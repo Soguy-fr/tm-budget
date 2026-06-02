@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
 import { realiseByCell } from "@/lib/suivi";
+import { isAllocated } from "@/lib/gl";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 
@@ -48,8 +49,13 @@ export default async function InternePage() {
       .select("line_id, year, total_input")
       .eq("budget_id", budget.id),
     supabase.from("bailleurs").select("*").order("code"),
-    supabase.from("gl_entries").select("*").eq("entry_type", "Dépense"),
+    supabase.from("gl_entries").select("*"),
   ]);
+
+  // Recettes prévues (tous bailleurs) agrégées par année:mois (BR-7.2).
+  const { data: incomeRows } = await supabase
+    .from("bailleur_income_monthly")
+    .select("year, month, amount");
 
   const flat = flattenForGrid((lines ?? []) as StructureLine[]);
 
@@ -68,7 +74,25 @@ export default async function InternePage() {
   }
 
   const yearList = (years ?? []).map((y) => y.year as number).sort((a, b) => a - b);
-  const realise = realiseByCell((glRows ?? []) as GlEntry[]);
+  const allGl = (glRows ?? []) as GlEntry[];
+  const realise = realiseByCell(allGl.filter((e) => e.entry_type === "Dépense"));
+
+  // Agrégats trésorerie par année:mois (BR-7.2 / BR-7.3).
+  const ym = (year: number, month: number) => `${year}:${month}`;
+  const incomePrevu: Record<string, number> = {};
+  for (const r of incomeRows ?? []) {
+    incomePrevu[ym(r.year as number, r.month as number)] =
+      (incomePrevu[ym(r.year as number, r.month as number)] ?? 0) + Number(r.amount);
+  }
+  const recReel: Record<string, number> = {};
+  const depReel: Record<string, number> = {};
+  for (const e of allGl) {
+    if (!isAllocated(e)) continue;
+    const y = Number(e.entry_date.slice(0, 4));
+    const m = Number(e.entry_date.slice(5, 7));
+    if (e.entry_type === "Recette") recReel[ym(y, m)] = (recReel[ym(y, m)] ?? 0) + Number(e.amount);
+    else depReel[ym(y, m)] = (depReel[ym(y, m)] ?? 0) + Number(e.amount);
+  }
 
   return (
     <InterneGrid
@@ -81,6 +105,10 @@ export default async function InternePage() {
       bailleurs={(bailleurRows ?? []) as Bailleur[]}
       bailleurByCell={bailleurByCell}
       realise={realise}
+      initialCash={Number(budget.initial_cash)}
+      incomePrevu={incomePrevu}
+      recReel={recReel}
+      depReel={depReel}
     />
   );
 }

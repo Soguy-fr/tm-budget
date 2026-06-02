@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import type { FlatRow } from "@/lib/budget-grid";
 import { cellKey, totalKey, aggregateMonths } from "@/lib/budget-grid";
 import { repartir, sumMonths } from "@/lib/budget-calc";
+import {
+  fluxBudgeted,
+  fluxReal,
+  chainCumulative,
+  lastClosedMonthIndex,
+} from "@/lib/treasury";
 import { formatEur, formatEcart, MONTHS_FR } from "@/lib/format";
 import type { Bailleur } from "@/lib/types";
 import {
@@ -28,6 +34,10 @@ export function InterneGrid({
   bailleurs,
   bailleurByCell,
   realise,
+  initialCash,
+  incomePrevu,
+  recReel,
+  depReel,
 }: {
   budgetId: string;
   budgetName: string;
@@ -38,12 +48,18 @@ export function InterneGrid({
   bailleurs: Bailleur[];
   bailleurByCell: Record<string, string | null>;
   realise: Record<string, number>;
+  initialCash: number;
+  incomePrevu: Record<string, number>;
+  recReel: Record<string, number>;
+  depReel: Record<string, number>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [showBailleur, setShowBailleur] = useState(false);
   const [showSuivi, setShowSuivi] = useState(false);
+  const [showTreso, setShowTreso] = useState(false);
+  const [tresoMode, setTresoMode] = useState<"budget" | "reel">("budget");
   const [error, setError] = useState<string | null>(null);
 
   const [work, setWork] = useState<Record<string, number>>(monthly);
@@ -70,6 +86,34 @@ export function InterneGrid({
   }, [dirty]);
 
   const leaves = useMemo(() => rows.filter((r) => r.level === 3), [rows]);
+
+  // BR-7.* — cumul de trésorerie chaîné sur toutes les années, selon le mode.
+  const tresoByYear = useMemo(() => {
+    const m12 = <T,>(fn: (i: number) => T) => Array.from({ length: 12 }, (_, i) => fn(i));
+    const flat: number[] = [];
+    for (const year of years) {
+      const depBud = m12((i) =>
+        leaves.reduce((s, l) => s + (work[cellKey(l.id, year, i + 1)] ?? 0), 0),
+      );
+      const recBud = m12((i) => incomePrevu[`${year}:${i + 1}`] ?? 0);
+      let flux: number[];
+      if (tresoMode === "budget") {
+        flux = fluxBudgeted(recBud, depBud);
+      } else {
+        const M = lastClosedMonthIndex(year);
+        const recR = m12((i) => recReel[`${year}:${i + 1}`] ?? 0);
+        const depR = m12((i) => depReel[`${year}:${i + 1}`] ?? 0);
+        flux = fluxReal(M, recR, depR, recBud, depBud);
+      }
+      flat.push(...flux);
+    }
+    const cumul = chainCumulative(initialCash, flat);
+    const byYear: Record<number, number[]> = {};
+    years.forEach((y, idx) => {
+      byYear[y] = cumul.slice(idx * 12, idx * 12 + 12);
+    });
+    return byYear;
+  }, [years, leaves, work, incomePrevu, recReel, depReel, initialCash, tresoMode]);
 
   function setCell(lineId: string, year: number, monthIdx: number, value: number) {
     setWork((w) => ({ ...w, [cellKey(lineId, year, monthIdx + 1)]: value }));
@@ -225,6 +269,24 @@ export function InterneGrid({
         >
           Suivi des dépenses
         </button>
+        <button
+          onClick={() => setShowTreso((v) => !v)}
+          className={`rounded px-3 py-1.5 text-sm ${
+            showTreso ? "bg-brand-night text-white" : "border border-slate-300 text-slate-600"
+          }`}
+        >
+          Solde tréso
+        </button>
+        {showTreso && (
+          <select
+            value={tresoMode}
+            onChange={(e) => setTresoMode(e.target.value as "budget" | "reel")}
+            className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            <option value="budget">Budgété</option>
+            <option value="reel">Réel (glissant)</option>
+          </select>
+        )}
         <button onClick={onAddYear} disabled={pending} className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600">
           + Année
         </button>
@@ -266,6 +328,9 @@ export function InterneGrid({
           editing={editing}
           showBailleur={showBailleur}
           showSuivi={showSuivi}
+          showTreso={showTreso}
+          tresoMode={tresoMode}
+          tresoCumul={tresoByYear[year] ?? []}
           realise={realise}
           bailleurs={bailleurs}
           colorOf={colorOf}
@@ -304,6 +369,9 @@ function YearBlock({
   editing,
   showBailleur,
   showSuivi,
+  showTreso,
+  tresoMode,
+  tresoCumul,
   realise,
   bailleurs,
   colorOf,
@@ -320,6 +388,9 @@ function YearBlock({
   editing: boolean;
   showBailleur: boolean;
   showSuivi: boolean;
+  showTreso: boolean;
+  tresoMode: "budget" | "reel";
+  tresoCumul: number[];
   realise: Record<string, number>;
   bailleurs: Bailleur[];
   colorOf: (id: string | null) => string;
@@ -370,6 +441,27 @@ function YearBlock({
                   {...handlers}
                 />
               ))}
+
+              {/* F3.11 / BR-7.4 — ligne « Solde trésorerie » (masquable, Budgété/Réel) */}
+              {showTreso && (
+                <tr className="border-t-2 border-slate-300 bg-slate-50 font-medium">
+                  <td className="sticky left-0 bg-inherit px-2 py-1 text-left">
+                    Solde trésorerie ({tresoMode === "budget" ? "Budgété" : "Réel"})
+                  </td>
+                  <td colSpan={3} />
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const v = tresoCumul[i] ?? 0;
+                    return (
+                      <td
+                        key={i}
+                        className={`px-2 py-1 text-right ${v < 0 ? "font-bold text-alert" : ""}`}
+                      >
+                        {formatEur(v)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
