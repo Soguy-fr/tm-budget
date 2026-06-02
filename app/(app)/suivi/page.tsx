@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { indicators } from "@/lib/suivi";
 import { formatEur, formatEcart } from "@/lib/format";
 import type { SuiviDepense } from "@/lib/types";
+import { SuiviTabs } from "@/components/suivi/SuiviTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,8 @@ export default async function SuiviPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Suivi des dépenses</h1>
+      <h1 className="mb-3 text-xl font-bold text-brand-night">Suivi</h1>
+      <SuiviTabs />
       <p className="mb-4 text-sm text-slate-500">
         Prévu (budget interne) vs réalisé (Grand Livre, écritures allouées) par
         ligne budgétaire — {budget.name}.
