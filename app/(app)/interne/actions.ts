@@ -16,18 +16,35 @@ export type TotalChange = {
   year: number;
   total_input: number | null;
 };
+export type BailleurChange = {
+  line_id: string;
+  year: number;
+  month: number;
+  bailleur_id: string | null;
+};
 
 // BR-9.1 — Envoi groupé (upsert) des modifications du mode édition par lot.
-// N'inclut pas bailleur_id : préservé sur conflit (assignation gérée au Jalon 4).
+// Montants et assignations bailleur sont upsertés séparément : chaque upsert
+// ne touche que ses colonnes, l'autre est préservée sur conflit.
 export async function saveGrid(
   budgetId: string,
   monthly: MonthlyChange[],
   totals: TotalChange[],
+  bailleurs: BailleurChange[] = [],
 ): Promise<ActionResult> {
   const supabase = createClient();
 
   if (monthly.length > 0) {
     const rows = monthly.map((m) => ({ budget_id: budgetId, ...m }));
+    const { error } = await supabase
+      .from("budget_monthly")
+      .upsert(rows, { onConflict: "budget_id,line_id,year,month" });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  // F3.9 — assignation bailleur par (LB × mois), un seul bailleur (P4).
+  if (bailleurs.length > 0) {
+    const rows = bailleurs.map((b) => ({ budget_id: budgetId, ...b }));
     const { error } = await supabase
       .from("budget_monthly")
       .upsert(rows, { onConflict: "budget_id,line_id,year,month" });

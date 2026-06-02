@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
-import type { StructureLine, Budget } from "@/lib/types";
+import type { StructureLine, Budget, Bailleur } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 
 export const dynamic = "force-dynamic";
@@ -28,27 +28,34 @@ export default async function InternePage() {
     );
   }
 
-  const [{ data: lines }, { data: years }, { data: monthlyRows }, { data: totalRows }] =
-    await Promise.all([
-      supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
-      supabase.from("budget_years").select("year").eq("budget_id", budget.id),
-      supabase
-        .from("budget_monthly")
-        .select("line_id, year, month, amount")
-        .eq("budget_id", budget.id),
-      supabase
-        .from("budget_line_totals")
-        .select("line_id, year, total_input")
-        .eq("budget_id", budget.id),
-    ]);
+  const [
+    { data: lines },
+    { data: years },
+    { data: monthlyRows },
+    { data: totalRows },
+    { data: bailleurRows },
+  ] = await Promise.all([
+    supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
+    supabase.from("budget_years").select("year").eq("budget_id", budget.id),
+    supabase
+      .from("budget_monthly")
+      .select("line_id, year, month, amount, bailleur_id")
+      .eq("budget_id", budget.id),
+    supabase
+      .from("budget_line_totals")
+      .select("line_id, year, total_input")
+      .eq("budget_id", budget.id),
+    supabase.from("bailleurs").select("*").order("code"),
+  ]);
 
   const flat = flattenForGrid((lines ?? []) as StructureLine[]);
 
   const monthly: Record<string, number> = {};
+  const bailleurByCell: Record<string, string | null> = {};
   for (const r of monthlyRows ?? []) {
-    monthly[cellKey(r.line_id as string, r.year as number, r.month as number)] = Number(
-      r.amount,
-    );
+    const k = cellKey(r.line_id as string, r.year as number, r.month as number);
+    monthly[k] = Number(r.amount);
+    bailleurByCell[k] = (r.bailleur_id as string | null) ?? null;
   }
   const totals: Record<string, number> = {};
   for (const r of totalRows ?? []) {
@@ -67,6 +74,8 @@ export default async function InternePage() {
       years={yearList}
       monthly={monthly}
       totals={totals}
+      bailleurs={(bailleurRows ?? []) as Bailleur[]}
+      bailleurByCell={bailleurByCell}
     />
   );
 }
