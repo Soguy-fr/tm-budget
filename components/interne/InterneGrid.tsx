@@ -27,6 +27,7 @@ export function InterneGrid({
   totals,
   bailleurs,
   bailleurByCell,
+  realise,
 }: {
   budgetId: string;
   budgetName: string;
@@ -36,11 +37,13 @@ export function InterneGrid({
   totals: Record<string, number>;
   bailleurs: Bailleur[];
   bailleurByCell: Record<string, string | null>;
+  realise: Record<string, number>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [showBailleur, setShowBailleur] = useState(false);
+  const [showSuivi, setShowSuivi] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [work, setWork] = useState<Record<string, number>>(monthly);
@@ -214,6 +217,14 @@ export function InterneGrid({
         >
           Afficher bailleur
         </button>
+        <button
+          onClick={() => setShowSuivi((v) => !v)}
+          className={`rounded px-3 py-1.5 text-sm ${
+            showSuivi ? "bg-brand-night text-white" : "border border-slate-300 text-slate-600"
+          }`}
+        >
+          Suivi des dépenses
+        </button>
         <button onClick={onAddYear} disabled={pending} className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600">
           + Année
         </button>
@@ -254,6 +265,8 @@ export function InterneGrid({
           workBailleur={workBailleur}
           editing={editing}
           showBailleur={showBailleur}
+          showSuivi={showSuivi}
+          realise={realise}
           bailleurs={bailleurs}
           colorOf={colorOf}
           collapsed={collapsed.has(year)}
@@ -290,6 +303,8 @@ function YearBlock({
   workBailleur,
   editing,
   showBailleur,
+  showSuivi,
+  realise,
   bailleurs,
   colorOf,
   collapsed,
@@ -304,6 +319,8 @@ function YearBlock({
   workBailleur: Record<string, string | null>;
   editing: boolean;
   showBailleur: boolean;
+  showSuivi: boolean;
+  realise: Record<string, number>;
   bailleurs: Bailleur[];
   colorOf: (id: string | null) => string;
   collapsed: boolean;
@@ -346,6 +363,8 @@ function YearBlock({
                   workBailleur={workBailleur}
                   editing={editing}
                   showBailleur={showBailleur}
+                  showSuivi={showSuivi}
+                  realise={realise}
                   bailleurs={bailleurs}
                   colorOf={colorOf}
                   {...handlers}
@@ -367,6 +386,8 @@ function GridRow({
   workBailleur,
   editing,
   showBailleur,
+  showSuivi,
+  realise,
   bailleurs,
   colorOf,
   setCell,
@@ -382,6 +403,8 @@ function GridRow({
   workBailleur: Record<string, string | null>;
   editing: boolean;
   showBailleur: boolean;
+  showSuivi: boolean;
+  realise: Record<string, number>;
   bailleurs: Bailleur[];
   colorOf: (id: string | null) => string;
 } & RowHandlers) {
@@ -469,6 +492,30 @@ function GridRow({
                     </option>
                   ))}
                 </select>
+              </td>
+            );
+          })}
+        </tr>
+      )}
+
+      {/* F3.10 / BR-5.3 — ligne réalisé (lecture seule) sous la LB, mois par mois */}
+      {isLeaf && showSuivi && (
+        <tr className="border-b border-slate-100 bg-emerald-50/40 text-slate-500">
+          <td className="sticky left-0 bg-inherit px-2 py-1 text-left text-[10px]" style={{ paddingLeft: 20 + row.depth * 14 }}>
+            ↳ réalisé
+          </td>
+          <td className="px-2 py-1 text-right text-[11px]">
+            {formatEur(
+              months.reduce((s, _, i) => s + (realise[cellKey(row.id, year, i + 1)] ?? 0), 0),
+            )}
+          </td>
+          <td colSpan={2} />
+          {months.map((prev, i) => {
+            const r = realise[cellKey(row.id, year, i + 1)] ?? 0;
+            const over = r > prev; // BR-5.2 — dépassement en rouge
+            return (
+              <td key={i} className={`px-2 py-1 text-right text-[11px] ${over ? "font-medium text-alert" : ""}`}>
+                {r !== 0 ? formatEur(r) : <span className="text-slate-300">·</span>}
               </td>
             );
           })}

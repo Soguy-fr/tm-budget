@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
-import type { StructureLine, Budget, Bailleur } from "@/lib/types";
+import { realiseByCell } from "@/lib/suivi";
+import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ export default async function InternePage() {
     { data: monthlyRows },
     { data: totalRows },
     { data: bailleurRows },
+    { data: glRows },
   ] = await Promise.all([
     supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
     supabase.from("budget_years").select("year").eq("budget_id", budget.id),
@@ -46,6 +48,7 @@ export default async function InternePage() {
       .select("line_id, year, total_input")
       .eq("budget_id", budget.id),
     supabase.from("bailleurs").select("*").order("code"),
+    supabase.from("gl_entries").select("*").eq("entry_type", "Dépense"),
   ]);
 
   const flat = flattenForGrid((lines ?? []) as StructureLine[]);
@@ -65,6 +68,7 @@ export default async function InternePage() {
   }
 
   const yearList = (years ?? []).map((y) => y.year as number).sort((a, b) => a - b);
+  const realise = realiseByCell((glRows ?? []) as GlEntry[]);
 
   return (
     <InterneGrid
@@ -76,6 +80,7 @@ export default async function InternePage() {
       totals={totals}
       bailleurs={(bailleurRows ?? []) as Bailleur[]}
       bailleurByCell={bailleurByCell}
+      realise={realise}
     />
   );
 }
