@@ -73,6 +73,9 @@
 | F5.5 | Filtrer par plusieurs colonnes (tri rapide pour classer) | 🟢 | — |
 | F5.6 | Avertissement « réalisé non conforme au plan » | 🟡 | BR-4.2 |
 | F5.7 | Indicateur conforme au plan (oui/non) par écriture | 🟡 | BR-4.2 |
+| F5.8 | Filtre date en accordéon (année puis mois) + bouton « Réinitialiser les filtres » | 🟢 | — |
+| F5.9 | Largeur des colonnes ajustable (poignée de redimensionnement) | 🟢 | — |
+| F5.10 | Colonne « Description LB » : libellé complet de la LB allouée (code + intitulé) | 🟢 | — |
 
 ## F6 — Suivi
 

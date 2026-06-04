@@ -8,6 +8,18 @@ import { parseCsv } from "@/lib/csv";
 import { allocationStatus, findColumn, mapCsvRow, type MappedEntry } from "@/lib/gl";
 import { importGl, updateAllocation } from "@/app/(app)/grand-livre/actions";
 
+// Colonnes du tableau, avec largeur initiale (px). Largeur ajustable (F5.9).
+const COLUMNS = [
+  { key: "date", label: "Date", w: 100 },
+  { key: "type", label: "Type", w: 84 },
+  { key: "label", label: "Libellé", w: 220 },
+  { key: "amount", label: "Montant", w: 96 },
+  { key: "lb", label: "LB", w: 90 },
+  { key: "lbdesc", label: "Description LB", w: 220 },
+  { key: "bailleur", label: "Bailleur", w: 90 },
+  { key: "statut", label: "Statut", w: 96 },
+] as const;
+
 export function GlTable({
   entries,
   lines,
@@ -25,26 +37,48 @@ export function GlTable({
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Filtres multi-colonnes (F5.5).
+  // Filtres multi-colonnes (F5.5, F5.8).
   const [fType, setFType] = useState("");
+  const [fYear, setFYear] = useState("");
   const [fMonth, setFMonth] = useState("");
   const [fLine, setFLine] = useState("");
   const [fBailleur, setFBailleur] = useState("");
   const [fStatut, setFStatut] = useState("");
 
+  // Largeurs de colonnes (F5.9).
+  const [widths, setWidths] = useState<Record<string, number>>(
+    Object.fromEntries(COLUMNS.map((c) => [c.key, c.w])),
+  );
+
   const lineLabel = useMemo(
     () => new Map(lines.map((l) => [l.id, `${l.code} ${l.label}`])),
     [lines],
   );
-  const bailleurCode = useMemo(
-    () => new Map(bailleurs.map((b) => [b.id, b.code])),
-    [bailleurs],
+
+  // Années présentes dans le GL (pour l'accordéon date).
+  const years = useMemo(
+    () =>
+      Array.from(new Set(entries.map((e) => Number(e.entry_date.slice(0, 4)))))
+        .sort((a, b) => b - a),
+    [entries],
   );
+
+  const hasFilter = Boolean(fType || fYear || fMonth || fLine || fBailleur || fStatut);
+  function resetFilters() {
+    setFType("");
+    setFYear("");
+    setFMonth("");
+    setFLine("");
+    setFBailleur("");
+    setFStatut("");
+  }
 
   const filtered = entries.filter((e) => {
     const statut = allocationStatus(e);
+    const year = Number(e.entry_date.slice(0, 4));
     const month = Number(e.entry_date.slice(5, 7));
     if (fType && e.entry_type !== fType) return false;
+    if (fYear && year !== Number(fYear)) return false;
     if (fMonth && month !== Number(fMonth)) return false;
     if (fLine && e.line_id !== fLine) return false;
     if (fBailleur && e.bailleur_id !== fBailleur) return false;
@@ -124,6 +158,22 @@ export function GlTable({
     });
   }
 
+  // F5.9 — redimensionnement d'une colonne par glisser.
+  function startResize(key: string, e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = widths[key];
+    function move(ev: MouseEvent) {
+      setWidths((w) => ({ ...w, [key]: Math.max(50, startW + ev.clientX - startX) }));
+    }
+    function up() {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    }
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-center gap-3">
@@ -148,19 +198,42 @@ export function GlTable({
         <p className="mb-3 rounded border border-alert/30 bg-red-50 p-2 text-sm text-alert">{error}</p>
       )}
 
-      {/* Filtres (F5.5) */}
-      <div className="mb-3 flex flex-wrap gap-2 text-xs">
+      {/* Filtres (F5.5, F5.8) */}
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
         <Select value={fType} onChange={setFType} label="Type">
           <option value="Dépense">Dépense</option>
           <option value="Recette">Recette</option>
         </Select>
-        <Select value={fMonth} onChange={setFMonth} label="Mois">
-          {Array.from({ length: 12 }, (_, i) => (
-            <option key={i} value={String(i + 1)}>
-              {String(i + 1).padStart(2, "0")}
-            </option>
-          ))}
-        </Select>
+
+        {/* Accordéon date : Année puis Mois (F5.8) */}
+        <span className="flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2 py-1">
+          <span className="text-slate-400">Date</span>
+          <select
+            value={fYear}
+            onChange={(e) => setFYear(e.target.value)}
+            className="rounded border border-slate-300 px-1 py-0.5"
+          >
+            <option value="">année</option>
+            {years.map((y) => (
+              <option key={y} value={String(y)}>
+                {y}
+              </option>
+            ))}
+          </select>
+          <select
+            value={fMonth}
+            onChange={(e) => setFMonth(e.target.value)}
+            className="rounded border border-slate-300 px-1 py-0.5"
+          >
+            <option value="">mois</option>
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i} value={String(i + 1)}>
+                {String(i + 1).padStart(2, "0")}
+              </option>
+            ))}
+          </select>
+        </span>
+
         <Select value={fLine} onChange={setFLine} label="LB">
           {lines.map((l) => (
             <option key={l.id} value={l.id}>
@@ -179,26 +252,45 @@ export function GlTable({
           <option value="OK">OK</option>
           <option value="À allouer">À allouer</option>
         </Select>
+
+        <button
+          onClick={resetFilters}
+          disabled={!hasFilter}
+          className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+        >
+          Réinitialiser les filtres
+        </button>
         <span className="self-center text-slate-400">{filtered.length} écriture(s)</span>
       </div>
 
       <div className="overflow-x-auto rounded border border-slate-200 bg-white">
-        <table className="w-full border-collapse text-xs">
+        <table className="table-fixed border-collapse text-xs">
+          <colgroup>
+            {COLUMNS.map((c) => (
+              <col key={c.key} style={{ width: widths[c.key] }} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="px-2 py-1">Date</th>
-              <th className="px-2 py-1">Type</th>
-              <th className="px-2 py-1">Libellé</th>
-              <th className="px-2 py-1 text-right">Montant</th>
-              <th className="px-2 py-1">LB</th>
-              <th className="px-2 py-1">Bailleur</th>
-              <th className="px-2 py-1">Statut</th>
+              {COLUMNS.map((c) => (
+                <th
+                  key={c.key}
+                  className={`relative px-2 py-1 ${c.key === "amount" ? "text-right" : ""}`}
+                >
+                  {c.label}
+                  {/* poignée de redimensionnement (F5.9) */}
+                  <span
+                    onMouseDown={(e) => startResize(c.key, e)}
+                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none hover:bg-brand-emerald/50"
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-2 py-4 text-center text-slate-400">
+                <td colSpan={COLUMNS.length} className="px-2 py-4 text-center text-slate-400">
                   Aucune écriture. Importez un CSV.
                 </td>
               </tr>
@@ -213,14 +305,16 @@ export function GlTable({
                 >
                   <td className="px-2 py-1 font-mono text-[11px]">{e.entry_date}</td>
                   <td className="px-2 py-1">{e.entry_type}</td>
-                  <td className="px-2 py-1">{e.label}</td>
+                  <td className="truncate px-2 py-1" title={e.label ?? ""}>
+                    {e.label}
+                  </td>
                   <td className="px-2 py-1 text-right">{formatEur(e.amount)}</td>
                   <td className="px-2 py-1">
                     <select
                       value={e.line_id ?? ""}
                       disabled={pending}
                       onChange={(ev) => onChangeLine(e, ev.target.value || null)}
-                      className="rounded border border-slate-300 px-1 py-0.5"
+                      className="w-full rounded border border-slate-300 px-1 py-0.5"
                     >
                       <option value="">—</option>
                       {lines.map((l) => (
@@ -230,12 +324,16 @@ export function GlTable({
                       ))}
                     </select>
                   </td>
+                  {/* F5.10 — description LB allouée */}
+                  <td className="truncate px-2 py-1 text-slate-500" title={e.line_id ? lineLabel.get(e.line_id) ?? "" : ""}>
+                    {e.line_id ? lineLabel.get(e.line_id) ?? "—" : <span className="text-slate-300">—</span>}
+                  </td>
                   <td className="px-2 py-1">
                     <select
                       value={e.bailleur_id ?? ""}
                       disabled={pending}
                       onChange={(ev) => save(e.id, e.line_id, ev.target.value || null)}
-                      className="rounded border border-slate-300 px-1 py-0.5"
+                      className="w-full rounded border border-slate-300 px-1 py-0.5"
                     >
                       <option value="">—</option>
                       {bailleurs.map((b) => (

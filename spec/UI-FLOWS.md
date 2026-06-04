@@ -126,8 +126,12 @@ Date       Type     Libellé              Montant   LB      Bailleur  Statut
 ...
 ```
 - Colonnes **LB** et **Bailleur** éditables ; bailleur pré-rempli depuis le plan (BR-2.4).
+- Colonne **Description LB** : à l'allocation d'une LB, son libellé complet (code + intitulé)
+  s'affiche pour lever toute ambiguïté (F5.10).
 - Lignes non allouées surlignées (BR-4.1).
-- Filtres multi-colonnes pour classer vite (F5.5).
+- Filtres multi-colonnes pour classer vite (F5.5) ; **filtre date en accordéon**
+  (année → mois) et bouton **Réinitialiser les filtres** (F5.8).
+- **Largeur des colonnes ajustable** par glisser d'une poignée d'entête (F5.9).
 - Avertissement discret si réalisé ≠ plan (BR-4.2), non bloquant.
 
 ## 6. Pages « Suivi » (F6)
