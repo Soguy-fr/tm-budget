@@ -40,3 +40,37 @@ tronquent silencieusement les résultats (limite par défaut de PostgREST).
 
 **Règle** : pour toute table à fort volume (mailles mensuelles, écritures GL),
 paginer explicitement ou poser un `.range()` large.
+
+## P-BUG-3 — Poignée de redimensionnement de colonne invisible / inopérante
+
+**Symptôme** : les colonnes du Grand Livre n'étaient pas redimensionnables ; la
+poignée était invisible.
+
+**Causes** :
+1. Poignée transparente (largeur 4px, couleur seulement au survol) → invisible.
+2. `<table>` sans largeur explicite : avec `table-fixed`, la largeur du tableau
+   restait contrainte au conteneur, donc augmenter une colonne ne se voyait pas.
+
+**Correctif** :
+- Poignée toujours visible : zone large (`w-2`) avec un trait `bg-slate-300`,
+  `cursor-col-resize`.
+- `<table style={{ width: Σ largeurs }}>` pour que `table-fixed` + `colgroup`
+  imposent les largeurs et activent le scroll horizontal.
+
+**Règle** : colonnes redimensionnables = `table-fixed` + `colgroup` avec largeurs
+en state + largeur totale sur `<table>` + poignée visible avec zone de clic ≥ 6px.
+
+## P-BUG-4 — Bailleur traité comme obligatoire sur les dépenses
+
+**Symptôme** : une dépense n'apparaissait dans le suivi des dépenses que si un
+bailleur était assigné.
+
+**Cause** : `allocationStatus` et `v_suivi_depenses` exigeaient `bailleur_id` pour
+une dépense. Or le bailleur est **facultatif** (BR-4.1) : la LB suffit pour le
+suivi des dépenses ; le bailleur ne sert qu'au suivi par bailleur (BR-6).
+
+**Correctif** : dépense OK dès que `line_id` est renseigné (cf. migration
+`0004_suivi_depenses_bailleur_facultatif.sql`).
+
+**Règle** : bien distinguer les deux suivis — **dépenses** (clé = LB) vs
+**bailleur** (clé = bailleur). Ne jamais coupler les deux conditions.

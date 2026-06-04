@@ -25,11 +25,14 @@ export function GlTable({
   lines,
   bailleurs,
   planByCell,
+  initialFilters,
 }: {
   entries: GlEntry[];
   lines: StructureLine[];
   bailleurs: Bailleur[];
   planByCell: Record<string, string>;
+  // F3.14 — filtres pré-remplis (depuis le clic d'une cellule du tableur).
+  initialFilters?: { line?: string; year?: string; month?: string };
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -39,9 +42,9 @@ export function GlTable({
 
   // Filtres multi-colonnes (F5.5, F5.8).
   const [fType, setFType] = useState("");
-  const [fYear, setFYear] = useState("");
-  const [fMonth, setFMonth] = useState("");
-  const [fLine, setFLine] = useState("");
+  const [fYear, setFYear] = useState(initialFilters?.year ?? "");
+  const [fMonth, setFMonth] = useState(initialFilters?.month ?? "");
+  const [fLine, setFLine] = useState(initialFilters?.line ?? "");
   const [fBailleur, setFBailleur] = useState("");
   const [fStatut, setFStatut] = useState("");
 
@@ -264,7 +267,10 @@ export function GlTable({
       </div>
 
       <div className="overflow-x-auto rounded border border-slate-200 bg-white">
-        <table className="table-fixed border-collapse text-xs">
+        <table
+          className="table-fixed border-collapse text-xs"
+          style={{ width: Object.values(widths).reduce((a, b) => a + b, 0) }}
+        >
           <colgroup>
             {COLUMNS.map((c) => (
               <col key={c.key} style={{ width: widths[c.key] }} />
@@ -275,14 +281,16 @@ export function GlTable({
               {COLUMNS.map((c) => (
                 <th
                   key={c.key}
-                  className={`relative px-2 py-1 ${c.key === "amount" ? "text-right" : ""}`}
+                  className={`relative overflow-hidden px-2 py-1 ${c.key === "amount" ? "text-right" : ""}`}
                 >
                   {c.label}
-                  {/* poignée de redimensionnement (F5.9) */}
+                  {/* poignée de redimensionnement (F5.9) — visible + zone large */}
                   <span
                     onMouseDown={(e) => startResize(c.key, e)}
-                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize select-none hover:bg-brand-emerald/50"
-                  />
+                    className="absolute right-0 top-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none items-center justify-center"
+                  >
+                    <span className="h-2/3 w-px bg-slate-300" />
+                  </span>
                 </th>
               ))}
             </tr>

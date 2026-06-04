@@ -51,10 +51,10 @@ describe("parseType", () => {
   });
 });
 
-describe("allocationStatus (BR-4.1)", () => {
-  it("Dépense OK seulement si LB + bailleur", () => {
+describe("allocationStatus (BR-4.1 — bailleur facultatif sur dépense)", () => {
+  it("Dépense OK dès que LB renseignée, avec ou sans bailleur", () => {
     expect(allocationStatus({ entry_type: "Dépense", line_id: "L", bailleur_id: "B" })).toBe("OK");
-    expect(allocationStatus({ entry_type: "Dépense", line_id: "L", bailleur_id: null })).toBe("À allouer");
+    expect(allocationStatus({ entry_type: "Dépense", line_id: "L", bailleur_id: null })).toBe("OK");
     expect(allocationStatus({ entry_type: "Dépense", line_id: null, bailleur_id: "B" })).toBe("À allouer");
   });
   it("Recette OK si bailleur (LB facultative)", () => {
@@ -64,8 +64,9 @@ describe("allocationStatus (BR-4.1)", () => {
 });
 
 describe("isAllocated (exclusion des agrégats)", () => {
-  it("exclut les écritures à allouer", () => {
+  it("dépense avec LB comptée même sans bailleur ; exclue si pas de LB", () => {
     expect(isAllocated({ entry_type: "Dépense", line_id: "L", bailleur_id: "B" })).toBe(true);
+    expect(isAllocated({ entry_type: "Dépense", line_id: "L", bailleur_id: null })).toBe(true);
     expect(isAllocated({ entry_type: "Dépense", line_id: null, bailleur_id: null })).toBe(false);
   });
 });

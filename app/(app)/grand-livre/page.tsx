@@ -5,7 +5,11 @@ import { GlTable } from "@/components/grand-livre/GlTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function GrandLivrePage() {
+export default async function GrandLivrePage({
+  searchParams,
+}: {
+  searchParams: { line?: string; year?: string; month?: string };
+}) {
   if (!isSupabaseConfigured()) {
     return (
       <div>
@@ -62,6 +66,11 @@ export default async function GrandLivrePage() {
         lines={(lines ?? []) as StructureLine[]}
         bailleurs={(bailleurs ?? []) as Bailleur[]}
         planByCell={planByCell}
+        initialFilters={{
+          line: searchParams.line,
+          year: searchParams.year,
+          month: searchParams.month,
+        }}
       />
     </div>
   );

@@ -48,6 +48,7 @@
 | F3.11 | Ligne « Solde trésorerie » en bas, masquable, sélecteur Budgété/Réel | 🟢 | BR-7.* |
 | F3.12 | Accordéon sur les LB : replier/déplier une catégorie ; boutons globaux « tout déplier », « catégories seules » (niv.1), « cat. + sous-cat. » (niv.1+2) | 🟢 | BR-8.3 |
 | F3.13 | Total annuel du budget affiché dans l'entête de chaque année (Σ de toutes les LB niv.3) | 🟢 | BR-8.4 |
+| F3.14 | Clic sur une cellule mois (hors édition) → ouvre le Grand Livre filtré sur cette LB + année + mois | 🟢 | — |
 
 ## F4 — Bailleurs (pages dédiées, même gabarit que l'interne)
 

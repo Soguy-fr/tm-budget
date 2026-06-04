@@ -161,6 +161,11 @@ export function InterneGrid({
     setTotal(lineId, year, sumMonths(leafMonths(lineId, year, work)));
   }
 
+  // F3.14 — ouvrir le Grand Livre filtré sur (LB × année × mois).
+  function openGl(lineId: string, year: number, monthIdx: number) {
+    router.push(`/grand-livre?line=${lineId}&year=${year}&month=${monthIdx + 1}`);
+  }
+
   function save() {
     setError(null);
     const monthlyChanges: MonthlyChange[] = [];
@@ -386,6 +391,7 @@ export function InterneGrid({
           setBailleur={setBailleur}
           doRepartir={doRepartir}
           doMajTotal={doMajTotal}
+          openGl={openGl}
         />
       ))}
     </div>
@@ -402,6 +408,7 @@ type RowHandlers = {
   setBailleur: (lineId: string, year: number, monthIdx: number, b: string | null) => void;
   doRepartir: (lineId: string, year: number) => void;
   doMajTotal: (lineId: string, year: number) => void;
+  openGl: (lineId: string, year: number, monthIdx: number) => void;
 };
 
 function YearBlock({
@@ -559,6 +566,7 @@ function GridRow({
   setBailleur,
   doRepartir,
   doMajTotal,
+  openGl,
 }: {
   row: FlatRow;
   year: number;
@@ -634,6 +642,15 @@ function GridRow({
             <td key={i} className="px-2 py-1 text-right" style={tint}>
               {isLeaf && editing ? (
                 <input type="number" value={val} onChange={(e) => setCell(row.id, year, i, Number(e.target.value) || 0)} className="w-16 rounded border border-slate-300 px-1 py-0.5 text-right text-input" />
+              ) : isLeaf ? (
+                // F3.14 — clic → Grand Livre filtré sur (LB × année × mois)
+                <button
+                  onClick={() => openGl(row.id, year, i)}
+                  className="w-full text-right hover:text-brand-emerald hover:underline"
+                  title="Voir les écritures dans le Grand Livre"
+                >
+                  {val !== 0 ? formatEur(val) : <span className="text-slate-300">·</span>}
+                </button>
               ) : val !== 0 ? (
                 formatEur(val)
               ) : (

@@ -11,8 +11,7 @@ select
   coalesce(sum(bm.amount),0)                                   as prevu,
   coalesce((select sum(g.amount) from gl_entries g
             where g.line_id = sl.id and g.entry_type='Dépense'
-              and g.bailleur_id is not null
-              and extract(year from g.entry_date) = by_.year),0) as realise
+              and extract(year from g.entry_date) = by_.year),0) as realise -- bailleur facultatif (BR-4.1)
 from budgets b
 join budget_years by_ on by_.budget_id = b.id
 join structure_lines sl on sl.level = 3

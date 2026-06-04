@@ -63,12 +63,18 @@ Saisie directe du montant attendu par mois (pas de %). Le total = Σ des 12 mois
 ## 4. Grand Livre & allocation
 
 ### BR-4.1 — Statut d'allocation
+Le **bailleur est facultatif** sur une dépense : associer un bailleur n'est PAS
+obligatoire. La LB suffit pour le suivi des dépenses ; le bailleur ne sert qu'au
+suivi par bailleur (BR-6).
 ```
-statut = OK   si (type = Recette et bailleur renseigné)
-              ou (type = Dépense et LB renseignée et bailleur renseigné)
+statut = OK   si (type = Dépense et LB renseignée)            -- bailleur facultatif
+              ou (type = Recette et bailleur renseigné)
          À allouer sinon
 ```
-Une écriture « À allouer » est surlignée et **exclue** des agrégats de suivi.
+- Une dépense **sans LB** est « À allouer » : surlignée, exclue du suivi des dépenses.
+- Une dépense **avec LB mais sans bailleur** est **OK pour le suivi des dépenses**
+  (comptée en réalisé par LB), mais n'entre pas dans le suivi par bailleur (BR-6.1).
+- Indicateur séparé « bailleur manquant » possible (informatif, non bloquant).
 
 ### BR-4.2 — Plan vs réel (avertissement non bloquant)
 Si le bailleur saisi sur une écriture diffère du bailleur prévu au plan pour ce (LB × mois) :
@@ -83,8 +89,10 @@ Le rattachement temporel d'une écriture utilise sa **date de paiement** (P5).
 
 ### BR-5.1 — Réalisé par LB
 ```
-réalisé(LB, année) = Σ amount des écritures GL où type=Dépense, line_id=LB, année(date)=année, statut=OK
+réalisé(LB, année) = Σ amount des écritures GL où type=Dépense, line_id=LB, année(date)=année
 ```
+Le bailleur n'intervient PAS ici (BR-4.1) : une dépense avec LB compte qu'elle ait
+un bailleur ou non. Seul `line_id` manquant l'exclut.
 
 ### BR-5.2 — Indicateurs
 ```

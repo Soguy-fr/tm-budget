@@ -1,7 +1,8 @@
 // Grand Livre : mapping CSV → écriture, statut d'allocation (BR-4.1). Pur.
 import type { GlEntry } from "./types";
 
-// BR-4.1 — Statut d'allocation.
+// BR-4.1 — Statut d'allocation. Bailleur FACULTATIF sur une dépense :
+// la LB suffit. Le bailleur ne sert qu'au suivi par bailleur (BR-6).
 export function allocationStatus(e: {
   entry_type: "Dépense" | "Recette";
   line_id: string | null;
@@ -10,8 +11,8 @@ export function allocationStatus(e: {
   if (e.entry_type === "Recette") {
     return e.bailleur_id ? "OK" : "À allouer";
   }
-  // Dépense
-  return e.line_id && e.bailleur_id ? "OK" : "À allouer";
+  // Dépense : OK dès que la LB est renseignée (bailleur optionnel).
+  return e.line_id ? "OK" : "À allouer";
 }
 
 // Parse un montant « 2 500,50 » / « 2,500.50 » / « 2500.5 » → number.

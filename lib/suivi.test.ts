@@ -42,9 +42,16 @@ describe("realiseByCell (BR-5.3 — réalisé = Σ GL par LB×mois)", () => {
     expect(m["L1:2026:2"]).toBe(500); // février
   });
 
-  it("exclut les non-allouées et les recettes", () => {
+  it("compte une dépense avec LB même sans bailleur (BR-4.1)", () => {
     const entries = [
-      E({ line_id: "L1", bailleur_id: null, amount: 999, entry_date: "2026-01-05" }), // à allouer
+      E({ line_id: "L1", bailleur_id: null, amount: 999, entry_date: "2026-01-05" }), // LB sans bailleur → comptée
+    ];
+    expect(realiseByCell(entries)["L1:2026:1"]).toBe(999);
+  });
+
+  it("exclut les dépenses sans LB et les recettes", () => {
+    const entries = [
+      E({ line_id: null, bailleur_id: "B", amount: 50, entry_date: "2026-01-05" }), // pas de LB → exclue
       E({ line_id: null, bailleur_id: "B", amount: 100, entry_type: "Recette", entry_date: "2026-01-05" }),
     ];
     expect(Object.keys(realiseByCell(entries))).toHaveLength(0);
