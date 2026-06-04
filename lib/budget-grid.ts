@@ -10,6 +10,8 @@ export type FlatRow = {
   depth: number;
   // ids des LB de niveau 3 sous cette ligne (elle-même si niveau 3).
   leafIds: string[];
+  // a au moins un enfant (→ pliable, BR-8.3).
+  hasChildren: boolean;
 };
 
 // Aplati l'arbre en lignes d'affichage ordonnées, avec la liste des feuilles
@@ -32,6 +34,7 @@ export function flattenForGrid(lines: StructureLine[]): FlatRow[] {
         level: n.level as 1 | 2 | 3,
         depth,
         leafIds: leavesOf(n),
+        hasChildren: n.children.length > 0,
       });
       walk(n.children, depth + 1);
     }

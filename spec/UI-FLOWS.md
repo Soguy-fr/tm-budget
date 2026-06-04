@@ -46,6 +46,10 @@ Code     Intitulé                    [+ Ligne] [Masquer vides]
 
 C'est l'écran cœur. Une seule page, plusieurs couches activables.
 
+Sous le titre du budget : boutons d'accordéon des lignes (BR-8.3) —
+**Tout déplier · Catégories seules · Cat. + sous-cat.** — et chevrons ▶/▼ par
+catégorie. L'entête de chaque année affiche le **total annuel du budget** (BR-8.4).
+
 ```
 [Éditer] [Répartir] [Afficher bailleur] [Suivi des dépenses] [Solde tréso ▼ Budgété|Réel]
 Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné

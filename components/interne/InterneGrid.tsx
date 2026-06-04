@@ -69,6 +69,18 @@ export function InterneGrid({
   );
   const [dirty, setDirty] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  // BR-8.3 — lignes budgétaires repliées (ids de LB niv.1/2). Affichage seul.
+  const [collapsedLines, setCollapsedLines] = useState<Set<string>>(new Set());
+
+  // P-BUG-1 — resynchroniser les copies de travail quand les props serveur
+  // changent (router.refresh / revalidation). Sans ça, « Rafraîchir » n'a aucun
+  // effet visible car useState ne lit l'initial qu'au premier rendu.
+  useEffect(() => {
+    if (dirty) return; // ne pas écraser des saisies non enregistrées
+    setWork(monthly);
+    setWorkTotals(totals);
+    setWorkBailleur(bailleurByCell);
+  }, [monthly, totals, bailleurByCell, dirty]);
 
   const colorOf = useMemo(() => {
     const map = new Map(bailleurs.map((b) => [b.id, b.color]));
@@ -232,6 +244,22 @@ export function InterneGrid({
     });
   }
 
+  // BR-8.3 — accordéon des lignes budgétaires.
+  function toggleLine(id: string) {
+    setCollapsedLines((c) => {
+      const n = new Set(c);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+  function expandAllLines() {
+    setCollapsedLines(new Set());
+  }
+  // Replie toutes les LB d'un niveau donné (1 → catégories seules ; 2 → cat.+sous-cat.).
+  function collapseToLevel(level: 1 | 2) {
+    setCollapsedLines(new Set(rows.filter((r) => r.level === level && r.hasChildren).map((r) => r.id)));
+  }
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -293,6 +321,20 @@ export function InterneGrid({
         {dirty && <span className="text-sm text-alert">● modifications non enregistrées</span>}
       </div>
 
+      {/* BR-8.3 — accordéon des lignes budgétaires */}
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-slate-400">Affichage :</span>
+        <button onClick={expandAllLines} className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100">
+          Tout déplier
+        </button>
+        <button onClick={() => collapseToLevel(2)} className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100">
+          Cat. + sous-cat.
+        </button>
+        <button onClick={() => collapseToLevel(1)} className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100">
+          Catégories seules
+        </button>
+      </div>
+
       {showBailleur && (
         <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
           <span className="font-medium">Légende :</span>
@@ -335,6 +377,8 @@ export function InterneGrid({
           bailleurs={bailleurs}
           colorOf={colorOf}
           collapsed={collapsed.has(year)}
+          collapsedLines={collapsedLines}
+          onToggleLine={toggleLine}
           onToggle={() => toggleYear(year)}
           onRemove={() => onRemoveYear(year)}
           setCell={setCell}
@@ -376,6 +420,8 @@ function YearBlock({
   bailleurs,
   colorOf,
   collapsed,
+  collapsedLines,
+  onToggleLine,
   onToggle,
   onRemove,
   ...handlers
@@ -395,18 +441,40 @@ function YearBlock({
   bailleurs: Bailleur[];
   colorOf: (id: string | null) => string;
   collapsed: boolean;
+  collapsedLines: Set<string>;
+  onToggleLine: (id: string) => void;
   onToggle: () => void;
   onRemove: () => void;
 } & RowHandlers) {
+  // BR-8.4 — total annuel du budget = Σ de toutes les LB niveau 3.
+  const yearTotal = rows
+    .filter((r) => r.level === 3)
+    .reduce((s, r) => s + sumMonths(leafMonths(r.id, year, work)), 0);
+
+  // BR-8.3 — masquer les descendants d'une ligne repliée.
+  const visibleRows: FlatRow[] = [];
+  let hideDepth = -1;
+  for (const row of rows) {
+    if (hideDepth >= 0 && row.depth > hideDepth) continue;
+    hideDepth = -1;
+    visibleRows.push(row);
+    if (row.hasChildren && collapsedLines.has(row.id)) hideDepth = row.depth;
+  }
+
   return (
     <div className="mb-4 overflow-hidden rounded border border-slate-200 bg-white">
       <div className="flex items-center justify-between bg-slate-50 px-3 py-2">
         <button onClick={onToggle} className="font-heading text-sm font-bold text-brand-night">
           {collapsed ? "▶" : "▼"} {year}
         </button>
-        <button onClick={onRemove} className="text-xs text-alert hover:underline">
-          retirer année
-        </button>
+        <span className="flex items-center gap-3">
+          <span className="text-sm font-medium text-brand-night">
+            Total {year} : {formatEur(yearTotal)}
+          </span>
+          <button onClick={onRemove} className="text-xs text-alert hover:underline">
+            retirer année
+          </button>
+        </span>
       </div>
 
       {!collapsed && (
@@ -424,7 +492,7 @@ function YearBlock({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {visibleRows.map((row) => (
                 <GridRow
                   key={row.id}
                   row={row}
@@ -438,6 +506,8 @@ function YearBlock({
                   realise={realise}
                   bailleurs={bailleurs}
                   colorOf={colorOf}
+                  collapsedLine={collapsedLines.has(row.id)}
+                  onToggleLine={onToggleLine}
                   {...handlers}
                 />
               ))}
@@ -482,6 +552,8 @@ function GridRow({
   realise,
   bailleurs,
   colorOf,
+  collapsedLine,
+  onToggleLine,
   setCell,
   setTotal,
   setBailleur,
@@ -499,6 +571,8 @@ function GridRow({
   realise: Record<string, number>;
   bailleurs: Bailleur[];
   colorOf: (id: string | null) => string;
+  collapsedLine: boolean;
+  onToggleLine: (id: string) => void;
 } & RowHandlers) {
   const isLeaf = row.level === 3;
   const months = isLeaf ? leafMonths(row.id, year, work) : aggregateMonths(row.leafIds, year, work);
@@ -511,6 +585,17 @@ function GridRow({
     <>
       <tr className={`border-b border-slate-50 ${isLeaf ? "" : "bg-slate-50/60 font-medium"}`}>
         <td className="sticky left-0 bg-inherit px-2 py-1 text-left" style={{ paddingLeft: 8 + row.depth * 14 }}>
+          {row.hasChildren ? (
+            <button
+              onClick={() => onToggleLine(row.id)}
+              className="mr-1 inline-block w-3 text-[10px] text-slate-400 hover:text-slate-700"
+              title={collapsedLine ? "Déplier" : "Replier"}
+            >
+              {collapsedLine ? "▶" : "▼"}
+            </button>
+          ) : (
+            <span className="mr-1 inline-block w-3" />
+          )}
           <span className="mr-2 font-mono text-[10px] text-slate-400">{row.code}</span>
           {row.label}
           {isLeaf && editing && (

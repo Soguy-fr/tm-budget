@@ -46,6 +46,8 @@
 | F3.9 | Éditer l'assignation bailleur d'un (LB × mois) | 🟢 | BR-2.1, BR-2.2 |
 | F3.10 | Bouton « Suivi des dépenses » → ligne réalisé sous la ligne prévue | 🟢 | BR-5.3 |
 | F3.11 | Ligne « Solde trésorerie » en bas, masquable, sélecteur Budgété/Réel | 🟢 | BR-7.* |
+| F3.12 | Accordéon sur les LB : replier/déplier une catégorie ; boutons globaux « tout déplier », « catégories seules » (niv.1), « cat. + sous-cat. » (niv.1+2) | 🟢 | BR-8.3 |
+| F3.13 | Total annuel du budget affiché dans l'entête de chaque année (Σ de toutes les LB niv.3) | 🟢 | BR-8.4 |
 
 ## F4 — Bailleurs (pages dédiées, même gabarit que l'interne)
 

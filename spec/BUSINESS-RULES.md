@@ -142,8 +142,21 @@ avec sélecteur **Budgété / Réel**. Détecte les trous (solde cumulé négati
 Ajouter une année crée les mailles vides (montant 0) pour toutes les LB.
 Retirer une année supprime ses mailles **après confirmation** (perte de données).
 
-### BR-8.2 — Repli/dépli
+### BR-8.2 — Repli/dépli (années)
 Chaque année est un bloc accordéon repliable indépendamment.
+
+### BR-8.3 — Accordéon sur les lignes budgétaires
+Dans le tableur, chaque LB de niveau 1 ou 2 peut être repliée pour masquer ses
+enfants (chevron ▶/▼). Boutons globaux sous le titre :
+- **Tout déplier** : toutes les LB visibles ;
+- **Catégories seules** : ne montre que le niveau 1 (replie tous les niveaux 1) ;
+- **Cat. + sous-cat.** : montre niveaux 1 et 2, masque les lignes niveau 3 (replie tous les niveaux 2).
+L'état de repli est purement d'affichage (non persisté), partagé entre les années.
+
+### BR-8.4 — Total annuel du budget
+L'entête de chaque bloc année affiche le **total du budget pour l'année** =
+Σ des montants de toutes les LB de niveau 3 (= Σ des catégories de niveau 1).
+Recalculé en direct en mode édition.
 
 ## 9. Édition par lot (P7)
 

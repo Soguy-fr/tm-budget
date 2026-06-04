@@ -43,13 +43,14 @@ export default async function InternePage() {
     supabase
       .from("budget_monthly")
       .select("line_id, year, month, amount, bailleur_id")
-      .eq("budget_id", budget.id),
+      .eq("budget_id", budget.id)
+      .range(0, 99999),
     supabase
       .from("budget_line_totals")
       .select("line_id, year, total_input")
       .eq("budget_id", budget.id),
     supabase.from("bailleurs").select("*").order("code"),
-    supabase.from("gl_entries").select("*"),
+    supabase.from("gl_entries").select("*").range(0, 99999),
   ]);
 
   // Recettes prévues (tous bailleurs) agrégées par année:mois (BR-7.2).
