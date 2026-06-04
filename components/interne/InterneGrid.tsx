@@ -321,17 +321,17 @@ export function InterneGrid({
         {dirty && <span className="text-sm text-alert">● modifications non enregistrées</span>}
       </div>
 
-      {/* BR-8.3 — accordéon des lignes budgétaires */}
+      {/* BR-8.3 — niveau d'affichage des lignes budgétaires */}
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
         <span className="text-slate-400">Affichage :</span>
-        <button onClick={expandAllLines} className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100">
-          Tout déplier
+        <button onClick={() => collapseToLevel(1)} className="rounded border border-slate-300 px-3 py-1 font-medium text-slate-600 hover:bg-slate-100" title="Niveau 1 — catégories seules">
+          1
         </button>
-        <button onClick={() => collapseToLevel(2)} className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100">
-          Cat. + sous-cat.
+        <button onClick={() => collapseToLevel(2)} className="rounded border border-slate-300 px-3 py-1 font-medium text-slate-600 hover:bg-slate-100" title="Niveaux 1 et 2">
+          2
         </button>
-        <button onClick={() => collapseToLevel(1)} className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-100">
-          Catégories seules
+        <button onClick={expandAllLines} className="rounded border border-slate-300 px-3 py-1 font-medium text-slate-600 hover:bg-slate-100" title="Niveau 3 — tout déplier">
+          3
         </button>
       </div>
 
@@ -675,29 +675,32 @@ function GridRow({
         </tr>
       )}
 
-      {/* F3.10 / BR-5.3 — ligne réalisé (lecture seule) sous la LB, mois par mois */}
-      {isLeaf && showSuivi && (
-        <tr className="border-b border-slate-100 bg-emerald-50/40 text-slate-500">
-          <td className="sticky left-0 bg-inherit px-2 py-1 text-left text-[10px]" style={{ paddingLeft: 20 + row.depth * 14 }}>
-            ↳ réalisé
-          </td>
-          <td className="px-2 py-1 text-right text-[11px]">
-            {formatEur(
-              months.reduce((s, _, i) => s + (realise[cellKey(row.id, year, i + 1)] ?? 0), 0),
-            )}
-          </td>
-          <td colSpan={2} />
-          {months.map((prev, i) => {
-            const r = realise[cellKey(row.id, year, i + 1)] ?? 0;
-            const over = r > prev; // BR-5.2 — dépassement en rouge
-            return (
-              <td key={i} className={`px-2 py-1 text-right text-[11px] ${over ? "font-medium text-alert" : ""}`}>
-                {r !== 0 ? formatEur(r) : <span className="text-slate-300">·</span>}
-              </td>
-            );
-          })}
-        </tr>
-      )}
+      {/* F3.10 / BR-5.3 — ligne réalisé (lecture seule), toutes LB (niv.1/2 agrégé),
+          visible même repliée pour voir les dépenses par catégorie */}
+      {showSuivi && (() => {
+        const ids = isLeaf ? [row.id] : row.leafIds;
+        const realiseMonths = Array.from({ length: 12 }, (_, i) =>
+          ids.reduce((s, id) => s + (realise[cellKey(id, year, i + 1)] ?? 0), 0),
+        );
+        const realiseTotal = realiseMonths.reduce((a, b) => a + b, 0);
+        return (
+          <tr className="border-b border-slate-100 bg-emerald-50/40 text-slate-500">
+            <td className="sticky left-0 bg-inherit px-2 py-1 text-left text-[10px]" style={{ paddingLeft: 20 + row.depth * 14 }}>
+              ↳ réalisé
+            </td>
+            <td className="px-2 py-1 text-right text-[11px]">{formatEur(realiseTotal)}</td>
+            <td colSpan={2} />
+            {realiseMonths.map((r, i) => {
+              const over = r > (months[i] ?? 0); // BR-5.2 — dépassement en rouge
+              return (
+                <td key={i} className={`px-2 py-1 text-right text-[11px] ${over ? "font-medium text-alert" : ""}`}>
+                  {r !== 0 ? formatEur(r) : <span className="text-slate-300">·</span>}
+                </td>
+              );
+            })}
+          </tr>
+        );
+      })()}
     </>
   );
 }

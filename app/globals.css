@@ -20,3 +20,14 @@ h1, h2, h3 {
 .cell-input { @apply text-input; }       /* saisie = bleu */
 .cell-formula { @apply text-formula; }   /* calcul = noir */
 .cell-alert { @apply text-alert; }       /* écart / dépassement = rouge */
+
+/* Saisie montant = frappe directe, pas d'incrémenteurs +1/−1 (UI-FLOWS §3) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

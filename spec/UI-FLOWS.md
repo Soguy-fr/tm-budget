@@ -82,6 +82,8 @@ Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
 ### Mode édition (BR-9.1)
 - Hors édition : tout en lecture (noir), couches consultables.
 - Clic « Éditer » : champs saisissables en bleu. Modifs locales.
+- Saisie des montants = **frappe directe du nombre**, sans incrémenteurs +1/−1
+  (pas de boutons stepper sur les champs numériques).
 - Re-clic / « Enregistrer » : envoi groupé + recalcul. Indicateur ● si non enregistré.
 
 ## 4. Pages « Bailleur » (F4) — même gabarit

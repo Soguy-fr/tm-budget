@@ -96,6 +96,9 @@ Mise en évidence rouge si `réalisé > prévu` (dépassement).
 ### BR-5.3 — Affichage ligne réalisé (bouton « Suivi des dépenses »)
 Quand activé, une ligne réalisé s'affiche **sous** la ligne prévue, mois par mois
 (ex : prévu 1 000 € janvier → réalisé 938 € en dessous). Ligne réalisé en lecture seule.
+La ligne réalisé s'affiche aussi pour les LB de **niveau 1 et 2** (réalisé agrégé
+= Σ des feuilles), et reste visible même lorsque la catégorie est repliée (BR-8.3) —
+on voit ainsi les dépenses par catégorie sans déplier.
 
 ## 6. Suivi par bailleur
 
@@ -147,10 +150,10 @@ Chaque année est un bloc accordéon repliable indépendamment.
 
 ### BR-8.3 — Accordéon sur les lignes budgétaires
 Dans le tableur, chaque LB de niveau 1 ou 2 peut être repliée pour masquer ses
-enfants (chevron ▶/▼). Boutons globaux sous le titre :
-- **Tout déplier** : toutes les LB visibles ;
-- **Catégories seules** : ne montre que le niveau 1 (replie tous les niveaux 1) ;
-- **Cat. + sous-cat.** : montre niveaux 1 et 2, masque les lignes niveau 3 (replie tous les niveaux 2).
+enfants (chevron ▶/▼). Sous le titre, **3 boutons de niveau d'affichage** :
+- **1** : ne montre que le niveau 1 (replie tous les niveaux 1) ;
+- **2** : montre niveaux 1 et 2, masque le niveau 3 (replie tous les niveaux 2) ;
+- **3** : tout déplier (toutes les LB visibles).
 L'état de repli est purement d'affichage (non persisté), partagé entre les années.
 
 ### BR-8.4 — Total annuel du budget
