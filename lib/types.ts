@@ -8,6 +8,7 @@ export type StructureLine = {
   parent_id: string | null;
   sort_order: number;
   active: boolean;
+  comment: string | null;
   created_at: string;
   updated_at: string;
 };

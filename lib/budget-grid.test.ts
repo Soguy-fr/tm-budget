@@ -16,6 +16,7 @@ const L = (
   parent_id,
   sort_order,
   active: true,
+  comment: null,
   created_at: "",
   updated_at: "",
 });

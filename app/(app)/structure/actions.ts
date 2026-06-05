@@ -71,6 +71,21 @@ export async function renameLine(
   return { ok: true };
 }
 
+// F1.7 — Mettre à jour le commentaire libre d'une LB.
+export async function updateComment(
+  id: string,
+  comment: string,
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("structure_lines")
+    .update({ comment: comment.trim() || null })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/structure");
+  return { ok: true };
+}
+
 // F1.5 — Supprimer (interdit si montant/écriture liés, P8 ; sinon soft-delete).
 export async function deleteLine(id: string): Promise<ActionResult> {
   const supabase = createClient();

@@ -20,6 +20,7 @@
 | F1.4 | Réordonner les LB (champ ordre) | 🟡 | P3 |
 | F1.5 | Supprimer une LB (interdit si montant/écriture liés ; sinon soft-delete) | 🟢 | P8 |
 | F1.6 | Masquer les LB vides (bouton « masquer vide ») | 🟡 | — |
+| F1.7 | Commentaire libre par LB (édité dans Configuration), affiché en bulle au survol dans Suivi interne et Grand Livre | 🟢 | — |
 
 ## F2 — Gestion des budgets
 
@@ -76,9 +77,10 @@
 | F5.7 | Indicateur conforme au plan (oui/non) par écriture | 🟡 | BR-4.2 |
 | F5.8 | Filtre date en accordéon (année puis mois) + bouton « Réinitialiser les filtres » | 🟢 | — |
 | F5.9 | Largeur des colonnes ajustable (poignée de redimensionnement) | 🟢 | — |
-| F5.10 | Colonne « Description LB » + menu déroulant LB affichant code ET intitulé, trié dans l'ordre de la structure | 🟢 | — |
-| F5.11 | Sur GL filtré par LB+année+mois : bandeau récap « réalisé total vs planifié pour la période » | 🟢 | BR-5.1 |
-| F5.12 | Bouton « Retour au budget » sur le GL ouvert depuis une cellule du tableur (revient à la bonne ligne) | 🟢 | F3.14 |
+| F5.10 | Menu déroulant LB (filtre + ligne) affichant code ET intitulé, trié dans l'ordre naturel de la structure (1.1.2 avant 1.1.10) ; bulle commentaire au survol de la colonne LB. Plus de colonne « Description » dédiée. | 🟢 | F1.7 |
+| F5.11 | Sur GL filtré par LB+année+mois : bloc récap synthétique — nom de la ligne en avant, commentaire dessous, puis réalisé / planifié / solde, couleur si dépassement | 🟢 | BR-5.1, F1.7 |
+| F5.12 | Bouton « Retour au budget » → ancre sur la ligne budgétaire (`/interne#lb-<id>`) | 🟢 | F3.14 |
+| F5.13 | Bouton « Importer CSV » en haut à droite | 🟢 | — |
 
 ## F6 — Suivi
 

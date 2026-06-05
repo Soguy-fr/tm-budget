@@ -30,13 +30,13 @@ export default async function GrandLivrePage({
     .maybeSingle();
 
   const [{ data: entries }, { data: lines }, { data: bailleurs }, planRes] = await Promise.all([
-    supabase.from("gl_entries").select("*").order("entry_date", { ascending: false }),
+    // Perf : limiter l'affichage aux 2000 écritures les plus récentes.
+    supabase.from("gl_entries").select("*").order("entry_date", { ascending: false }).range(0, 1999),
     supabase
       .from("structure_lines")
       .select("*")
       .eq("level", 3)
-      .eq("active", true)
-      .order("sort_order"),
+      .eq("active", true),
     supabase.from("bailleurs").select("*").order("code"),
     budget
       ? supabase
@@ -57,6 +57,16 @@ export default async function GrandLivrePage({
     planAmountByCell[k] = (planAmountByCell[k] ?? 0) + Number(p.amount);
   }
 
+  // F5.10 — tri naturel des LB par code (1.1.2 avant 1.1.10), ordre de la structure.
+  const sortedLines = ((lines ?? []) as StructureLine[]).sort((a, b) =>
+    a.code.localeCompare(b.code, undefined, { numeric: true }),
+  );
+  // F1.7 — commentaire par LB (bulle au survol de la colonne LB).
+  const commentByLine: Record<string, string> = {};
+  for (const l of sortedLines) {
+    if (l.comment) commentByLine[l.id] = l.comment;
+  }
+
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-brand-night">Grand Livre</h1>
@@ -66,10 +76,11 @@ export default async function GrandLivrePage({
       </p>
       <GlTable
         entries={(entries ?? []) as GlEntry[]}
-        lines={(lines ?? []) as StructureLine[]}
+        lines={sortedLines}
         bailleurs={(bailleurs ?? []) as Bailleur[]}
         planByCell={planByCell}
         planAmountByCell={planAmountByCell}
+        commentByLine={commentByLine}
         initialFilters={{
           line: searchParams.line,
           year: searchParams.year,

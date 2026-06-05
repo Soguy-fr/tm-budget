@@ -14,8 +14,7 @@ const COLUMNS = [
   { key: "type", label: "Type", w: 84 },
   { key: "label", label: "Libellé", w: 220 },
   { key: "amount", label: "Montant", w: 96 },
-  { key: "lb", label: "LB", w: 90 },
-  { key: "lbdesc", label: "Description LB", w: 220 },
+  { key: "lb", label: "LB", w: 220 },
   { key: "bailleur", label: "Bailleur", w: 90 },
   { key: "statut", label: "Statut", w: 96 },
 ] as const;
@@ -26,6 +25,7 @@ export function GlTable({
   bailleurs,
   planByCell,
   planAmountByCell,
+  commentByLine,
   initialFilters,
 }: {
   entries: GlEntry[];
@@ -34,6 +34,8 @@ export function GlTable({
   planByCell: Record<string, string>;
   // F5.11 — montant planifié par maille (LB:année:mois).
   planAmountByCell?: Record<string, number>;
+  // F1.7 — commentaire par LB (bulle au survol).
+  commentByLine?: Record<string, string>;
   // F3.14 / F5.12 — filtres pré-remplis + provenance (clic d'une cellule du tableur).
   initialFilters?: { line?: string; year?: string; month?: string; fromInterne?: boolean };
 }) {
@@ -187,55 +189,77 @@ export function GlTable({
 
   return (
     <div>
-      {/* F5.12 — retour au budget (ligne d'origine) */}
-      {initialFilters?.fromInterne && (
-        <button
-          onClick={() => router.back()}
-          className="mb-3 inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
-        >
-          ← Retour au budget
-        </button>
-      )}
+      {/* Barre du haut : retour (gauche) + Importer CSV (droite, F5.13) */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {/* F5.12 — retour au budget, ancré sur la ligne d'origine */}
+          {initialFilters?.fromInterne && (
+            <button
+              onClick={() =>
+                initialFilters.line
+                  ? router.push(`/interne#lb-${initialFilters.line}`)
+                  : router.back()
+              }
+              className="inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+            >
+              ← Retour au budget
+            </button>
+          )}
+          {importMsg && <span className="text-sm text-brand-emerald">{importMsg}</span>}
+        </div>
+        <div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+            className="hidden"
+            id="gl-file"
+          />
+          <label
+            htmlFor="gl-file"
+            className="cursor-pointer rounded bg-brand-night px-3 py-1.5 text-sm text-white"
+          >
+            Importer CSV
+          </label>
+        </div>
+      </div>
 
-      {/* F5.11 — récap réalisé vs planifié pour la maille ciblée */}
+      {/* F5.11 — bloc récap synthétique pour la maille ciblée */}
       {showSummary && (
-        <div className="mb-3 flex flex-wrap items-center gap-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm">
-          <span className="text-slate-500">
-            {lineLabel.get(fLine) ?? fLine} · {fYear}/{String(Number(fMonth)).padStart(2, "0")}
-          </span>
-          <span>
-            Réalisé (dépenses) :{" "}
-            <span className={`font-medium ${realiseDep > planifie ? "text-alert" : "text-brand-night"}`}>
-              {formatEur(realiseDep)}
+        <div className="mb-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-base font-bold text-brand-night">
+            {lineLabel.get(fLine) ?? fLine}
+            <span className="ml-2 text-xs font-normal text-slate-400">
+              {fYear}/{String(Number(fMonth)).padStart(2, "0")}
             </span>
-          </span>
-          <span>
-            Planifié pour la période :{" "}
-            <span className="font-medium text-brand-night">{formatEur(planifie)}</span>
-          </span>
-          <span className="text-slate-400">
-            Écart : {formatEur(planifie - realiseDep)}
-          </span>
+          </div>
+          {commentByLine?.[fLine] && (
+            <p className="mt-1 text-sm italic text-slate-500">{commentByLine[fLine]}</p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-6 text-sm">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">Réalisé</div>
+              <div className={`text-lg font-bold ${realiseDep > planifie ? "text-alert" : "text-brand-night"}`}>
+                {formatEur(realiseDep)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">Planifié</div>
+              <div className="text-lg font-bold text-brand-night">{formatEur(planifie)}</div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">Solde</div>
+              <div className={`text-lg font-bold ${planifie - realiseDep < 0 ? "text-alert" : "text-brand-emerald"}`}>
+                {formatEur(planifie - realiseDep)}
+              </div>
+            </div>
+          </div>
+          {realiseDep > planifie && (
+            <p className="mt-2 text-xs font-medium text-alert">⚠ Dépassement du budget planifié</p>
+          )}
         </div>
       )}
-
-      <div className="mb-3 flex items-center gap-3">
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-          className="hidden"
-          id="gl-file"
-        />
-        <label
-          htmlFor="gl-file"
-          className="cursor-pointer rounded bg-brand-night px-3 py-1.5 text-sm text-white"
-        >
-          Importer CSV
-        </label>
-        {importMsg && <span className="text-sm text-brand-emerald">{importMsg}</span>}
-      </div>
 
       {error && (
         <p className="mb-3 rounded border border-alert/30 bg-red-50 p-2 text-sm text-alert">{error}</p>
@@ -357,7 +381,11 @@ export function GlTable({
                     {e.label}
                   </td>
                   <td className="px-2 py-1 text-right">{formatEur(e.amount)}</td>
-                  <td className="px-2 py-1">
+                  {/* F1.7 — bulle commentaire au survol de la cellule LB */}
+                  <td
+                    className={`px-2 py-1 ${e.line_id && commentByLine?.[e.line_id] ? "cursor-help" : ""}`}
+                    title={e.line_id ? commentByLine?.[e.line_id] ?? lineLabel.get(e.line_id) ?? "" : ""}
+                  >
                     <select
                       value={e.line_id ?? ""}
                       disabled={pending}
@@ -371,10 +399,6 @@ export function GlTable({
                         </option>
                       ))}
                     </select>
-                  </td>
-                  {/* F5.10 — description LB allouée */}
-                  <td className="truncate px-2 py-1 text-slate-500" title={e.line_id ? lineLabel.get(e.line_id) ?? "" : ""}>
-                    {e.line_id ? lineLabel.get(e.line_id) ?? "—" : <span className="text-slate-300">—</span>}
                   </td>
                   <td className="px-2 py-1">
                     <select

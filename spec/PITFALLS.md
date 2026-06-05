@@ -74,3 +74,18 @@ suivi des dépenses ; le bailleur ne sert qu'au suivi par bailleur (BR-6).
 
 **Règle** : bien distinguer les deux suivis — **dépenses** (clé = LB) vs
 **bailleur** (clé = bailleur). Ne jamais coupler les deux conditions.
+
+## P-BUG-5 — Pages lentes : chargement non borné + rendu de gros tableaux
+
+**Symptôme** : pages très lentes, onglet Chrome saturé.
+
+**Causes probables** : requêtes `.range(0, 99999)` chargeant tout le Grand Livre +
+rendu de toutes les écritures dans une table `table-fixed`, en `force-dynamic`
+(refetch à chaque navigation).
+
+**Mitigations appliquées** : la liste du GL est limitée aux 2000 écritures les plus
+récentes (`.range(0, 1999)` + tri date desc). Les agrégats (réalisé, trésorerie)
+restent calculés côté serveur.
+
+**Règle** : ne jamais rendre des milliers de lignes éditables sans pagination ou
+virtualisation. Borner les requêtes d'affichage ; garder les agrégats côté base/serveur.

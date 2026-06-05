@@ -25,6 +25,7 @@ create table structure_lines (
   parent_id    uuid references structure_lines(id),
   sort_order   int not null,                   -- ordre d'affichage, indépendant du code
   active       boolean not null default true,
+  comment      text,                            -- commentaire libre (F1.7), bulle au survol
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );

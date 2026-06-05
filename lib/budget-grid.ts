@@ -12,6 +12,8 @@ export type FlatRow = {
   leafIds: string[];
   // a au moins un enfant (→ pliable, BR-8.3).
   hasChildren: boolean;
+  // commentaire libre (F1.7), affiché en bulle au survol.
+  comment: string | null;
 };
 
 // Aplati l'arbre en lignes d'affichage ordonnées, avec la liste des feuilles
@@ -35,6 +37,7 @@ export function flattenForGrid(lines: StructureLine[]): FlatRow[] {
         depth,
         leafIds: leavesOf(n),
         hasChildren: n.children.length > 0,
+        comment: n.comment ?? null,
       });
       walk(n.children, depth + 1);
     }

@@ -87,6 +87,19 @@ export function InterneGrid({
     return (id: string | null) => (id ? map.get(id) ?? UNASSIGNED : UNASSIGNED);
   }, [bailleurs]);
 
+  // F5.12 — au chargement, scroller vers la LB ciblée par l'ancre (#lb-<id>).
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const el = document.getElementById(hash.slice(1));
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-brand-emerald");
+      const t = setTimeout(() => el.classList.remove("ring-2", "ring-brand-emerald"), 2000);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   useEffect(() => {
     if (!dirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -606,7 +619,12 @@ function GridRow({
   return (
     <>
       <tr className={`border-b border-slate-50 ${isLeaf ? "" : "bg-slate-50/60 font-medium"}`}>
-        <td className="sticky left-0 bg-inherit px-2 py-1 text-left" style={{ paddingLeft: 8 + row.depth * 14 }}>
+        <td
+          id={`lb-${row.id}`}
+          title={row.comment ?? undefined}
+          className={`sticky left-0 scroll-mt-24 bg-inherit px-2 py-1 text-left ${row.comment ? "cursor-help" : ""}`}
+          style={{ paddingLeft: 8 + row.depth * 14 }}
+        >
           {row.hasChildren ? (
             <button
               onClick={() => onToggleLine(row.id)}
@@ -620,6 +638,7 @@ function GridRow({
           )}
           <span className="mr-2 font-mono text-[10px] text-slate-400">{row.code}</span>
           {row.label}
+          {row.comment && <span className="ml-1 text-[10px] text-slate-400">💬</span>}
           {isLeaf && editing && (
             <span className="ml-2 inline-flex gap-1">
               <button onClick={() => doRepartir(row.id, year)} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 hover:bg-slate-200" title="Répartir (BR-1.2)">

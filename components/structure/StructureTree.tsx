@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { TreeNode } from "@/lib/structure";
-import { addLine, renameLine, deleteLine } from "@/app/(app)/structure/actions";
+import { addLine, renameLine, deleteLine, updateComment } from "@/app/(app)/structure/actions";
 
 export function StructureTree({ tree }: { tree: TreeNode[] }) {
   const router = useRouter();
@@ -98,6 +98,11 @@ function Row({
     if (ok) run(() => deleteLine(node.id));
   }
 
+  function onComment() {
+    const c = window.prompt("Commentaire (F1.7)", node.comment ?? "");
+    if (c !== null) run(() => updateComment(node.id, c));
+  }
+
   return (
     <div>
       <div
@@ -109,6 +114,11 @@ function Row({
             {node.code}
           </span>
           {node.label}
+          {node.comment && (
+            <span className="ml-2 cursor-help text-xs text-slate-400" title={node.comment}>
+              💬
+            </span>
+          )}
         </span>
         <span className="flex gap-2 text-xs">
           {node.level < 3 && (
@@ -120,6 +130,9 @@ function Row({
               + Ligne
             </button>
           )}
+          <button onClick={onComment} disabled={pending} className="text-slate-500 hover:underline">
+            Commentaire
+          </button>
           <button onClick={onRename} disabled={pending} className="text-slate-500 hover:underline">
             Renommer
           </button>
