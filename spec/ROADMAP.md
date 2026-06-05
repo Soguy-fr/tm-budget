@@ -79,6 +79,10 @@
   Voir UI-FLOWS §7.
 - Jalon 11 — Export XLSX budget + rapport bailleur (F9.1, F4.8).
 - Jalon 12 — Purge annuelle (F9.2), masquer LB vides (F1.6), réordonner LB (F1.4).
+  🚧 **en cours** — F1.4 boutons ▲▼ dans Configuration (swap `sort_order`,
+  helper pur `reorderSwap`) ; F1.6 toggle « Masquer vides » sur Suivi interne
+  (helper pur `lineIsEmpty`) ; F9.2 purge sur Scénarios (reset données
+  transactionnelles, structure + bailleurs conservés, double confirmation).
 - Jalon 13 — Avertissement/indicateur plan vs réel (F5.6, F5.7), alerte dépassement bailleur (F6.3).
 - Bascule Supabase Pro (backups, storage) si usage réel.
 

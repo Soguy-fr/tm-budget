@@ -1,5 +1,51 @@
 import { describe, it, expect } from "vitest";
-import { nextChildCode, canDeleteLine, nextSortOrder } from "./structure";
+import { nextChildCode, canDeleteLine, nextSortOrder, reorderSwap } from "./structure";
+
+describe("reorderSwap (F1.4 — échange sort_order)", () => {
+  const sibs = [
+    { id: "a", sort_order: 10 },
+    { id: "b", sort_order: 20 },
+    { id: "c", sort_order: 30 },
+  ];
+
+  it("monte b : échange avec a", () => {
+    expect(reorderSwap(sibs, "b", "up")).toEqual([
+      { id: "b", sort_order: 10 },
+      { id: "a", sort_order: 20 },
+    ]);
+  });
+
+  it("descend b : échange avec c", () => {
+    expect(reorderSwap(sibs, "b", "down")).toEqual([
+      { id: "b", sort_order: 30 },
+      { id: "c", sort_order: 20 },
+    ]);
+  });
+
+  it("bordure haute : null (no-op)", () => {
+    expect(reorderSwap(sibs, "a", "up")).toBeNull();
+  });
+
+  it("bordure basse : null (no-op)", () => {
+    expect(reorderSwap(sibs, "c", "down")).toBeNull();
+  });
+
+  it("id introuvable : null", () => {
+    expect(reorderSwap(sibs, "z", "up")).toBeNull();
+  });
+
+  it("trie par sort_order avant d'échanger (ordre d'entrée indifférent)", () => {
+    const shuffled = [
+      { id: "c", sort_order: 30 },
+      { id: "a", sort_order: 10 },
+      { id: "b", sort_order: 20 },
+    ];
+    expect(reorderSwap(shuffled, "a", "down")).toEqual([
+      { id: "a", sort_order: 20 },
+      { id: "b", sort_order: 10 },
+    ]);
+  });
+});
 
 describe("nextChildCode (P3 — pas de renumérotation)", () => {
   it("niveau 1 : prochain entier", () => {

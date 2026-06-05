@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { TreeNode } from "@/lib/structure";
-import { addLine, updateLine, deleteLine } from "@/app/(app)/structure/actions";
+import { addLine, updateLine, deleteLine, moveLine } from "@/app/(app)/structure/actions";
 
 export function StructureTree({ tree }: { tree: TreeNode[] }) {
   const router = useRouter();
@@ -40,8 +40,16 @@ export function StructureTree({ tree }: { tree: TreeNode[] }) {
           </p>
         )}
 
-        {tree.map((node) => (
-          <Row key={node.id} node={node} depth={0} run={run} pending={pending} />
+        {tree.map((node, i) => (
+          <Row
+            key={node.id}
+            node={node}
+            depth={0}
+            run={run}
+            pending={pending}
+            isFirst={i === 0}
+            isLast={i === tree.length - 1}
+          />
         ))}
       </div>
 
@@ -73,11 +81,15 @@ function Row({
   depth,
   run,
   pending,
+  isFirst,
+  isLast,
 }: {
   node: TreeNode;
   depth: number;
   run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
   pending: boolean;
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -99,7 +111,25 @@ function Row({
             </span>
           )}
         </span>
-        <span className="flex gap-2 text-xs">
+        <span className="flex items-center gap-2 text-xs">
+          <span className="flex gap-0.5">
+            <button
+              onClick={() => run(() => moveLine(node.id, "up"))}
+              disabled={pending || isFirst}
+              title="Monter"
+              className="px-1 text-slate-400 enabled:hover:text-brand-night disabled:opacity-30"
+            >
+              ▲
+            </button>
+            <button
+              onClick={() => run(() => moveLine(node.id, "down"))}
+              disabled={pending || isLast}
+              title="Descendre"
+              className="px-1 text-slate-400 enabled:hover:text-brand-night disabled:opacity-30"
+            >
+              ▼
+            </button>
+          </span>
           {node.level < 3 && (
             <button
               onClick={() => setAdding((v) => !v)}
@@ -143,8 +173,16 @@ function Row({
         </div>
       )}
 
-      {node.children.map((child) => (
-        <Row key={child.id} node={child} depth={depth + 1} run={run} pending={pending} />
+      {node.children.map((child, i) => (
+        <Row
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          run={run}
+          pending={pending}
+          isFirst={i === 0}
+          isLast={i === node.children.length - 1}
+        />
       ))}
     </div>
   );

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Budget } from "@/lib/types";
 import { BudgetList } from "@/components/budgets/BudgetList";
+import { PurgeZone } from "@/components/budgets/PurgeZone";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function BudgetsPage() {
         budgets={(budgets ?? []) as Budget[]}
         yearsByBudget={yearsByBudget}
       />
+      <PurgeZone />
     </div>
   );
 }

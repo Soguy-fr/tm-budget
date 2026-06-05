@@ -63,6 +63,38 @@ export function lineMonths(
   return Array.from({ length: 12 }, (_, i) => monthly[cellKey(lineId, year, i + 1)] ?? 0);
 }
 
+// F1.6 — total général d'une ligne sur toutes les années (somme de ses feuilles).
+export function lineGrandTotal(
+  leafIds: string[],
+  years: number[],
+  monthly: Record<string, number>,
+): number {
+  let s = 0;
+  for (const id of leafIds) {
+    for (const y of years) {
+      for (let m = 1; m <= 12; m++) s += monthly[cellKey(id, y, m)] ?? 0;
+    }
+  }
+  return s;
+}
+
+// F1.6 — une ligne est « vide » si la somme de ses feuilles sur toutes les
+// années vaut 0, totaux annuels saisis (BR-1.1) inclus.
+export function lineIsEmpty(
+  leafIds: string[],
+  years: number[],
+  monthly: Record<string, number>,
+  totals: Record<string, number> = {},
+): boolean {
+  if (lineGrandTotal(leafIds, years, monthly) !== 0) return false;
+  for (const id of leafIds) {
+    for (const y of years) {
+      if ((totals[totalKey(id, y)] ?? 0) !== 0) return false;
+    }
+  }
+  return true;
+}
+
 // Agrège les 12 mois d'un ensemble de feuilles (niveau 3) — total d'un parent.
 export function aggregateMonths(
   leafIds: string[],

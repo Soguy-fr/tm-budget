@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { flattenForGrid, aggregateMonths, lineMonths, cellKey } from "./budget-grid";
+import {
+  flattenForGrid, aggregateMonths, lineMonths, cellKey,
+  lineGrandTotal, lineIsEmpty, totalKey,
+} from "./budget-grid";
 import type { StructureLine } from "./types";
 
 const L = (
@@ -47,6 +50,32 @@ describe("aggregateMonths (total parent = Σ feuilles)", () => {
     expect(agg[0]).toBe(4300); // janvier
     expect(agg[1]).toBe(2500); // février
     expect(agg[11]).toBe(0);
+  });
+});
+
+describe("lineGrandTotal / lineIsEmpty (F1.6)", () => {
+  const years = [2026, 2027];
+  it("somme toutes les feuilles sur toutes les années", () => {
+    const monthly: Record<string, number> = {
+      [cellKey("a", 2026, 1)]: 100,
+      [cellKey("b", 2026, 5)]: 50,
+      [cellKey("a", 2027, 12)]: 25,
+    };
+    expect(lineGrandTotal(["a", "b"], years, monthly)).toBe(175);
+  });
+
+  it("vide si tout est 0", () => {
+    expect(lineIsEmpty(["a", "b"], years, {})).toBe(true);
+  });
+
+  it("non vide si une maille ≠ 0", () => {
+    const monthly = { [cellKey("a", 2026, 3)]: 1 };
+    expect(lineIsEmpty(["a"], years, monthly)).toBe(false);
+  });
+
+  it("non vide si un total annuel saisi ≠ 0 (mailles à 0)", () => {
+    const totals = { [totalKey("a", 2026)]: 500 };
+    expect(lineIsEmpty(["a"], years, {}, totals)).toBe(false);
   });
 });
 

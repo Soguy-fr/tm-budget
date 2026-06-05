@@ -17,9 +17,9 @@
 | F1.1 | Afficher l'arbre hiérarchique des LB (niveaux 1/2/3) | 🟢 | P2, P3 |
 | F1.2 | Ajouter une LB (numéro suivant dans la branche, pas de renumérotation) | 🟢 | P3 |
 | F1.3 | Éditer une LB via un panneau dédié : intitulé (1 ligne) + commentaire (multiligne), avertissement de propagation ; suppression UNIQUEMENT depuis l'éditeur (bouton « Effacer » + confirmation) | 🟢 | P8 |
-| F1.4 | Réordonner les LB (champ ordre) | 🟡 | P3 |
+| F1.4 | Réordonner les LB parmi leurs frères (boutons ▲▼ dans Configuration, échange `sort_order` ; aucun renumérotation de code) | 🟡 | P3 |
 | F1.5 | Supprimer une LB (interdit si montant/écriture liés ; sinon soft-delete) | 🟢 | P8 |
-| F1.6 | Masquer les LB vides (bouton « masquer vide ») | 🟡 | — |
+| F1.6 | Masquer les LB vides sur Suivi interne (toggle « Masquer vides »). Masquage **par année affichée** : une feuille est masquée si son **montant affiché** (total saisi `total_input` s'il existe, sinon Σ mois) pour cette année = 0 ; un parent est masqué si l'agrégat de ses mois pour l'année = 0 | 🟡 | — |
 | F1.7 | Commentaire libre par LB (édité dans Configuration), affiché en bulle au survol dans Suivi interne et Grand Livre | 🟢 | — |
 
 ## F2 — Gestion des budgets
@@ -114,7 +114,7 @@
 | # | Fonctionnalité | Phase | Règles |
 |---|---|---|---|
 | F9.1 | Export XLSX d'un budget + suivis | 🟡 | BR-10.1 |
-| F9.2 | Purge annuelle (export puis reset, structure conservée) | 🟡 | BR-10.2 |
+| F9.2 | Purge annuelle : reset des données transactionnelles (mailles, totaux saisis, écritures GL, recettes/dépenses bailleur) ; structure LB + bailleurs conservés ; double confirmation (saisir « PURGER »). Export XLSX recommandé avant (F9.1, Jalon 11) | 🟡 | BR-10.2 |
 | F9.3 | Sauvegardes / restauration | 🔵 | — |
 
 ## F10 — Transverse

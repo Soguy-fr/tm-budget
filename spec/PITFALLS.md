@@ -89,3 +89,24 @@ restent calculés côté serveur.
 
 **Règle** : ne jamais rendre des milliers de lignes éditables sans pagination ou
 virtualisation. Borner les requêtes d'affichage ; garder les agrégats côté base/serveur.
+
+## P-BUG-6 — « Masquer vides » ne masque pas une ligne affichée à 0
+
+**Symptôme** : avec « Masquer vides » actif, une LB affichant « 0 € » (ex. 1.1.2)
+restait visible.
+
+**Causes** :
+1. **Sémantique « toutes années »** : la première version masquait une LB seulement
+   si elle était nulle sur **toutes** les années. Une ligne nulle dans l'année
+   affichée mais saisie dans une autre année restait visible → contre-intuitif.
+2. **Override `total_input`** : le total affiché d'une feuille peut être le total
+   saisi (BR-1.1), distinct de Σ mois. Tester l'emptiness sur Σ mois pouvait
+   diverger de ce que l'utilisateur voit.
+
+**Correctif** : masquage **par bloc d'année**, basé sur le **montant réellement
+affiché** : feuille = `total_input ?? Σ mois` pour cette année ; parent = agrégat
+des mois de l'année. Calculé dans `YearBlock` (pas au niveau global).
+
+**Règle** : un filtre « masquer ce qui est à 0 » doit se baser sur la **valeur que
+l'utilisateur voit à l'écran**, dans le **périmètre affiché** (ici l'année), pas sur
+un agrégat global ni sur une grandeur sous-jacente différente de l'affichage.

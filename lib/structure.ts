@@ -70,3 +70,25 @@ export function nextSortOrder(siblingSortOrders: number[]): number {
   const max = siblingSortOrders.reduce((a, b) => Math.max(a, b), 0);
   return max + 10;
 }
+
+// F1.4 — réordonner une LB parmi ses frères : échange le `sort_order` avec le
+// voisin dans la direction donnée. Renvoie la paire d'enregistrements à
+// persister, ou null si la ligne est déjà en bordure (no-op) ou introuvable.
+// Le code n'est jamais touché (P3) : seul l'ordre d'affichage change.
+export function reorderSwap(
+  siblings: { id: string; sort_order: number }[],
+  id: string,
+  dir: "up" | "down",
+): { id: string; sort_order: number }[] | null {
+  const sorted = [...siblings].sort((a, b) => a.sort_order - b.sort_order);
+  const i = sorted.findIndex((s) => s.id === id);
+  if (i < 0) return null;
+  const j = dir === "up" ? i - 1 : i + 1;
+  if (j < 0 || j >= sorted.length) return null;
+  const a = sorted[i];
+  const b = sorted[j];
+  return [
+    { id: a.id, sort_order: b.sort_order },
+    { id: b.id, sort_order: a.sort_order },
+  ];
+}

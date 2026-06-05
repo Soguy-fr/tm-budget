@@ -71,6 +71,8 @@ export function InterneGrid({
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   // BR-8.3 — lignes budgétaires repliées (ids de LB niv.1/2). Affichage seul.
   const [collapsedLines, setCollapsedLines] = useState<Set<string>>(new Set());
+  // F1.6 — masquer les LB vides (somme nulle sur toutes les années).
+  const [hideEmpty, setHideEmpty] = useState(false);
 
   // P-BUG-1 — resynchroniser les copies de travail quand les props serveur
   // changent (router.refresh / revalidation). Sans ça, « Rafraîchir » n'a aucun
@@ -354,6 +356,18 @@ export function InterneGrid({
         <button onClick={expandAllLines} className="rounded border border-slate-300 px-3 py-1 font-medium text-slate-600 hover:bg-slate-100" title="Niveau 3 — tout déplier">
           3
         </button>
+        <span className="mx-1 h-4 w-px bg-slate-200" />
+        <button
+          onClick={() => setHideEmpty((v) => !v)}
+          className={`rounded border px-3 py-1 font-medium ${
+            hideEmpty
+              ? "border-brand-emerald bg-emerald-50 text-brand-night"
+              : "border-slate-300 text-slate-600 hover:bg-slate-100"
+          }`}
+          title="F1.6 — masquer les lignes dont le montant est nul sur toutes les années"
+        >
+          {hideEmpty ? "✓ " : ""}Masquer vides
+        </button>
       </div>
 
       {showBailleur && (
@@ -399,6 +413,7 @@ export function InterneGrid({
           colorOf={colorOf}
           collapsed={collapsed.has(year)}
           collapsedLines={collapsedLines}
+          hideEmpty={hideEmpty}
           onToggleLine={toggleLine}
           onToggle={() => toggleYear(year)}
           onRemove={() => onRemoveYear(year)}
@@ -444,6 +459,7 @@ function YearBlock({
   colorOf,
   collapsed,
   collapsedLines,
+  hideEmpty,
   onToggleLine,
   onToggle,
   onRemove,
@@ -465,6 +481,7 @@ function YearBlock({
   colorOf: (id: string | null) => string;
   collapsed: boolean;
   collapsedLines: Set<string>;
+  hideEmpty: boolean;
   onToggleLine: (id: string) => void;
   onToggle: () => void;
   onRemove: () => void;
@@ -479,12 +496,26 @@ function YearBlock({
     0,
   );
 
+  // F1.6 — lignes dont le montant AFFICHÉ cette année est nul (override total_input
+  // pris en compte pour les feuilles, agrégat des mois pour les parents).
+  const emptyThisYear = new Set<string>();
+  if (hideEmpty) {
+    for (const r of rows) {
+      const disp =
+        r.level === 3
+          ? workTotals[totalKey(r.id, year)] ?? sumMonths(leafMonths(r.id, year, work))
+          : sumMonths(aggregateMonths(r.leafIds, year, work));
+      if (disp === 0) emptyThisYear.add(r.id);
+    }
+  }
+
   // BR-8.3 — masquer les descendants d'une ligne repliée.
   const visibleRows: FlatRow[] = [];
   let hideDepth = -1;
   for (const row of rows) {
     if (hideDepth >= 0 && row.depth > hideDepth) continue;
     hideDepth = -1;
+    if (emptyThisYear.has(row.id)) continue; // F1.6 — LB vide (année affichée)
     visibleRows.push(row);
     if (row.hasChildren && collapsedLines.has(row.id)) hideDepth = row.depth;
   }

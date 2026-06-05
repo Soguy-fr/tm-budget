@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { nextChildCode, nextSortOrder, canDeleteLine } from "@/lib/structure";
+import { nextChildCode, nextSortOrder, canDeleteLine, reorderSwap } from "@/lib/structure";
 import type { StructureLine } from "@/lib/types";
 
 type ActionResult = { ok: boolean; error?: string };
@@ -99,6 +99,42 @@ export async function updateComment(
     .update({ comment: comment.trim() || null })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
+  revalidatePath("/structure");
+  return { ok: true };
+}
+
+// F1.4 — Réordonner une LB parmi ses frères (échange sort_order, P3 : code intact).
+export async function moveLine(
+  id: string,
+  dir: "up" | "down",
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data: row, error: e1 } = await supabase
+    .from("structure_lines")
+    .select("parent_id")
+    .eq("id", id)
+    .single();
+  if (e1 || !row) return { ok: false, error: "Ligne introuvable." };
+
+  const q = supabase.from("structure_lines").select("id, sort_order").eq("active", true);
+  const { data: sibs } = row.parent_id
+    ? await q.eq("parent_id", row.parent_id)
+    : await q.is("parent_id", null);
+
+  const pair = reorderSwap(
+    (sibs ?? []) as { id: string; sort_order: number }[],
+    id,
+    dir,
+  );
+  if (!pair) return { ok: true }; // déjà en bordure : no-op
+
+  for (const p of pair) {
+    const { error } = await supabase
+      .from("structure_lines")
+      .update({ sort_order: p.sort_order })
+      .eq("id", p.id);
+    if (error) return { ok: false, error: error.message };
+  }
   revalidatePath("/structure");
   return { ok: true };
 }

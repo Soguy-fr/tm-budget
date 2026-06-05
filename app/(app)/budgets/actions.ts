@@ -118,3 +118,35 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
   revalidatePath("/budgets");
   return { ok: true };
 }
+
+// F9.2 / BR-10.2 — Purge annuelle. Remet à zéro les données transactionnelles en
+// CONSERVANT la structure des LB et les bailleurs (P2). IRRÉVERSIBLE.
+// Double confirmation : l'appelant doit transmettre exactement « PURGER ».
+const PURGE_TABLES = [
+  "gl_entries",
+  "budget_monthly",
+  "budget_line_totals",
+  "bailleur_income_monthly",
+  "bailleur_expense_monthly",
+  "gl_imports",
+] as const;
+
+export async function purgeTransactionalData(
+  confirm: string,
+): Promise<ActionResult> {
+  if (confirm !== "PURGER") {
+    return { ok: false, error: "Confirmation invalide : saisir « PURGER »." };
+  }
+  const supabase = createClient();
+  // Filtre « id non nul » = tout supprimer (PostgREST exige un WHERE).
+  for (const table of PURGE_TABLES) {
+    const { error } = await supabase.from(table).delete().not("id", "is", null);
+    if (error) return { ok: false, error: `${table} : ${error.message}` };
+  }
+  // Structure (structure_lines), bailleurs, lignes bailleur et budgets conservés.
+  revalidatePath("/budgets");
+  revalidatePath("/interne");
+  revalidatePath("/grand-livre");
+  revalidatePath("/suivi");
+  return { ok: true };
+}

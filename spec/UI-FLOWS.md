@@ -51,6 +51,15 @@ Code     Intitulé                    [+ Ligne] [Masquer vides]
   budgets » (P8).
 - **Effacer** → uniquement dans l'éditeur (pas de bouton supprimer dans la liste,
   jugé trop dangereux). Confirmation explicite ; bloqué si montant/écriture liés (P8).
+- **Réordonner (F1.4)** → boutons ▲▼ par ligne, déplacent la LB parmi ses **frères
+  uniquement** (échange `sort_order`). Le **code n'est jamais renuméroté** (P3) :
+  seul l'ordre d'affichage change.
+
+> **Purge annuelle (F9.2)** — bouton en zone danger de la page **Scénario**.
+> Remet à zéro les données transactionnelles (mailles, totaux saisis, écritures GL,
+> recettes/dépenses bailleur). La **structure des LB et les bailleurs sont conservés**
+> (P2). Irréversible → **double confirmation** (saisir le mot « PURGER »). Exporter
+> avant (F9.1).
 
 ## 3. Page « Budget interne » — le tableur principal (F3, F7)
 
@@ -85,6 +94,11 @@ Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
 - **Afficher bailleur** : chaque cellule mois prend la couleur de son bailleur (BR-2.3). En mode édition, cliquer une cellule ouvre le choix du bailleur.
 - **Suivi des dépenses** : insère une ligne réalisé sous chaque LB (BR-5.3).
 - **Solde tréso** : insère la ligne du bas, sélecteur Budgété/Réel (BR-7.4).
+- **Masquer vides (F1.6)** : toggle qui retire, **dans chaque bloc d'année**, les
+  LB dont le **montant affiché pour cette année** vaut 0 (feuille : total saisi
+  s'il existe, sinon Σ mois ; parent : agrégat des mois). Le masquage est donc
+  par année : une LB nulle en 2025 mais saisie en 2026 reste visible dans le bloc
+  2026. Recalcul en direct quand on édite une valeur.
 
 ### Cellule « Total » d'une LB
 - Normale si total = Σ mois ; **rouge + écart affiché** sinon (BR-1.1).
