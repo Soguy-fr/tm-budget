@@ -162,8 +162,11 @@ export function InterneGrid({
   }
 
   // F3.14 — ouvrir le Grand Livre filtré sur (LB × année × mois).
-  function openGl(lineId: string, year: number, monthIdx: number) {
-    router.push(`/grand-livre?line=${lineId}&year=${year}&month=${monthIdx + 1}`);
+  // lineId null (catégorie) → filtre seulement année + mois. `from=interne` pour le retour.
+  function openGl(lineId: string | null, year: number, monthIdx: number) {
+    const p = new URLSearchParams({ year: String(year), month: String(monthIdx + 1), from: "interne" });
+    if (lineId) p.set("line", lineId);
+    router.push(`/grand-livre?${p.toString()}`);
   }
 
   function save() {
@@ -408,7 +411,7 @@ type RowHandlers = {
   setBailleur: (lineId: string, year: number, monthIdx: number, b: string | null) => void;
   doRepartir: (lineId: string, year: number) => void;
   doMajTotal: (lineId: string, year: number) => void;
-  openGl: (lineId: string, year: number, monthIdx: number) => void;
+  openGl: (lineId: string | null, year: number, monthIdx: number) => void;
 };
 
 function YearBlock({
@@ -654,19 +657,15 @@ function GridRow({
             <td key={i} className="px-2 py-1 text-right" style={tint}>
               {isLeaf && editing ? (
                 <input type="number" value={val} onChange={(e) => setCell(row.id, year, i, Number(e.target.value) || 0)} className="w-16 rounded border border-slate-300 px-1 py-0.5 text-right text-input" />
-              ) : isLeaf ? (
-                // F3.14 — clic → Grand Livre filtré sur (LB × année × mois)
+              ) : (
+                // F3.14 — clic → Grand Livre filtré (LB+période pour une LB, période seule pour une catégorie)
                 <button
-                  onClick={() => openGl(row.id, year, i)}
-                  className="w-full text-right hover:text-brand-emerald hover:underline"
+                  onClick={() => openGl(isLeaf ? row.id : null, year, i)}
+                  className="w-full cursor-pointer text-right hover:text-brand-emerald hover:underline"
                   title="Voir les écritures dans le Grand Livre"
                 >
                   {val !== 0 ? formatEur(val) : <span className="text-slate-300">·</span>}
                 </button>
-              ) : val !== 0 ? (
-                formatEur(val)
-              ) : (
-                <span className="text-slate-300">·</span>
               )}
             </td>
           );

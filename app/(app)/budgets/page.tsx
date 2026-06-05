@@ -9,7 +9,7 @@ export default async function BudgetsPage() {
   if (!isSupabaseConfigured()) {
     return (
       <div>
-        <h1 className="mb-2 text-xl font-bold text-brand-night">Budgets</h1>
+        <h1 className="mb-2 text-xl font-bold text-brand-night">Scénarios</h1>
         <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           Supabase n&apos;est pas encore configuré.
         </p>
@@ -33,7 +33,7 @@ export default async function BudgetsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Budgets</h1>
+      <h1 className="mb-1 text-xl font-bold text-brand-night">Scénarios</h1>
       <p className="mb-4 text-sm text-slate-500">
         Créez, dupliquez et sélectionnez le budget actif. Un seul budget actif à
         la fois (F2.2).

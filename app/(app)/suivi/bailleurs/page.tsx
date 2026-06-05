@@ -10,7 +10,7 @@ export default async function SuiviBailleursPage() {
   if (!isSupabaseConfigured()) {
     return (
       <div>
-        <h1 className="mb-2 text-xl font-bold text-brand-night">Suivi</h1>
+        <h1 className="mb-2 text-xl font-bold text-brand-night">Dashboard</h1>
         <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           Supabase n&apos;est pas encore configuré.
         </p>
@@ -25,7 +25,7 @@ export default async function SuiviBailleursPage() {
 
   return (
     <div>
-      <h1 className="mb-3 text-xl font-bold text-brand-night">Suivi</h1>
+      <h1 className="mb-3 text-xl font-bold text-brand-night">Dashboard</h1>
       <SuiviTabs />
       <p className="mb-4 text-sm text-slate-500">
         Recettes & dépenses par bailleur : prévu vs réalisé (Grand Livre, BR-6.1).

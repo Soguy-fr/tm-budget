@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function GrandLivrePage({
   searchParams,
 }: {
-  searchParams: { line?: string; year?: string; month?: string };
+  searchParams: { line?: string; year?: string; month?: string; from?: string };
 }) {
   if (!isSupabaseConfigured()) {
     return (
@@ -41,17 +41,20 @@ export default async function GrandLivrePage({
     budget
       ? supabase
           .from("budget_monthly")
-          .select("line_id, year, month, bailleur_id")
+          .select("line_id, year, month, amount, bailleur_id")
           .eq("budget_id", budget.id)
-      : Promise.resolve({ data: [] as { line_id: string; year: number; month: number; bailleur_id: string | null }[] }),
+          .range(0, 99999)
+      : Promise.resolve({ data: [] as { line_id: string; year: number; month: number; amount: number; bailleur_id: string | null }[] }),
   ]);
 
   // BR-2.4 — plan d'assignation pour pré-remplir le bailleur : clé LB:année:mois.
+  // + montant planifié par maille (F5.11).
   const planByCell: Record<string, string> = {};
+  const planAmountByCell: Record<string, number> = {};
   for (const p of planRes.data ?? []) {
-    if (p.bailleur_id) {
-      planByCell[`${p.line_id}:${p.year}:${p.month}`] = p.bailleur_id as string;
-    }
+    const k = `${p.line_id}:${p.year}:${p.month}`;
+    if (p.bailleur_id) planByCell[k] = p.bailleur_id as string;
+    planAmountByCell[k] = (planAmountByCell[k] ?? 0) + Number(p.amount);
   }
 
   return (
@@ -66,10 +69,12 @@ export default async function GrandLivrePage({
         lines={(lines ?? []) as StructureLine[]}
         bailleurs={(bailleurs ?? []) as Bailleur[]}
         planByCell={planByCell}
+        planAmountByCell={planAmountByCell}
         initialFilters={{
           line: searchParams.line,
           year: searchParams.year,
           month: searchParams.month,
+          fromInterne: searchParams.from === "interne",
         }}
       />
     </div>

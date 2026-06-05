@@ -33,7 +33,7 @@ export default async function SuiviPage() {
 
   return (
     <div>
-      <h1 className="mb-3 text-xl font-bold text-brand-night">Suivi</h1>
+      <h1 className="mb-3 text-xl font-bold text-brand-night">Dashboard</h1>
       <SuiviTabs />
       <p className="mb-4 text-sm text-slate-500">
         Prévu (budget interne) vs réalisé (Grand Livre, écritures allouées) par

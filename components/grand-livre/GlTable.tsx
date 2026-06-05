@@ -25,14 +25,17 @@ export function GlTable({
   lines,
   bailleurs,
   planByCell,
+  planAmountByCell,
   initialFilters,
 }: {
   entries: GlEntry[];
   lines: StructureLine[];
   bailleurs: Bailleur[];
   planByCell: Record<string, string>;
-  // F3.14 — filtres pré-remplis (depuis le clic d'une cellule du tableur).
-  initialFilters?: { line?: string; year?: string; month?: string };
+  // F5.11 — montant planifié par maille (LB:année:mois).
+  planAmountByCell?: Record<string, number>;
+  // F3.14 / F5.12 — filtres pré-remplis + provenance (clic d'une cellule du tableur).
+  initialFilters?: { line?: string; year?: string; month?: string; fromInterne?: boolean };
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -88,6 +91,11 @@ export function GlTable({
     if (fStatut && statut !== fStatut) return false;
     return true;
   });
+
+  // F5.11 — récap réalisé vs planifié quand on cible une maille (LB+année+mois).
+  const showSummary = Boolean(fLine && fYear && fMonth);
+  const realiseDep = filtered.reduce((s, e) => (e.entry_type === "Dépense" ? s + Number(e.amount) : s), 0);
+  const planifie = planAmountByCell?.[`${fLine}:${fYear}:${fMonth}`] ?? 0;
 
   async function onFile(file: File) {
     setError(null);
@@ -179,6 +187,38 @@ export function GlTable({
 
   return (
     <div>
+      {/* F5.12 — retour au budget (ligne d'origine) */}
+      {initialFilters?.fromInterne && (
+        <button
+          onClick={() => router.back()}
+          className="mb-3 inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+        >
+          ← Retour au budget
+        </button>
+      )}
+
+      {/* F5.11 — récap réalisé vs planifié pour la maille ciblée */}
+      {showSummary && (
+        <div className="mb-3 flex flex-wrap items-center gap-4 rounded border border-slate-200 bg-slate-50 p-3 text-sm">
+          <span className="text-slate-500">
+            {lineLabel.get(fLine) ?? fLine} · {fYear}/{String(Number(fMonth)).padStart(2, "0")}
+          </span>
+          <span>
+            Réalisé (dépenses) :{" "}
+            <span className={`font-medium ${realiseDep > planifie ? "text-alert" : "text-brand-night"}`}>
+              {formatEur(realiseDep)}
+            </span>
+          </span>
+          <span>
+            Planifié pour la période :{" "}
+            <span className="font-medium text-brand-night">{formatEur(planifie)}</span>
+          </span>
+          <span className="text-slate-400">
+            Écart : {formatEur(planifie - realiseDep)}
+          </span>
+        </div>
+      )}
+
       <div className="mb-3 flex items-center gap-3">
         <input
           ref={fileRef}
@@ -240,7 +280,7 @@ export function GlTable({
         <Select value={fLine} onChange={setFLine} label="LB">
           {lines.map((l) => (
             <option key={l.id} value={l.id}>
-              {l.code}
+              {l.code} — {l.label}
             </option>
           ))}
         </Select>
@@ -327,7 +367,7 @@ export function GlTable({
                       <option value="">—</option>
                       {lines.map((l) => (
                         <option key={l.id} value={l.id}>
-                          {l.code}
+                          {l.code} — {l.label}
                         </option>
                       ))}
                     </select>

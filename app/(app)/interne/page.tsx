@@ -117,7 +117,7 @@ export default async function InternePage() {
 function Notice({ children }: { children: React.ReactNode }) {
   return (
     <div>
-      <h1 className="mb-2 text-xl font-bold text-brand-night">Prévisionnel interne</h1>
+      <h1 className="mb-2 text-xl font-bold text-brand-night">Suivi interne</h1>
       <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
         {children}
       </p>

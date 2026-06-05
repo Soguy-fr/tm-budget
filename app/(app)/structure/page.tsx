@@ -10,7 +10,7 @@ export default async function StructurePage() {
   if (!isSupabaseConfigured()) {
     return (
       <div>
-        <h1 className="mb-2 text-xl font-bold text-brand-night">Structure</h1>
+        <h1 className="mb-2 text-xl font-bold text-brand-night">Configuration</h1>
         <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           Supabase n&apos;est pas encore configuré. Renseignez{" "}
           <code>.env.local</code> puis appliquez les migrations et le seed.
@@ -30,7 +30,7 @@ export default async function StructurePage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Structure</h1>
+      <h1 className="mb-1 text-xl font-bold text-brand-night">Configuration</h1>
       <p className="mb-4 text-sm text-slate-500">
         Structure budgétaire unique, partagée par tous les budgets (P2). Seul le
         niveau 3 porte des montants.

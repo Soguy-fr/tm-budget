@@ -76,7 +76,9 @@
 | F5.7 | Indicateur conforme au plan (oui/non) par écriture | 🟡 | BR-4.2 |
 | F5.8 | Filtre date en accordéon (année puis mois) + bouton « Réinitialiser les filtres » | 🟢 | — |
 | F5.9 | Largeur des colonnes ajustable (poignée de redimensionnement) | 🟢 | — |
-| F5.10 | Colonne « Description LB » : libellé complet de la LB allouée (code + intitulé) | 🟢 | — |
+| F5.10 | Colonne « Description LB » + menu déroulant LB affichant code ET intitulé, trié dans l'ordre de la structure | 🟢 | — |
+| F5.11 | Sur GL filtré par LB+année+mois : bandeau récap « réalisé total vs planifié pour la période » | 🟢 | BR-5.1 |
+| F5.12 | Bouton « Retour au budget » sur le GL ouvert depuis une cellule du tableur (revient à la bonne ligne) | 🟢 | F3.14 |
 
 ## F6 — Suivi
 

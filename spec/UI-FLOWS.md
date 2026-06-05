@@ -5,23 +5,30 @@
 
 ## 1. Navigation générale
 
+Nomenclature des entrées de menu (les routes techniques restent inchangées) :
+
+| Libellé menu     | Route          | Ancien nom |
+|------------------|----------------|------------|
+| Scénario         | `/budgets`     | Budgets    |
+| Suivi interne    | `/interne`     | Interne    |
+| Bailleurs        | `/bailleurs`   | Bailleurs  |
+| Grand Livre      | `/grand-livre` | Grand Livre|
+| Dashboard        | `/suivi`       | Suivi      |
+| Configuration    | `/structure`   | Structure (déplacé en **dernier**) |
+
+- **Scénario** : on y teste plusieurs budgets (créer / dupliquer / activer).
+- **Configuration** : structure budgétaire + futurs réglages. Toujours en bas du menu.
+
 ```
-┌──────────────────────────────────────────────┐
-│  Barre supérieure : [Budget actif ▼] [Éditer] │
-│  [Rafraîchir]   ● modifications non enregistrées│
-├────────────┬─────────────────────────────────┤
-│ Menu       │                                  │
-│ ─────────  │      Zone de contenu             │
-│ Budgets    │                                  │
-│ Structure  │                                  │
-│ Interne    │  (page tableur)                  │
-│ Bailleurs ▼│                                  │
-│   · FPC    │                                  │
-│   · SW     │                                  │
-│   · JFN    │                                  │
+┌────────────┬─────────────────────────────────┐
+│ Menu       │      Zone de contenu             │
+│ ─────────  │                                  │
+│ Scénario   │                                  │
+│ Suivi interne                                 │
+│ Bailleurs  │  (page tableur)                  │
 │ Grand Livre│                                  │
-│ Suivi      │                                  │
 │ Dashboard  │                                  │
+│ Configuration (dernier)                       │
 └────────────┴─────────────────────────────────┘
 ```
 
