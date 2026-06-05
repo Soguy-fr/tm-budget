@@ -151,9 +151,36 @@ Date       Type     Libellé              Montant   LB      Bailleur  Statut
 - **Suivi bailleurs** : tableau recettes & dépenses prévues vs réelles par bailleur (BR-6).
 - Dépassements en rouge.
 
-## 7. Page « Dashboard » (F8, Phase 2)
+## 7. Page « Dashboard » — onglet Graphiques (F8, Phase 2 / Jalon 10)
 
-Graphiques : dépenses vs budget, répartition par bailleur, courbe trésorerie cumulée.
+La page `/suivi` (menu « Dashboard ») gagne un 3e onglet **« Graphiques »**
+(après Dépenses et Bailleurs). Sélecteur d'année en tête (réutilise les années du
+budget actif). Tout est calculé côté serveur depuis les vues existantes
+(`v_suivi_depenses`, `v_suivi_bailleurs`) + chaînage trésorerie ; le rendu utilise
+**Recharts** côté client.
+
+```
+[Dépenses] [Bailleurs] [Graphiques]            Année : [2026 ▼]
+
+┌─ Dépenses vs budget par catégorie (F8.1) ─┐  ┌─ Répartition réalisé (F8.2) ─┐
+│  barres group: prévu | réalisé par niv.1  │  │  donut par catégorie niv.1   │
+│  réalisé rouge si > prévu                 │  │  + donut par bailleur        │
+└───────────────────────────────────────────┘  └──────────────────────────────┘
+┌─ Trésorerie cumulée : prévu vs réel (F8.3) ──────────────────────────────────┐
+│  courbe mensuelle Jan…Déc, 2 séries (budgété, réel glissant), 0 en pointillé │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **F8.1** : barres groupées prévu/réalisé, agrégées par **catégorie de niveau 1**
+  (premier segment du code LB) pour rester lisible ; réalisé en rouge si dépassement.
+- **F8.2** : deux donuts — répartition du **réalisé par catégorie** (niv.1) et
+  répartition du **réalisé par bailleur** (depuis `v_suivi_bailleurs`). Couleur
+  bailleur = sa couleur de convention.
+- **F8.3** : courbe de **trésorerie cumulée** (BR-7.*), deux séries Budgété vs Réel
+  glissant (réel jusqu'au dernier mois clos, budget ensuite), ligne 0 repère ;
+  segment négatif signalé.
+- Logique de mise en forme des données isolée dans `lib/charts.ts` (pur, testé) ;
+  les composants Recharts ne font que rendre.
 
 ## 8. Parcours types
 

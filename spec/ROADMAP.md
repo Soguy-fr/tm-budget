@@ -74,7 +74,9 @@
 ## Phase 2 — après validation client
 
 - Jalon 9 — Dépenses prévues bailleur + réalisé sur page bailleur (F4.4, F4.7).
-- Jalon 10 — Dashboard graphiques (F8.1–F8.3).
+- Jalon 10 — Dashboard graphiques (F8.1–F8.3). 🚧 **en cours** — onglet « Graphiques »
+  sur `/suivi`, Recharts, données via `lib/charts.ts` (pur+testé) + vues existantes.
+  Voir UI-FLOWS §7.
 - Jalon 11 — Export XLSX budget + rapport bailleur (F9.1, F4.8).
 - Jalon 12 — Purge annuelle (F9.2), masquer LB vides (F1.6), réordonner LB (F1.4).
 - Jalon 13 — Avertissement/indicateur plan vs réel (F5.6, F5.7), alerte dépassement bailleur (F6.3).

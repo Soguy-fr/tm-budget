@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/suivi", label: "Dépenses" },
   { href: "/suivi/bailleurs", label: "Bailleurs" },
+  { href: "/suivi/graphiques", label: "Graphiques" },
 ];
 
 export function SuiviTabs() {
