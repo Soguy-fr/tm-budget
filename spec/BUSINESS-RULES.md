@@ -11,8 +11,10 @@ Pour une LB sur une année :
 écart = total_annuel_saisi − Σ(montants des 12 mois)
 ```
 - Si `écart == 0` : la cellule « Total » s'affiche en couleur normale.
-- Si `écart ≠ 0` : la cellule « Total » passe en **rouge** et l'écart est affiché à côté
-  (ex : « +250 € » ou « −250 € »).
+- Si `écart ≠ 0` : la cellule « Total » passe en **rouge** et l'écart est affiché
+  **dans la même cellule** (ex : « 30 000 (+250) »).
+- Pas de colonnes dédiées « Σ mois » ni « Écart » dans le tableur (jugées inutiles) :
+  l'information d'écart vit dans la cellule Total.
 
 ### BR-1.2 — Bouton « Répartir »
 Répartit le `total_annuel_saisi` également sur les 12 mois (ou sur les mois actifs du bailleur si filtré).
@@ -107,6 +109,10 @@ Quand activé, une ligne réalisé s'affiche **sous** la ligne prévue, mois par
 La ligne réalisé s'affiche aussi pour les LB de **niveau 1 et 2** (réalisé agrégé
 = Σ des feuilles), et reste visible même lorsque la catégorie est repliée (BR-8.3) —
 on voit ainsi les dépenses par catégorie sans déplier.
+Le **total annuel réalisé** (cellule Total de la ligne réalisé) passe en **rouge**
+en cas de dépassement (réalisé annuel > prévu annuel), pas seulement mois par mois.
+L'entête de chaque année affiche le **réalisé annuel à côté du budget annuel**
+(BR-8.4), rouge si dépassement.
 
 ## 6. Suivi par bailleur
 
@@ -167,7 +173,9 @@ L'état de repli est purement d'affichage (non persisté), partagé entre les an
 ### BR-8.4 — Total annuel du budget
 L'entête de chaque bloc année affiche le **total du budget pour l'année** =
 Σ des montants de toutes les LB de niveau 3 (= Σ des catégories de niveau 1).
-Recalculé en direct en mode édition.
+Recalculé en direct en mode édition. Quand la couche « Suivi des dépenses » est
+active, l'entête affiche aussi le **réalisé annuel** à côté du budget annuel,
+en **rouge** si réalisé > budget (dépassement).
 
 ## 9. Édition par lot (P7)
 

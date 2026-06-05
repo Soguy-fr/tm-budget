@@ -54,20 +54,21 @@ catégorie. L'entête de chaque année affiche le **total annuel du budget** (BR
 [Éditer] [Répartir] [Afficher bailleur] [Suivi des dépenses] [Solde tréso ▼ Budgété|Réel]
 Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
 
-▼ 2026                                          [retirer année]
-  Code   Ligne              Total    Σmois  Écart  Jan  Fev  ... Déc
-  1      Operating Costs    52 800   52 800   0
-   1.1   Core Team          69 600   69 600   0
-    1.1.1 Director           30 000   30 000   0   2500 2500 ... 2500
-          ↳ (réalisé)*                              938  ...        ← si "Suivi" activé
-    1.1.2 Programme Manager  21 600   21 600   0   [cellules colorées par bailleur si activé]
+▼ 2026   Total 52 800 · réalisé 41 200        [retirer année]
+  Code   Ligne              Total            Jan  Fev  ... Déc
+  1      Operating Costs    52 800
+   1.1   Core Team          69 600
+    1.1.1 Director           30 000 (+250)*   2500 2500 ... 2500
+          ↳ réalisé**         28 900           938  ...        ← si "Suivi" activé
+    1.1.2 Programme Manager  21 600           [cellules colorées par bailleur si activé]
   ...
   ─────────────────────────────────────────────────
   Solde trésorerie (Budgété)†                  -11200 37600 ...    ← si activé, masquable
 [+ Ajouter une année]
 
-* ligne réalisé en lecture seule (depuis le GL)
-† sélecteur Budgété/Réel ; rouge si négatif
+*  écart inline dans la cellule Total, rouge si ≠ 0 (BR-1.1) — plus de colonnes Σmois/Écart
+** ligne réalisé en lecture seule (depuis le GL) ; total réalisé rouge si dépassement
+†  sélecteur Budgété/Réel ; rouge si négatif
 ```
 
 ### Couches activables (boutons bascule)

@@ -454,9 +454,14 @@ function YearBlock({
   onRemove: () => void;
 } & RowHandlers) {
   // BR-8.4 — total annuel du budget = Σ de toutes les LB niveau 3.
-  const yearTotal = rows
-    .filter((r) => r.level === 3)
-    .reduce((s, r) => s + sumMonths(leafMonths(r.id, year, work)), 0);
+  const leafRows = rows.filter((r) => r.level === 3);
+  const yearTotal = leafRows.reduce((s, r) => s + sumMonths(leafMonths(r.id, year, work)), 0);
+  // Réalisé annuel (Σ GL alloué) pour l'entête quand « Suivi » actif.
+  const yearRealise = leafRows.reduce(
+    (s, r) =>
+      s + Array.from({ length: 12 }, (_, i) => realise[cellKey(r.id, year, i + 1)] ?? 0).reduce((a, b) => a + b, 0),
+    0,
+  );
 
   // BR-8.3 — masquer les descendants d'une ligne repliée.
   const visibleRows: FlatRow[] = [];
@@ -477,6 +482,14 @@ function YearBlock({
         <span className="flex items-center gap-3">
           <span className="text-sm font-medium text-brand-night">
             Total {year} : {formatEur(yearTotal)}
+            {showSuivi && (
+              <>
+                {" · réalisé "}
+                <span className={yearRealise > yearTotal ? "font-bold text-alert" : "text-slate-500"}>
+                  {formatEur(yearRealise)}
+                </span>
+              </>
+            )}
           </span>
           <button onClick={onRemove} className="text-xs text-alert hover:underline">
             retirer année
@@ -491,8 +504,6 @@ function YearBlock({
               <tr className="border-b border-slate-200 text-slate-500">
                 <th className="sticky left-0 bg-white px-2 py-1 text-left">Code · Ligne</th>
                 <th className="px-2 py-1 text-right">Total</th>
-                <th className="px-2 py-1 text-right">Σ mois</th>
-                <th className="px-2 py-1 text-right">Écart</th>
                 {MONTHS_FR.map((m) => (
                   <th key={m} className="px-2 py-1 text-right">{m}</th>
                 ))}
@@ -525,7 +536,7 @@ function YearBlock({
                   <td className="sticky left-0 bg-inherit px-2 py-1 text-left">
                     Solde trésorerie ({tresoMode === "budget" ? "Budgété" : "Réel"})
                   </td>
-                  <td colSpan={3} />
+                  <td />
                   {Array.from({ length: 12 }, (_, i) => {
                     const v = tresoCumul[i] ?? 0;
                     return (
@@ -622,12 +633,13 @@ function GridRow({
           {isLeaf && editing ? (
             <input type="number" value={totalInput} onChange={(e) => setTotal(row.id, year, Number(e.target.value) || 0)} className="w-20 rounded border border-slate-300 px-1 py-0.5 text-right text-input" />
           ) : (
-            formatEur(totalInput)
+            <>
+              {formatEur(totalInput)}
+              {hasEcart && (
+                <span className="ml-1 text-[10px]">({formatEcart(ecartVal)})</span>
+              )}
+            </>
           )}
-        </td>
-        <td className="px-2 py-1 text-right text-slate-500">{formatEur(sumM)}</td>
-        <td className={`px-2 py-1 text-right ${hasEcart ? "font-medium text-alert" : "text-slate-400"}`}>
-          {hasEcart ? formatEcart(ecartVal) : "—"}
         </td>
 
         {months.map((val, i) => {
@@ -667,7 +679,7 @@ function GridRow({
           <td className="sticky left-0 bg-inherit px-2 py-1 text-left text-[10px] text-slate-400" style={{ paddingLeft: 20 + row.depth * 14 }}>
             ↳ bailleur
           </td>
-          <td colSpan={3} />
+          <td />
           {months.map((_, i) => {
             const k = cellKey(row.id, year, i + 1);
             const b = workBailleur[k] ?? "";
@@ -705,8 +717,9 @@ function GridRow({
             <td className="sticky left-0 bg-inherit px-2 py-1 text-left text-[10px]" style={{ paddingLeft: 20 + row.depth * 14 }}>
               ↳ réalisé
             </td>
-            <td className="px-2 py-1 text-right text-[11px]">{formatEur(realiseTotal)}</td>
-            <td colSpan={2} />
+            <td className={`px-2 py-1 text-right text-[11px] ${realiseTotal > sumM ? "font-medium text-alert" : ""}`}>
+              {formatEur(realiseTotal)}
+            </td>
             {realiseMonths.map((r, i) => {
               const over = r > (months[i] ?? 0); // BR-5.2 — dépassement en rouge
               return (
