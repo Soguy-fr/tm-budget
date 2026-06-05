@@ -71,6 +71,23 @@ export async function renameLine(
   return { ok: true };
 }
 
+// F1.3 / F1.7 — Éditer une LB : intitulé + commentaire en un seul enregistrement.
+export async function updateLine(
+  id: string,
+  label: string,
+  comment: string,
+): Promise<ActionResult> {
+  if (!label.trim()) return { ok: false, error: "L'intitulé est requis." };
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("structure_lines")
+    .update({ label: label.trim(), comment: comment.trim() || null })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/structure");
+  return { ok: true };
+}
+
 // F1.7 — Mettre à jour le commentaire libre d'une LB.
 export async function updateComment(
   id: string,

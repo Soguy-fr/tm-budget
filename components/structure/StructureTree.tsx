@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { TreeNode } from "@/lib/structure";
-import { addLine, renameLine, deleteLine, updateComment } from "@/app/(app)/structure/actions";
+import { addLine, updateLine, deleteLine } from "@/app/(app)/structure/actions";
 
 export function StructureTree({ tree }: { tree: TreeNode[] }) {
   const router = useRouter();
@@ -80,28 +80,7 @@ function Row({
   pending: boolean;
 }) {
   const [adding, setAdding] = useState(false);
-
-  function onRename() {
-    // P8 — avertissement de propagation avant renommage.
-    const ok = window.confirm(
-      "Ce changement de libellé s'applique à TOUS les budgets et au suivi (structure partagée, P2). Continuer ?",
-    );
-    if (!ok) return;
-    const label = window.prompt("Nouvel intitulé", node.label);
-    if (label && label.trim()) run(() => renameLine(node.id, label));
-  }
-
-  function onDelete() {
-    const ok = window.confirm(
-      `Supprimer « ${node.code} ${node.label} » ? (Bloqué si des montants ou écritures y sont liés.)`,
-    );
-    if (ok) run(() => deleteLine(node.id));
-  }
-
-  function onComment() {
-    const c = window.prompt("Commentaire (F1.7)", node.comment ?? "");
-    if (c !== null) run(() => updateComment(node.id, c));
-  }
+  const [editing, setEditing] = useState(false);
 
   return (
     <div>
@@ -130,17 +109,26 @@ function Row({
               + Ligne
             </button>
           )}
-          <button onClick={onComment} disabled={pending} className="text-slate-500 hover:underline">
-            Commentaire
-          </button>
-          <button onClick={onRename} disabled={pending} className="text-slate-500 hover:underline">
-            Renommer
-          </button>
-          <button onClick={onDelete} disabled={pending} className="text-alert hover:underline">
-            Supprimer
+          <button
+            onClick={() => setEditing((v) => !v)}
+            disabled={pending}
+            className="text-slate-500 hover:underline"
+          >
+            Éditer
           </button>
         </span>
       </div>
+
+      {editing && (
+        <div style={{ paddingLeft: 32 + depth * 20 }} className="py-2 pr-3">
+          <EditForm
+            node={node}
+            pending={pending}
+            onClose={() => setEditing(false)}
+            run={run}
+          />
+        </div>
+      )}
 
       {adding && (
         <div style={{ paddingLeft: 32 + depth * 20 }} className="py-1.5 pr-3">
@@ -159,6 +147,96 @@ function Row({
         <Row key={child.id} node={child} depth={depth + 1} run={run} pending={pending} />
       ))}
     </div>
+  );
+}
+
+function EditForm({
+  node,
+  pending,
+  onClose,
+  run,
+}: {
+  node: TreeNode;
+  pending: boolean;
+  onClose: () => void;
+  run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
+}) {
+  const [label, setLabel] = useState(node.label);
+  const [comment, setComment] = useState(node.comment ?? "");
+
+  function onSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!label.trim()) return;
+    run(() => updateLine(node.id, label, comment));
+    onClose();
+  }
+
+  function onDelete() {
+    const ok = window.confirm(
+      `⚠ Effacer définitivement « ${node.code} ${node.label} » ?\n\n` +
+        "Cette ligne disparaîtra de la structure partagée (tous les budgets). " +
+        "Action bloquée si des montants ou des écritures y sont liés (P8).",
+    );
+    if (ok) {
+      run(() => deleteLine(node.id));
+      onClose();
+    }
+  }
+
+  return (
+    <form
+      onSubmit={onSave}
+      className="space-y-2 rounded border border-slate-200 bg-slate-50 p-3"
+    >
+      <div>
+        <label className="block text-xs text-slate-500">Intitulé</label>
+        <input
+          autoFocus
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+        />
+        <p className="mt-0.5 text-[10px] text-slate-400">
+          Le changement d&apos;intitulé s&apos;applique à tous les budgets (structure partagée, P2/P8).
+        </p>
+      </div>
+      <div>
+        <label className="block text-xs text-slate-500">Commentaire</label>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={3}
+          placeholder="Note libre, affichée en bulle au survol (Suivi interne, Grand Livre)"
+          className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded bg-brand-emerald px-3 py-1 text-sm text-white"
+          >
+            Enregistrer
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-slate-300 px-3 py-1 text-sm text-slate-600"
+          >
+            Annuler
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={pending}
+          className="rounded border border-alert/40 px-3 py-1 text-sm text-alert hover:bg-red-50"
+        >
+          Effacer
+        </button>
+      </div>
+    </form>
   );
 }
 

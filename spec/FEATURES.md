@@ -16,7 +16,7 @@
 |---|---|---|---|
 | F1.1 | Afficher l'arbre hiérarchique des LB (niveaux 1/2/3) | 🟢 | P2, P3 |
 | F1.2 | Ajouter une LB (numéro suivant dans la branche, pas de renumérotation) | 🟢 | P3 |
-| F1.3 | Renommer une LB avec avertissement de propagation | 🟢 | P8 |
+| F1.3 | Éditer une LB via un panneau dédié : intitulé (1 ligne) + commentaire (multiligne), avertissement de propagation ; suppression UNIQUEMENT depuis l'éditeur (bouton « Effacer » + confirmation) | 🟢 | P8 |
 | F1.4 | Réordonner les LB (champ ordre) | 🟡 | P3 |
 | F1.5 | Supprimer une LB (interdit si montant/écriture liés ; sinon soft-delete) | 🟢 | P8 |
 | F1.6 | Masquer les LB vides (bouton « masquer vide ») | 🟡 | — |

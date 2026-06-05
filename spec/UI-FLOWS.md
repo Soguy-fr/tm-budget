@@ -46,8 +46,11 @@ Code     Intitulé                    [+ Ligne] [Masquer vides]
   ...
 ```
 - **Ajouter** sous une branche → numéro suivant auto (1.1.25), placé en fin de groupe (P3).
-- **Renommer** → modal d'avertissement « ce changement s'applique à tous les budgets ».
-- **Supprimer** → bloqué si montant/écriture liés, message explicatif (P8).
+- **Éditer** (un seul bouton par ligne) → panneau : intitulé (1 ligne) + commentaire
+  (multiligne). Note de propagation « le changement d'intitulé s'applique à tous les
+  budgets » (P8).
+- **Effacer** → uniquement dans l'éditeur (pas de bouton supprimer dans la liste,
+  jugé trop dangereux). Confirmation explicite ; bloqué si montant/écriture liés (P8).
 
 ## 3. Page « Budget interne » — le tableur principal (F3, F7)
 
