@@ -7,6 +7,7 @@ import {
   parseType,
   isAllocated,
   findColumn,
+  mapCsvRow,
 } from "./gl";
 
 describe("parseCsv", () => {
@@ -30,6 +31,31 @@ describe("parseAmount", () => {
     expect(parseAmount("2,500.50")).toBe(2500.5);
     expect(parseAmount("2500")).toBe(2500);
     expect(parseAmount("95 €")).toBe(95);
+  });
+
+  it("conserve le signe négatif (BR-4.4 — avoirs)", () => {
+    expect(parseAmount("-120,00")).toBe(-120);
+    expect(parseAmount("-1 250,50")).toBe(-1250.5);
+  });
+});
+
+describe("mapCsvRow (BR-4.4 — montant signé)", () => {
+  const cols = { date: "Date", type: "Type", label: "Libellé", amount: "Montant" };
+
+  it("conserve un montant négatif (avoir / remboursement)", () => {
+    const r = mapCsvRow(
+      { Date: "2026-01-05", Type: "Dépense", Libellé: "Avoir fournisseur", Montant: "-120,00" },
+      cols,
+    );
+    expect(r).toMatchObject({ entry_type: "Dépense", amount: -120 });
+  });
+
+  it("conserve un montant positif inchangé", () => {
+    const r = mapCsvRow(
+      { Date: "2026-01-05", Type: "Recette", Libellé: "Déblocage FPC", Montant: "60 000" },
+      cols,
+    );
+    expect(r).toMatchObject({ entry_type: "Recette", amount: 60000 });
   });
 });
 

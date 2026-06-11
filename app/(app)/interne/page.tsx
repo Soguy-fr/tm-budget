@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
 import { realiseByCell } from "@/lib/suivi";
-import { isAllocated } from "@/lib/gl";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 
@@ -85,10 +84,11 @@ export default async function InternePage() {
     incomePrevu[ym(r.year as number, r.month as number)] =
       (incomePrevu[ym(r.year as number, r.month as number)] ?? 0) + Number(r.amount);
   }
+  // BR-7.3 (A1) — la trésorerie réelle somme TOUTES les écritures, allouées ou
+  // non : la caisse reflète la banque, pas le suivi analytique.
   const recReel: Record<string, number> = {};
   const depReel: Record<string, number> = {};
   for (const e of allGl) {
-    if (!isAllocated(e)) continue;
     const y = Number(e.entry_date.slice(0, 4));
     const m = Number(e.entry_date.slice(5, 7));
     if (e.entry_type === "Recette") recReel[ym(y, m)] = (recReel[ym(y, m)] ?? 0) + Number(e.amount);

@@ -86,7 +86,8 @@ export function mapCsvRow(
     entry_date,
     entry_type,
     label: raw[cols.label] ?? null,
-    amount: Math.abs(parseAmount(raw[cols.amount] ?? "0")),
+    // BR-4.4 — montant SIGNÉ : négatif = avoir / remboursement.
+    amount: parseAmount(raw[cols.amount] ?? "0"),
     raw,
   };
 }
