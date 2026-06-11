@@ -63,7 +63,8 @@
 - Ligne « Solde tréso » intégrée au tableur, sélecteur Budgété/Réel.
 - Prévision glissante (BR-7.3, option A : mois en cours budgété jusqu'à clôture).
 - Solde initial saisi (BR-7.1). Trous en rouge.
-- Tests : chaînage cumul ; bascule réel→budget au bon mois.
+- Tests : chaînage cumul ; bascule réel→budget au bon mois ; **les flux réels
+  incluent les écritures non allouées (A1/BR-7.3) — test dédié.**
 
 ### ✅ Fin du MVP — démontrable au client
 
@@ -84,6 +85,11 @@
   (helper pur `lineIsEmpty`) ; F9.2 purge sur Scénarios (reset données
   transactionnelles, structure + bailleurs conservés, double confirmation).
 - Jalon 13 — Avertissement/indicateur plan vs réel (F5.6, F5.7), alerte dépassement bailleur (F6.3).
+- Jalon 14 — Rigueur comptable (corrections A1–A7 de `AMELIORATIONS.md`) :
+  clôture mensuelle + verrouillage (F11.1–F11.3, BR-11), rapprochement bancaire
+  (F7.6, BR-7.5), montants signés / avoirs (F5.14, BR-4.4), ligne « Réalisé non
+  assigné » (F6.5, BR-6.3), purge en soft-delete + export obligatoire (F9.2 révisée).
+  Tests : INV6–INV9.
 - Bascule Supabase Pro (backups, storage) si usage réel.
 
 ## Phase 3 — industrialisation

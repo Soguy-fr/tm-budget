@@ -162,12 +162,13 @@ create table gl_entries (
   entry_date    date not null,                  -- date de paiement (caisse, P5)
   entry_type    text not null check (entry_type in ('Dépense','Recette')),
   label         text,
-  amount        numeric(14,2) not null,         -- positif ; le sens vient de entry_type
+  amount        numeric(14,2) not null,         -- SIGNÉ : négatif = avoir/remboursement (BR-4.4)
   -- métadonnées comptables natives conservées (colonnes du CSV source) :
   raw           jsonb,                          -- toutes les colonnes d'origine du grand livre
   -- allocations (UI) :
   line_id       uuid references structure_lines(id),   -- LB interne (null si recette pure)
   bailleur_id   uuid references bailleurs(id),
+  archived      boolean not null default false,  -- purge = soft-delete (BR-10.2) ; jamais de delete physique
   created_at    timestamptz not null default now()
 );
 create index on gl_entries(entry_date);
@@ -187,6 +188,38 @@ create table gl_imports (
 );
 ```
 
+### month_closures
+Clôture mensuelle explicite (BR-11). Le dernier mois clos = `M` de la trésorerie réelle (BR-7.3).
+```sql
+create table month_closures (
+  id          uuid primary key default gen_random_uuid(),
+  year        int not null,
+  month       smallint not null check (month between 1 and 12),
+  closed_at   timestamptz not null default now(),
+  reopened_at timestamptz,                      -- null = clos ; non-null = réouvert (tracé, BR-11.2)
+  unique (year, month)
+);
+```
+> Le verrouillage (BR-11.2) s'applique côté API : refuser tout upsert sur
+> `budget_monthly` (année, mois clos) et toute modification d'écriture GL
+> (`entry_date` dans un mois clos) tant que `reopened_at` est null.
+
+### bank_reconciliations
+Rapprochement bancaire mensuel (BR-7.5) : solde du relevé saisi par l'utilisateur.
+```sql
+create table bank_reconciliations (
+  id                 uuid primary key default gen_random_uuid(),
+  year               int not null,
+  month              smallint not null check (month between 1 and 12),
+  statement_balance  numeric(14,2) not null,    -- solde du relevé en fin de mois
+  note               text,
+  created_at         timestamptz not null default now(),
+  unique (year, month)
+);
+```
+> `écart_rapprochement` = `statement_balance` − solde calculé (mode Réel) :
+> calculé côté application, jamais stocké.
+
 ## 3. Vues (calculs agrégés côté base — limite les appels)
 
 ### v_suivi_depenses — prévu vs réalisé par LB
@@ -201,6 +234,7 @@ select
   coalesce(sum(bm.amount),0)                                   as prevu,
   coalesce((select sum(g.amount) from gl_entries g
             where g.line_id = sl.id and g.entry_type='Dépense'
+              and g.archived = false
               and extract(year from g.entry_date) = by_.year),0) as realise
 from budgets b
 join budget_years by_ on by_.budget_id = b.id
@@ -219,19 +253,39 @@ select
             where i.bailleur_id=ba.id and i.year=by_.year),0)            as recettes_prevues,
   coalesce((select sum(g.amount) from gl_entries g
             where g.bailleur_id=ba.id and g.entry_type='Recette'
+              and g.archived=false
               and extract(year from g.entry_date)=by_.year),0)           as recettes_recues,
   coalesce((select sum(e.amount) from bailleur_expense_monthly e
             join bailleur_lines bl on bl.id=e.bailleur_line_id
             where bl.bailleur_id=ba.id and e.year=by_.year),0)           as depenses_prevues,
   coalesce((select sum(g.amount) from gl_entries g
             where g.bailleur_id=ba.id and g.entry_type='Dépense'
+              and g.archived=false
               and extract(year from g.entry_date)=by_.year),0)           as depenses_realisees
 from bailleurs ba
 cross join (select distinct year from budget_years) by_;
 ```
 
+### v_realise_non_assigne — réconciliation suivi bailleur (BR-6.3)
+Dépenses réalisées avec LB mais sans bailleur : comptées dans le suivi des dépenses,
+affichées en ligne « Réalisé non assigné » dans le suivi bailleur.
+```sql
+create view v_realise_non_assigne as
+select
+  extract(year from g.entry_date)::int as year,
+  sum(g.amount)                        as realise_non_assigne
+from gl_entries g
+where g.entry_type='Dépense' and g.line_id is not null
+  and g.bailleur_id is null and g.archived=false
+group by 1;
+```
+
 > La trésorerie (prévision glissante budgété/réel) est calculée côté application
-> car elle dépend de la « date du jour » et du chaînage des soldes (voir BUSINESS-RULES).
+> car elle dépend du dernier mois clos (`month_closures`, BR-11.1) et du chaînage
+> des soldes (voir BUSINESS-RULES). **Attention (A1/BR-7.3)** : les flux réels de
+> trésorerie somment **toutes** les écritures GL non archivées du mois, y compris
+> les « À allouer » (pas de filtre `line_id`/`bailleur_id`) — la caisse reflète la
+> banque, pas le suivi analytique.
 
 ## 4. Notes d'implémentation
 

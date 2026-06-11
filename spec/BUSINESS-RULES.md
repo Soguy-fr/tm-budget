@@ -87,6 +87,16 @@ Si le bailleur saisi sur une écriture diffère du bailleur prévu au plan pour 
 ### BR-4.3 — Réalisé = caisse
 Le rattachement temporel d'une écriture utilise sa **date de paiement** (P5).
 
+### BR-4.4 — Avoirs & remboursements (A4)
+Le montant d'une écriture GL est **signé** (négatif autorisé) :
+- **Avoir fournisseur** ou **remboursement reçu d'une dépense** = écriture de type
+  `Dépense` à montant **négatif** (vient en déduction du réalisé de la LB).
+  JAMAIS une `Recette` : cela polluerait les recettes du bailleur et fausserait
+  le % de recettes reçues (BR-6.1).
+- **Reversement à un bailleur** (trop-perçu restitué) = `Recette` à montant négatif.
+- Tous les agrégats (suivi LB, suivi bailleur, trésorerie) somment les montants signés
+  sans traitement particulier.
+
 ## 5. Suivi des dépenses (prévu vs réalisé)
 
 ### BR-5.1 — Réalisé par LB
@@ -127,11 +137,28 @@ solde_réalisé                       = recettes_reçues − dépenses_réalisé
 ### BR-6.2 — Alerte dépassement bailleur
 Si `dépenses_réalisées > recettes (prévues ou conventionnées)` : alerte de dépassement (INV5).
 
+### BR-6.3 — Ligne « Réalisé non assigné » (réconciliation, A6)
+Le suivi par bailleur affiche une ligne calculée supplémentaire :
+```
+réalisé_non_assigné(année) = Σ dépenses GL avec LB mais SANS bailleur
+```
+Garantit la réconciliation des deux suivis :
+```
+Σ dépenses_réalisées(tous bailleurs) + réalisé_non_assigné = Σ dépenses GL allouées (LB)
+```
+Sans cette ligne, une dépense avec LB sans bailleur est comptée dans le suivi des
+dépenses (BR-5.1) mais invisible dans le suivi bailleur → totaux non recoupables.
+
 ## 7. Trésorerie (prévision glissante)
 
 ### BR-7.1 — Solde initial
 `initial_cash` est saisi **une fois**, au 1er janvier de la **première** année du budget.
 Les années suivantes chaînent automatiquement : `solde_initial(N+1) = solde_final(N)`.
+
+**Précision chaînage (A5)** : chaque mode chaîne ses propres soldes, sans mélange :
+- Mode **Budgété** : `solde_final(N)` = solde budgété de décembre N.
+- Mode **Réel** : `solde_final(N)` = solde glissant de décembre N (réel si tous les
+  mois de N sont clos, sinon réel jusqu'à M puis budgété — BR-7.3).
 
 ### BR-7.2 — Mode Budgété
 Pour chaque mois, dans l'ordre chronologique :
@@ -149,9 +176,31 @@ cumul enchaîné sans couture, départ = initial_cash
 ```
 Le mois en cours et les mois futurs restent **budgétés** tant que le mois n'est pas clos (option A).
 
+**Définition de M (A3)** : `M` = dernier mois **explicitement clos** via la clôture
+mensuelle (BR-11.1), et non plus « mois courant − 1 » implicite. Tant qu'un mois
+n'est pas clos, son flux reste budgété — un GL importé en retard ne produit jamais
+un cumul faux silencieux.
+
+**Périmètre des sommes GL (A1)** : les flux réels de trésorerie incluent **TOUTES**
+les écritures GL du mois, **allouées ou non**. Le statut d'allocation (BR-4.1) ne
+s'applique PAS à la trésorerie : la caisse reflète la banque, pas le suivi
+analytique. Une écriture « À allouer » est exclue des suivis par LB et par
+bailleur, mais compte dans le solde de trésorerie.
+
 ### BR-7.4 — Affichage
 Ligne « Solde trésorerie » en bas du tableau du budget interne, **masquable**,
 avec sélecteur **Budgété / Réel**. Détecte les trous (solde cumulé négatif → rouge).
+
+### BR-7.5 — Rapprochement bancaire (A2)
+Pour chaque mois, l'utilisateur peut saisir le **solde du relevé bancaire** en fin de mois.
+```
+écart_rapprochement = solde_relevé − solde_calculé (mode Réel, fin de mois)
+```
+- Écart ≠ 0 → affiché en **rouge** à côté du solde calculé : GL incomplet, doublon,
+  ou écriture hors GL. C'est le contrôle de complétude du GL.
+- Un mois sans solde de relevé saisi est signalé « non rapproché ».
+- Le rapprochement (écart = 0) est un prérequis **recommandé** (non bloquant au début)
+  de la clôture mensuelle (BR-11.1).
 
 ## 8. Multi-années & accordéon
 
@@ -196,3 +245,32 @@ Export d'un budget (et de ses suivis) au format XLSX. *(Structure exacte du fich
 ### BR-10.2 — Purge annuelle
 Une fois par an : exporter les budgets + suivis, puis remettre à zéro en **conservant la structure**
 des LB (qui reste modifiable). Les budgets sont archivés/supprimés, la structure persiste (P2).
+
+**Garde-fous (A7)** — les pièces comptables se conservent **10 ans** (obligation légale) :
+- L'export XLSX de l'exercice est **obligatoire et vérifié** avant purge : le bouton
+  « Purger » reste désactivé tant qu'un export couvrant les données à purger n'a pas
+  été généré et téléchargé.
+- Les écritures GL ne sont **jamais supprimées physiquement** : purge = `archived=true`
+  (soft-delete). Les vues et agrégats filtrent `archived=false`. Une restauration
+  reste possible.
+
+## 11. Clôture mensuelle (A3)
+
+### BR-11.1 — Clôture explicite
+Un mois passe à l'état **clos** par une action utilisateur explicite (pas d'automatisme
+calendaire). Check-list affichée avant clôture :
+- GL du mois importé ;
+- écritures du mois allouées (ou consciemment laissées « À allouer ») ;
+- rapprochement bancaire effectué (BR-7.5) — recommandé, non bloquant.
+
+Le dernier mois clos définit `M` pour la trésorerie réelle (BR-7.3).
+Les mois se clôturent dans l'ordre chronologique (pas de trou).
+
+### BR-11.2 — Verrouillage des périodes closes
+Sur un mois clos :
+- les **écritures GL** datées de ce mois et leurs **allocations** (LB, bailleur)
+  deviennent non modifiables ;
+- les **montants budgétés** (`budget_monthly`) de ce mois deviennent non modifiables ;
+- toute modification exige une **réouverture** explicite du mois (action tracée,
+  avec confirmation), puis une re-clôture.
+Objectif : ce qui a été reporté (bailleur, CA) ne peut plus bouger silencieusement.

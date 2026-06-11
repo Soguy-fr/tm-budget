@@ -81,6 +81,7 @@
 | F5.11 | Sur GL filtré par LB+année+mois : bloc récap synthétique — nom de la ligne en avant, commentaire dessous, puis réalisé / planifié / solde, couleur si dépassement | 🟢 | BR-5.1, F1.7 |
 | F5.12 | Bouton « Retour au budget » → ancre sur la ligne budgétaire (`/interne#lb-<id>`) | 🟢 | F3.14 |
 | F5.13 | Bouton « Importer CSV » en haut à droite | 🟢 | — |
+| F5.14 | Montants signés : avoirs / remboursements en négatif (Dépense négative, jamais Recette) | 🟡 | BR-4.4 |
 
 ## F6 — Suivi
 
@@ -90,6 +91,7 @@
 | F6.2 | Suivi par bailleur : recettes & dépenses, prévu vs réalisé | 🟢 | BR-6.1 |
 | F6.3 | Alerte dépassement bailleur | 🟡 | BR-6.2 |
 | F6.4 | Suivi mois par mois (réalisé cumulé vs prévu) | 🟡 | BR-5.* |
+| F6.5 | Ligne « Réalisé non assigné » dans le suivi bailleur (réconciliation des deux suivis) | 🟡 | BR-6.3 |
 
 ## F7 — Trésorerie
 
@@ -99,6 +101,8 @@
 | F7.2 | Prévision glissante (réel jusqu'au dernier mois clos, budget ensuite) | 🟢 | BR-7.3 |
 | F7.3 | Chaînage des soldes entre années | 🟡 | BR-7.1 |
 | F7.4 | Détection visuelle des trous de trésorerie | 🟢 | BR-7.4 |
+| F7.5 | Tréso réelle = toutes écritures GL (allouées ou non) — la caisse reflète la banque | 🟢 | BR-7.3 |
+| F7.6 | Rapprochement bancaire : saisie solde relevé mensuel + écart vs solde calculé (rouge si ≠ 0) | 🟡 | BR-7.5 |
 
 ## F8 — Dashboard
 
@@ -114,7 +118,7 @@
 | # | Fonctionnalité | Phase | Règles |
 |---|---|---|---|
 | F9.1 | Export XLSX d'un budget + suivis | 🟡 | BR-10.1 |
-| F9.2 | Purge annuelle : reset des données transactionnelles (mailles, totaux saisis, écritures GL, recettes/dépenses bailleur) ; structure LB + bailleurs conservés ; double confirmation (saisir « PURGER »). Export XLSX recommandé avant (F9.1, Jalon 11) | 🟡 | BR-10.2 |
+| F9.2 | Purge annuelle : reset des données transactionnelles (mailles, totaux saisis, recettes/dépenses bailleur) ; écritures GL **archivées** (soft-delete, jamais supprimées — conservation 10 ans) ; structure LB + bailleurs conservés ; double confirmation (saisir « PURGER »). Export XLSX **obligatoire et vérifié** avant purge (bouton désactivé sinon) | 🟡 | BR-10.2 |
 | F9.3 | Sauvegardes / restauration | 🔵 | — |
 
 ## F10 — Transverse
@@ -124,6 +128,14 @@
 | F10.1 | Authentification (mono-utilisateur au départ) | 🟢 | — |
 | F10.2 | Multi-utilisateurs + rôles (admin/lecteur) + RLS | 🔵 | — |
 | F10.3 | Real-time (édition concurrente) | 🔵 | — |
+
+## F11 — Clôture mensuelle
+
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F11.1 | Clore un mois (action explicite + check-list : GL importé, allocations, rapprochement) | 🟡 | BR-11.1 |
+| F11.2 | Verrouillage des mois clos (GL, allocations, montants budgétés) + réouverture tracée | 🟡 | BR-11.2 |
+| F11.3 | La frontière réel/budgété de la tréso (M) = dernier mois clos | 🟡 | BR-7.3, BR-11.1 |
 
 ---
 
