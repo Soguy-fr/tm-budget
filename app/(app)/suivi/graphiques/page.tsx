@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
-  fluxBudgeted, fluxReal, chainCumulative, lastClosedMonthIndex,
+  fluxBudgeted, fluxReal, chainCumulative, lastClosedMonthIndex, realFlowsByMonth,
 } from "@/lib/treasury";
 import {
   barsByCategory, pieByCategory, pieByBailleur, tresoSeries,
@@ -78,14 +78,7 @@ export default async function GraphiquesPage() {
   }
   // BR-7.3 (A1) — la trésorerie réelle somme TOUTES les écritures, allouées ou
   // non : la caisse reflète la banque, pas le suivi analytique.
-  const recReel: Record<string, number> = {};
-  const depReel: Record<string, number> = {};
-  for (const e of allGl) {
-    const y = Number(e.entry_date.slice(0, 4));
-    const m = Number(e.entry_date.slice(5, 7));
-    if (e.entry_type === "Recette") recReel[ym(y, m)] = (recReel[ym(y, m)] ?? 0) + Number(e.amount);
-    else if (e.entry_type === "Dépense") depReel[ym(y, m)] = (depReel[ym(y, m)] ?? 0) + Number(e.amount);
-  }
+  const { rec: recReel, dep: depReel } = realFlowsByMonth(allGl);
 
   const m12 = <T,>(fn: (i: number) => T) => Array.from({ length: 12 }, (_, i) => fn(i));
   const fluxBudFlat: number[] = [];

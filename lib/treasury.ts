@@ -9,6 +9,23 @@ export function lastClosedMonthIndex(year: number, now: Date = new Date()): numb
   return now.getMonth() - 1; // année courante : mois en cours exclu
 }
 
+// BR-7.3 (A1) — agrège les flux réels du GL par clé « année:mois ».
+// Somme TOUTES les écritures, allouées ou non : la caisse reflète la banque,
+// pas le suivi analytique. Le statut d'allocation (BR-4.1) ne s'applique pas ici.
+// Montants signés (BR-4.4) : un avoir négatif réduit le flux de dépenses.
+export function realFlowsByMonth(
+  entries: Array<{ entry_date: string; entry_type: "Dépense" | "Recette"; amount: number }>,
+): { rec: Record<string, number>; dep: Record<string, number> } {
+  const rec: Record<string, number> = {};
+  const dep: Record<string, number> = {};
+  for (const e of entries) {
+    const k = `${Number(e.entry_date.slice(0, 4))}:${Number(e.entry_date.slice(5, 7))}`;
+    if (e.entry_type === "Recette") rec[k] = (rec[k] ?? 0) + Number(e.amount);
+    else dep[k] = (dep[k] ?? 0) + Number(e.amount);
+  }
+  return { rec, dep };
+}
+
 // BR-7.2 — flux budgété d'un mois = recettes prévues − dépenses prévues.
 export function fluxBudgeted(recettes: number[], depenses: number[]): number[] {
   return Array.from({ length: 12 }, (_, i) => (recettes[i] ?? 0) - (depenses[i] ?? 0));

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
 import { realiseByCell } from "@/lib/suivi";
+import { realFlowsByMonth } from "@/lib/treasury";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 
@@ -86,14 +87,7 @@ export default async function InternePage() {
   }
   // BR-7.3 (A1) — la trésorerie réelle somme TOUTES les écritures, allouées ou
   // non : la caisse reflète la banque, pas le suivi analytique.
-  const recReel: Record<string, number> = {};
-  const depReel: Record<string, number> = {};
-  for (const e of allGl) {
-    const y = Number(e.entry_date.slice(0, 4));
-    const m = Number(e.entry_date.slice(5, 7));
-    if (e.entry_type === "Recette") recReel[ym(y, m)] = (recReel[ym(y, m)] ?? 0) + Number(e.amount);
-    else depReel[ym(y, m)] = (depReel[ym(y, m)] ?? 0) + Number(e.amount);
-  }
+  const { rec: recReel, dep: depReel } = realFlowsByMonth(allGl);
 
   return (
     <InterneGrid

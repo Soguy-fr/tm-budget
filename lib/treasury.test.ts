@@ -5,6 +5,7 @@ import {
   fluxReal,
   chainCumulative,
   negativeMonths,
+  realFlowsByMonth,
 } from "./treasury";
 
 describe("lastClosedMonthIndex (BR-7.3 option A)", () => {
@@ -17,6 +18,47 @@ describe("lastClosedMonthIndex (BR-7.3 option A)", () => {
   it("année courante : mois en cours exclu", () => {
     // juin = index 5 → dernier clos = mai = 4
     expect(lastClosedMonthIndex(2026, new Date("2026-06-15"))).toBe(4);
+  });
+});
+
+describe("realFlowsByMonth (BR-7.3 / A1 — la caisse reflète la banque)", () => {
+  it("inclut les écritures NON allouées (sans LB ni bailleur)", () => {
+    // Le bug A1 : ces écritures étaient filtrées par isAllocated() → solde ≠ banque.
+    const entries = [
+      // dépense allouée
+      { entry_date: "2026-03-05", entry_type: "Dépense" as const, amount: 1000,
+        line_id: "lb-1", bailleur_id: "b-1" },
+      // dépense NON allouée (À allouer) — doit compter quand même
+      { entry_date: "2026-03-12", entry_type: "Dépense" as const, amount: 250,
+        line_id: null, bailleur_id: null },
+      // recette NON allouée — doit compter quand même
+      { entry_date: "2026-03-20", entry_type: "Recette" as const, amount: 5000,
+        line_id: null, bailleur_id: null },
+    ];
+    const { rec, dep } = realFlowsByMonth(entries);
+    expect(dep["2026:3"]).toBe(1250); // 1000 + 250, pas 1000
+    expect(rec["2026:3"]).toBe(5000);
+  });
+
+  it("somme les montants signés (BR-4.4 — un avoir réduit les dépenses)", () => {
+    const entries = [
+      { entry_date: "2026-03-05", entry_type: "Dépense" as const, amount: 1000 },
+      { entry_date: "2026-03-10", entry_type: "Dépense" as const, amount: -120 }, // avoir
+    ];
+    const { dep } = realFlowsByMonth(entries);
+    expect(dep["2026:3"]).toBe(880);
+  });
+
+  it("agrège par année:mois sans zéro de tête (clé « 2026:3 »)", () => {
+    const entries = [
+      { entry_date: "2026-03-05", entry_type: "Dépense" as const, amount: 10 },
+      { entry_date: "2026-11-05", entry_type: "Dépense" as const, amount: 20 },
+      { entry_date: "2025-03-05", entry_type: "Dépense" as const, amount: 30 },
+    ];
+    const { dep } = realFlowsByMonth(entries);
+    expect(dep["2026:3"]).toBe(10);
+    expect(dep["2026:11"]).toBe(20);
+    expect(dep["2025:3"]).toBe(30);
   });
 });
 
