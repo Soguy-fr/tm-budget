@@ -6,6 +6,7 @@ import { checkEntryEligibility } from "@/lib/eligibility";
 import { scoreAnomalies } from "@/lib/anomalies";
 import type { StructureLine, Bailleur, GlEntry } from "@/lib/types";
 import { GlTable } from "@/components/grand-livre/GlTable";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,10 @@ export default async function GrandLivrePage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Grand Livre</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Grand Livre</h1>
+        <GuideLink anchor="le-grand-livre-la-realite-entre-dans-l-appli" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Importez le grand livre (CSV), allouez chaque écriture à une LB et un
         bailleur. Le réalisé en découle (P1, P5).

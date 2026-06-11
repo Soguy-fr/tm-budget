@@ -204,6 +204,39 @@ create table month_closures (
 > `budget_monthly` (année, mois clos) et toute modification d'écriture GL
 > (`entry_date` dans un mois clos) tant que `reopened_at` est null.
 
+### user_roles (F12.1)
+Rôle applicatif par utilisateur. Absent = lecteur. RLS : transactionnel = gestionnaire+,
+référentiel/clôture = admin (helper SQL `current_app_role()`, security definer).
+```sql
+create table user_roles (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  role       text not null check (role in ('admin','gestionnaire','lecteur')),
+  created_at timestamptz not null default now()
+);
+```
+
+### audit_log (F12.2)
+Piste d'audit alimentée par triggers (`fn_audit`, security definer) sur les tables
+métier. Lecture admin uniquement ; écriture impossible hors trigger.
+```sql
+create table audit_log (
+  id         uuid primary key default gen_random_uuid(),
+  table_name text not null,
+  record_id  uuid,
+  action     text not null check (action in ('INSERT','UPDATE','DELETE')),
+  old_data   jsonb,
+  new_data   jsonb,
+  changed_by uuid,                      -- auth.uid()
+  changed_at timestamptz not null default now()
+);
+```
+
+### Colonnes ajoutées (migration 0006)
+- `bailleurs.montant_conventionne numeric(14,2)` — plafond contractuel (Q4, F12.4).
+- `gl_entries.confirmed boolean default true` — double validation (F12.6) :
+  allocation par non-admin → `false`, confirmation admin → `true`.
+- `gl_entries.archived boolean default false` — purge soft-delete (BR-10.2).
+
 ### bank_reconciliations
 Rapprochement bancaire mensuel (BR-7.5) : solde du relevé saisi par l'utilisateur.
 ```sql

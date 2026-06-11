@@ -89,8 +89,12 @@
   BR-11), rapprochement bancaire (F7.6, BR-7.5), ligne « Réalisé non assigné »
   (F6.5, BR-6.3), purge en soft-delete + export obligatoire (F9.2 révisée).
   Tests : INV6–INV9. Origine : audit comptable, voir `AMELIORATIONS.md` §1.
-  (Déjà livrés hors jalon : périmètre tréso BR-7.3/F7.5 et montants signés
-  BR-4.4/F5.14, avec tests.)
+  ✅ **Livré** (sauf F6.5 ligne « Réalisé non assigné » UI et blocage purge sur
+  export — vue SQL créée, garde-fou export à câbler au Jalon 11).
+- Jalon 14b — Collaboration, contrôles & IA (F12, F13) : rôles + RLS + audit,
+  doublons import, éligibilité bailleur, anomalies, double validation,
+  pack audit CSV, catégorisation IA, chatbot outils typés. Migration 0006.
+  ✅ **Livré** (2026-06-11), 155 tests verts.
 - Bascule Supabase Pro (backups, storage) si usage réel.
 
 ## Phase 3 — industrialisation

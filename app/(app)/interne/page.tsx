@@ -6,6 +6,7 @@ import { realFlowsByMonth } from "@/lib/treasury";
 import type { ClosureRow } from "@/lib/closure";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,12 @@ export default async function InternePage() {
   const { rec: recReel, dep: depReel } = realFlowsByMonth(allGl);
 
   return (
-    <InterneGrid
+    <div>
+      <div className="mb-2 flex justify-end gap-2">
+        <GuideLink anchor="saisir-le-previsionnel" />
+        <GuideLink anchor="la-tresorerie-eviter-la-panne-seche" />
+      </div>
+      <InterneGrid
       budgetId={budget.id}
       budgetName={budget.name}
       rows={flat}
@@ -111,7 +117,8 @@ export default async function InternePage() {
       recReel={recReel}
       depReel={depReel}
       closures={(closureRows ?? []) as ClosureRow[]}
-    />
+      />
+    </div>
   );
 }
 

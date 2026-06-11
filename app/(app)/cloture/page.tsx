@@ -7,6 +7,7 @@ import { getRole } from "@/lib/auth/role";
 import { can } from "@/lib/roles";
 import type { Budget, BankReconciliation, GlEntry } from "@/lib/types";
 import { ClotureBoard } from "@/components/cloture/ClotureBoard";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +86,10 @@ export default async function CloturePage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Clôture mensuelle</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Clôture mensuelle</h1>
+        <GuideLink anchor="clore-le-mois-le-rituel-mensuel" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Clore un mois fige ses écritures, allocations et montants budgétés (BR-11). Le dernier
         mois clos définit la frontière réel/budgété de la trésorerie. Rapprochement bancaire :

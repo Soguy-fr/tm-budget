@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Bailleur } from "@/lib/types";
 import { BailleurCreate } from "@/components/bailleurs/BailleurCreate";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,10 @@ export default async function BailleursPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Bailleurs</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Bailleurs</h1>
+        <GuideLink anchor="ajouter-un-bailleur" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Sources de financement. Chaque bailleur a sa nomenclature, son mapping
         vers les LB internes et ses recettes prévues.

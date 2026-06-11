@@ -4,6 +4,7 @@ import { getRole } from "@/lib/auth/role";
 import { can, ROLE_LABELS } from "@/lib/roles";
 import { describeAudit, TABLE_LABELS } from "@/lib/audit-format";
 import type { AuditLogEntry } from "@/lib/types";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,10 @@ export default async function AuditPage({
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Piste d&apos;audit</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Piste d&apos;audit</h1>
+        <GuideLink anchor="qui-a-fait-quoi-l-audit" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         200 derniers changements (qui, quoi, quand). Alimentée automatiquement par la base.
       </p>

@@ -133,9 +133,28 @@
 
 | # | Fonctionnalité | Phase | Règles |
 |---|---|---|---|
-| F11.1 | Clore un mois (action explicite + check-list : GL importé, allocations, rapprochement) | 🟡 | BR-11.1 |
-| F11.2 | Verrouillage des mois clos (GL, allocations, montants budgétés) + réouverture tracée | 🟡 | BR-11.2 |
-| F11.3 | La frontière réel/budgété de la tréso (M) = dernier mois clos | 🟡 | BR-7.3, BR-11.1 |
+| F11.1 | Clore un mois (action explicite + check-list : GL importé, allocations, rapprochement) — page /cloture | 🟢 | BR-11.1 |
+| F11.2 | Verrouillage des mois clos (GL, allocations, montants budgétés) + réouverture tracée (dernier mois clos seulement) | 🟢 | BR-11.2 |
+| F11.3 | La frontière réel/budgété de la tréso (M) = dernier mois clos (fallback implicite si aucune clôture) | 🟢 | BR-7.3, BR-11.1 |
+
+## F12 — Collaboration & contrôles
+
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F12.1 | Rôles admin / gestionnaire / lecteur : matrice de permissions + RLS + gardes server actions | 🟢 | — |
+| F12.2 | Piste d'audit (triggers DB sur 8 tables) + page /audit admin-only, diff des champs | 🟢 | — |
+| F12.3 | Détection de doublons à l'import GL (même date + montant + libellé similaire) ; import sans doublons ou forcé | 🟢 | — |
+| F12.4 | Contrôles d'éligibilité bailleur : hors convention, LB non mappée, plafond conventionné (`montant_conventionne`, Q4) | 🟢 | — |
+| F12.5 | Détection d'anomalies GL : montant inhabituel (> 2σ vs historique LB), paiement week-end, montant rond répété — non bloquant | 🟢 | — |
+| F12.6 | Double validation des allocations : allocation par non-admin = « À confirmer », confirmation admin | 🟢 | — |
+| F12.7 | Pack audit bailleur : export CSV multi-sections (convention, synthèse, mapping, recettes, écritures) | 🟢 | BR-10.1 |
+
+## F13 — IA (OpenRouter)
+
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F13.1 | Catégorisation auto du GL : suggestions LB + bailleur (few-shot sur l'historique), validation humaine obligatoire, codes inventés rejetés | 🟢 | — |
+| F13.2 | Chatbot « Explique-moi mes chiffres » : 4 outils typés sur les vues (suivi LB, bailleurs, tréso, écritures), jamais de SQL libre — page /chat | 🟢 | — |
 
 ---
 

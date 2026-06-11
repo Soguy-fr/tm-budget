@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getRole } from "@/lib/auth/role";
 import { can, ROLE_LABELS } from "@/lib/roles";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,10 @@ export default async function ChatPage() {
   }
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Assistant budgétaire</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Assistant budgétaire</h1>
+        <GuideLink anchor="l-assistant-ia-pose-tes-questions" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Pose une question sur tes chiffres (suivi, bailleurs, trésorerie, écritures). L&apos;assistant
         lit les données réelles via des outils fermés — il n&apos;invente pas de chiffres.

@@ -13,6 +13,7 @@ const NAV = [
   { href: "/chat", label: "Assistant IA" },
   { href: "/audit", label: "Audit" },
   { href: "/structure", label: "Configuration" },
+  { href: "/guide", label: "📖 Guide" },
 ];
 
 export function Sidebar() {
