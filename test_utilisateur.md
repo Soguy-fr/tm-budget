@@ -128,6 +128,14 @@ Sans cette migration, le Grand Livre et les nouvelles pages renverront des erreu
 - [ ] /budgets → purge (« PURGER ») → les écritures GL disparaissent des écrans
 - [ ] Dans Supabase : `select count(*) from gl_entries where archived = true` → écritures conservées
 
+## Test 14 — Guide utilisateur
+
+- [ ] http://localhost:3000/guide — le guide s'affiche (sommaire à gauche, encarts verts)
+- [ ] Cliquer une entrée du sommaire → saut à la bonne section
+- [ ] Sur /grand-livre, /cloture, /chat, /audit, /budgets, /structure, /bailleurs, /suivi, /interne :
+  bouton **📖 Guide** présent → mène à la section correspondante du guide
+- [ ] Lien « 📖 Guide » dans la barre latérale
+
 ---
 
 ## Résultat
