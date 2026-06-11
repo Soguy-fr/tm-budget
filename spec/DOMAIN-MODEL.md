@@ -137,7 +137,7 @@ Une ligne du grand livre comptable importée (CSV), représentant le réalisé.
   Un écart plan/réel produit un **avertissement non bloquant**, pas un blocage.
 - Une écriture non allouée est surlignée et exclue des agrégats **analytiques**
   (suivi LB, suivi bailleur) jusqu'à allocation — mais elle compte **toujours**
-  dans la trésorerie réelle (la caisse reflète la banque, BR-7.3/A1).
+  dans la trésorerie réelle (la caisse reflète la banque, BR-7.3).
 - Une écriture n'est jamais supprimée physiquement : la purge annuelle l'archive
   (`archived`, BR-10.2) — conservation comptable 10 ans.
 
@@ -180,10 +180,10 @@ Le contrôle de complétude du GL (BR-7.5).
 - **INV4** : un bailleur assigné à une écriture GL doit financer la LB concernée à un moment de l'année (sinon avertissement, Tension A/D).
 - **INV5** (Phase) : `Σ dépenses réalisées d'un bailleur ≤ recettes du bailleur` (alerte de dépassement si faux).
 - **INV6** : la trésorerie réelle d'un mois clos = Σ de **toutes** les écritures GL
-  du mois (allouées ou non, signées), indépendante du statut d'allocation (A1).
+  du mois (allouées ou non, signées), indépendante du statut d'allocation (BR-7.3).
 - **INV7** : `Σ dépenses réalisées (tous bailleurs) + réalisé non assigné == Σ dépenses GL allouées (LB)`
-  — les deux suivis se recoupent (BR-6.3, A6).
+  — les deux suivis se recoupent (BR-6.3).
 - **INV8** : aucune donnée (GL, allocation, montant budgété) d'un mois clos ne change
-  sans réouverture explicite et tracée (BR-11.2, A3).
+  sans réouverture explicite et tracée (BR-11.2).
 - **INV9** : si un rapprochement bancaire existe pour un mois, `écart == 0` est attendu ;
-  sinon signal rouge non bloquant (BR-7.5, A2).
+  sinon signal rouge non bloquant (BR-7.5).

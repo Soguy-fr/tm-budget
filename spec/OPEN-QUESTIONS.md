@@ -65,8 +65,8 @@ Probablement même logique que les LB (P8) : interdit tant que référencé, sin
 - Bailleurs = pages séparées même gabarit ; sur page interne, bailleur visible via code couleur,
   édition fine via ligne « ↳ bailleur » en mode édition.
 - Plan vs réel sur GL : avertissement non bloquant, seul le total annuel par bailleur compte.
-- Trésorerie réelle : somme **toutes** les écritures GL, allouées ou non (A1, BR-7.3).
-- Chaînage inter-années : chaque mode (Budgété/Réel) chaîne ses propres soldes (A5, BR-7.1).
+- Trésorerie réelle : somme **toutes** les écritures GL, allouées ou non (BR-7.3).
+- Chaînage inter-années : chaque mode (Budgété/Réel) chaîne ses propres soldes (BR-7.1).
 - Mois clos = action explicite (BR-11.1), plus « mois courant − 1 » implicite ; mois clos verrouillé (BR-11.2).
 - Avoirs/remboursements = montants signés (négatifs), jamais convertis en Recette (BR-4.4).
 - Purge = soft-delete des écritures GL + export XLSX obligatoire avant (BR-10.2, conservation 10 ans).

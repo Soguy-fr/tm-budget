@@ -81,7 +81,7 @@
 | F5.11 | Sur GL filtré par LB+année+mois : bloc récap synthétique — nom de la ligne en avant, commentaire dessous, puis réalisé / planifié / solde, couleur si dépassement | 🟢 | BR-5.1, F1.7 |
 | F5.12 | Bouton « Retour au budget » → ancre sur la ligne budgétaire (`/interne#lb-<id>`) | 🟢 | F3.14 |
 | F5.13 | Bouton « Importer CSV » en haut à droite | 🟢 | — |
-| F5.14 | Montants signés : avoirs / remboursements en négatif (Dépense négative, jamais Recette) | 🟡 | BR-4.4 |
+| F5.14 | Montants signés : avoirs / remboursements en négatif (Dépense négative, jamais Recette) | 🟢 | BR-4.4 |
 
 ## F6 — Suivi
 

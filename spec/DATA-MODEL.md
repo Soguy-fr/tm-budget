@@ -282,7 +282,7 @@ group by 1;
 
 > La trésorerie (prévision glissante budgété/réel) est calculée côté application
 > car elle dépend du dernier mois clos (`month_closures`, BR-11.1) et du chaînage
-> des soldes (voir BUSINESS-RULES). **Attention (A1/BR-7.3)** : les flux réels de
+> des soldes (voir BUSINESS-RULES). **Attention (BR-7.3)** : les flux réels de
 > trésorerie somment **toutes** les écritures GL non archivées du mois, y compris
 > les « À allouer » (pas de filtre `line_id`/`bailleur_id`) — la caisse reflète la
 > banque, pas le suivi analytique.
