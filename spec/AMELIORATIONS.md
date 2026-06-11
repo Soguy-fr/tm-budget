@@ -43,6 +43,14 @@ Ces points ne sont pas des « améliorations » mais des trous à boucher avant 
 
 ---
 
+> ✅ **Implémentés (2026-06-11)** : U1 (rôles admin/gestionnaire/lecteur + RLS,
+> migration 0006), U2 (audit_log + triggers + page /audit), C1 (doublons à
+> l'import), C2 (éligibilité : convention, mapping, plafond conventionné),
+> C3 (anomalies : z-score, week-end, montants ronds), C4 (clôture mensuelle +
+> rapprochement bancaire, page /cloture), C5 (pack audit CSV), C6 (double
+> validation des allocations), I1 (catégorisation IA OpenRouter), I2 (chatbot
+> outils typés, page /chat + /api/chat).
+
 ## 3. Multi-utilisateurs & collaboration (10 personnes)
 
 | # | Idée | Description | Faisabilité | Importance |
