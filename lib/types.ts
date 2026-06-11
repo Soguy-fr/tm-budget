@@ -37,6 +37,7 @@ export type Bailleur = {
   color: string;
   convention_start: string | null;
   convention_end: string | null;
+  montant_conventionne: number | null; // C2/Q4 — plafond contractuel
   created_at: string;
 };
 
@@ -92,6 +93,42 @@ export type GlEntry = {
   raw: Record<string, unknown> | null;
   line_id: string | null;
   bailleur_id: string | null;
+  confirmed: boolean;  // C6 — double validation des allocations
+  archived: boolean;   // BR-10.2 — purge = soft-delete
+  created_at: string;
+};
+
+// U1 — rôles applicatifs
+export type Role = "admin" | "gestionnaire" | "lecteur";
+
+// U2 — piste d'audit
+export type AuditLogEntry = {
+  id: string;
+  table_name: string;
+  record_id: string | null;
+  action: "INSERT" | "UPDATE" | "DELETE";
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
+  changed_by: string | null;
+  changed_at: string;
+};
+
+// C4 / BR-11 — clôture mensuelle
+export type MonthClosure = {
+  id: string;
+  year: number;
+  month: number; // 1..12
+  closed_at: string;
+  reopened_at: string | null;
+};
+
+// C4 / BR-7.5 — rapprochement bancaire
+export type BankReconciliation = {
+  id: string;
+  year: number;
+  month: number; // 1..12
+  statement_balance: number;
+  note: string | null;
   created_at: string;
 };
 

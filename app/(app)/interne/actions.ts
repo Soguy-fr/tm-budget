@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { denyUnless } from "@/lib/auth/role";
+import { lockedViolations, type ClosureRow } from "@/lib/closure";
 
 type ActionResult = { ok: boolean; error?: string };
 
@@ -33,6 +35,24 @@ export async function saveGrid(
   bailleurs: BailleurChange[] = [],
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "edit_budget");
+  if (deny) return { ok: false, error: deny };
+
+  // BR-11.2 — pas de modification des montants d'un mois clos.
+  const { data: closureRows } = await supabase
+    .from("month_closures")
+    .select("year, month, reopened_at");
+  const violations = lockedViolations(
+    (closureRows ?? []) as ClosureRow[],
+    [...monthly, ...bailleurs].map((c) => ({ year: c.year, month: c.month })),
+  );
+  if (violations.length > 0) {
+    const v = violations[0];
+    return {
+      ok: false,
+      error: `Mois ${v.year}-${String(v.month).padStart(2, "0")} clos : montants verrouillés (réouvrir via Clôture).`,
+    };
+  }
 
   if (monthly.length > 0) {
     const rows = monthly.map((m) => ({ budget_id: budgetId, ...m }));
@@ -69,6 +89,8 @@ export async function addYear(
   year: number,
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
 
   const { error: yearErr } = await supabase
     .from("budget_years")
@@ -106,6 +128,8 @@ export async function removeYear(
   year: number,
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
 
   await supabase
     .from("budget_monthly")

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { cloneMonthlyRows, duplicateName } from "@/lib/budgets";
+import { denyUnless } from "@/lib/auth/role";
 import type { Budget } from "@/lib/types";
 
 type ActionResult = { ok: boolean; error?: string };
@@ -11,6 +12,8 @@ type ActionResult = { ok: boolean; error?: string };
 export async function createBudget(name: string): Promise<ActionResult> {
   if (!name.trim()) return { ok: false, error: "Le nom est requis." };
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("budgets")
     .insert({ name: name.trim(), type: "interne" });
@@ -23,6 +26,8 @@ export async function createBudget(name: string): Promise<ActionResult> {
 // Désactiver d'abord l'actif courant pour respecter l'index unique partiel.
 export async function setActiveBudget(id: string): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
   const { error: unsetErr } = await supabase
     .from("budgets")
     .update({ is_active: false })
@@ -45,6 +50,8 @@ export async function updateInitialCash(
   value: number,
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("budgets")
     .update({ initial_cash: value })
@@ -57,6 +64,8 @@ export async function updateInitialCash(
 // F2.3 — Dupliquer un budget : copie années + mailles (montants + assignations).
 export async function duplicateBudget(id: string): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
 
   const { data: src, error: srcErr } = await supabase
     .from("budgets")
@@ -120,10 +129,10 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
 }
 
 // F9.2 / BR-10.2 — Purge annuelle. Remet à zéro les données transactionnelles en
-// CONSERVANT la structure des LB et les bailleurs (P2). IRRÉVERSIBLE.
-// Double confirmation : l'appelant doit transmettre exactement « PURGER ».
-const PURGE_TABLES = [
-  "gl_entries",
+// CONSERVANT la structure des LB et les bailleurs (P2).
+// Les écritures GL ne sont JAMAIS supprimées : archivées (soft-delete,
+// conservation comptable 10 ans). Double confirmation : saisir « PURGER ».
+const PURGE_DELETE_TABLES = [
   "budget_monthly",
   "budget_line_totals",
   "bailleur_income_monthly",
@@ -138,8 +147,18 @@ export async function purgeTransactionalData(
     return { ok: false, error: "Confirmation invalide : saisir « PURGER »." };
   }
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "purge");
+  if (deny) return { ok: false, error: deny };
+
+  // BR-10.2 — GL archivé, pas supprimé.
+  const { error: glErr } = await supabase
+    .from("gl_entries")
+    .update({ archived: true })
+    .eq("archived", false);
+  if (glErr) return { ok: false, error: `gl_entries : ${glErr.message}` };
+
   // Filtre « id non nul » = tout supprimer (PostgREST exige un WHERE).
-  for (const table of PURGE_TABLES) {
+  for (const table of PURGE_DELETE_TABLES) {
     const { error } = await supabase.from(table).delete().not("id", "is", null);
     if (error) return { ok: false, error: `${table} : ${error.message}` };
   }

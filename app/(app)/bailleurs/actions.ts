@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { denyUnless } from "@/lib/auth/role";
 
 type ActionResult = { ok: boolean; error?: string };
 
@@ -12,16 +13,20 @@ export async function createBailleur(input: {
   color: string;
   convention_start: string | null;
   convention_end: string | null;
+  montant_conventionne?: number | null; // C2/Q4 — plafond contractuel
 }): Promise<ActionResult> {
   if (!input.code.trim() || !input.name.trim())
     return { ok: false, error: "Code et nom requis." };
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase.from("bailleurs").insert({
     code: input.code.trim(),
     name: input.name.trim(),
     color: input.color || "#64748b",
     convention_start: input.convention_start || null,
     convention_end: input.convention_end || null,
+    montant_conventionne: input.montant_conventionne ?? null,
   });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/bailleurs");
@@ -36,6 +41,8 @@ export async function addBailleurLine(
 ): Promise<ActionResult> {
   if (!code.trim()) return { ok: false, error: "Code requis." };
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
 
   const { data: existing } = await supabase
     .from("bailleur_lines")
@@ -60,6 +67,8 @@ export async function deleteBailleurLine(
   lineId: string,
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase.from("bailleur_lines").delete().eq("id", lineId);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/bailleurs/${bailleurId}`);
@@ -73,6 +82,8 @@ export async function setLineMapping(
   lineIds: string[],
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
   await supabase
     .from("bailleur_line_mapping")
     .delete()
@@ -94,6 +105,8 @@ export async function saveIncome(
 ): Promise<ActionResult> {
   if (rows.length === 0) return { ok: true };
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "edit_budget");
+  if (deny) return { ok: false, error: deny };
   const payload = rows.map((r) => ({ bailleur_id: bailleurId, ...r }));
   const { error } = await supabase
     .from("bailleur_income_monthly")

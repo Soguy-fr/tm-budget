@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nextChildCode, nextSortOrder, canDeleteLine, reorderSwap } from "@/lib/structure";
+import { denyUnless } from "@/lib/auth/role";
 import type { StructureLine } from "@/lib/types";
 
 type ActionResult = { ok: boolean; error?: string };
@@ -14,6 +15,8 @@ export async function addLine(
   label: string,
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_structure");
+  if (deny) return { ok: false, error: deny };
 
   let parent: StructureLine | null = null;
   if (parentId) {
@@ -62,6 +65,8 @@ export async function renameLine(
 ): Promise<ActionResult> {
   if (!label.trim()) return { ok: false, error: "Le libellé est requis." };
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_structure");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("structure_lines")
     .update({ label: label.trim() })
@@ -79,6 +84,8 @@ export async function updateLine(
 ): Promise<ActionResult> {
   if (!label.trim()) return { ok: false, error: "L'intitulé est requis." };
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_structure");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("structure_lines")
     .update({ label: label.trim(), comment: comment.trim() || null })
@@ -94,6 +101,8 @@ export async function updateComment(
   comment: string,
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_structure");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("structure_lines")
     .update({ comment: comment.trim() || null })
@@ -109,6 +118,8 @@ export async function moveLine(
   dir: "up" | "down",
 ): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_structure");
+  if (deny) return { ok: false, error: deny };
   const { data: row, error: e1 } = await supabase
     .from("structure_lines")
     .select("parent_id")
@@ -142,6 +153,8 @@ export async function moveLine(
 // F1.5 — Supprimer (interdit si montant/écriture liés, P8 ; sinon soft-delete).
 export async function deleteLine(id: string): Promise<ActionResult> {
   const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_structure");
+  if (deny) return { ok: false, error: deny };
 
   const { count: amountCount } = await supabase
     .from("budget_monthly")
