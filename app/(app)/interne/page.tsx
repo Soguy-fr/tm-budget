@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
 import { realiseByCell } from "@/lib/suivi";
 import { realFlowsByMonth } from "@/lib/treasury";
+import type { ClosureRow } from "@/lib/closure";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 
@@ -50,8 +51,13 @@ export default async function InternePage() {
       .select("line_id, year, total_input")
       .eq("budget_id", budget.id),
     supabase.from("bailleurs").select("*").order("code"),
-    supabase.from("gl_entries").select("*").range(0, 99999),
+    supabase.from("gl_entries").select("*").eq("archived", false).range(0, 99999),
   ]);
+
+  // BR-11.1 — clôtures mensuelles (M de la trésorerie réelle).
+  const { data: closureRows } = await supabase
+    .from("month_closures")
+    .select("year, month, reopened_at");
 
   // Recettes prévues (tous bailleurs) agrégées par année:mois (BR-7.2).
   const { data: incomeRows } = await supabase
@@ -104,6 +110,7 @@ export default async function InternePage() {
       incomePrevu={incomePrevu}
       recReel={recReel}
       depReel={depReel}
+      closures={(closureRows ?? []) as ClosureRow[]}
     />
   );
 }

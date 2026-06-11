@@ -1,6 +1,19 @@
 // Trésorerie en prévision glissante (BUSINESS-RULES §7). Pur, testable.
+import { lastClosedIndex, type ClosureRow } from "./closure";
 
-// BR-7.3 — dernier mois CLOS pour une année (option A : mois courant exclu).
+// BR-7.3 — M = dernier mois EXPLICITEMENT clos (BR-11.1).
+// Fallback : tant qu'aucune clôture n'existe (adoption progressive), on garde
+// l'ancien comportement implicite « mois courant − 1 ».
+export function lastClosedMonthIndexExplicit(
+  year: number,
+  closures: ClosureRow[],
+  now: Date = new Date(),
+): number {
+  if (closures.some((c) => !c.reopened_at)) return lastClosedIndex(closures, year);
+  return lastClosedMonthIndex(year, now);
+}
+
+// Comportement implicite historique (option A : mois courant exclu).
 // Retourne un index 0..11, ou -1 si aucun mois clos (année future).
 export function lastClosedMonthIndex(year: number, now: Date = new Date()): number {
   const cy = now.getFullYear();

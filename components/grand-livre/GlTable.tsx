@@ -6,7 +6,10 @@ import type { StructureLine, Bailleur, GlEntry } from "@/lib/types";
 import { formatEur } from "@/lib/format";
 import { parseCsv } from "@/lib/csv";
 import { allocationStatus, findColumn, mapCsvRow, type MappedEntry } from "@/lib/gl";
-import { importGl, updateAllocation } from "@/app/(app)/grand-livre/actions";
+import {
+  importGl, updateAllocation, confirmAllocation, suggestAllocations,
+  type SuggestResult,
+} from "@/app/(app)/grand-livre/actions";
 
 // Colonnes du tableau, avec largeur initiale (px). Largeur ajustable (F5.9).
 const COLUMNS = [
@@ -27,6 +30,8 @@ export function GlTable({
   planAmountByCell,
   commentByLine,
   initialFilters,
+  warningsByEntry,
+  canConfirm,
 }: {
   entries: GlEntry[];
   lines: StructureLine[];
@@ -38,11 +43,18 @@ export function GlTable({
   commentByLine?: Record<string, string>;
   // F3.14 / F5.12 — filtres pré-remplis + provenance (clic d'une cellule du tableur).
   initialFilters?: { line?: string; year?: string; month?: string; fromInterne?: boolean };
+  // C2/C3 — avertissements (éligibilité bailleur, anomalies) par écriture.
+  warningsByEntry?: Record<string, string[]>;
+  // C6 — l'utilisateur peut-il confirmer les allocations en attente ?
+  canConfirm?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  // I1 — suggestions IA en attente d'application.
+  const [aiSuggestions, setAiSuggestions] = useState<NonNullable<SuggestResult["suggestions"]>>([]);
+  const [aiBusy, setAiBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Filtres multi-colonnes (F5.5, F5.8).
@@ -141,13 +153,56 @@ export function GlTable({
     if (!window.confirm(`Importer ${mapped.length} écriture(s)${note} ?`)) return;
 
     startTransition(async () => {
-      const res = await importGl(file.name, mapped);
+      // C1 — premier passage en mode « check » : détection des doublons probables.
+      let res = await importGl(file.name, mapped, "check");
+      if (!res.ok && res.duplicates && res.duplicates.length > 0) {
+        const preview = res.duplicates
+          .slice(0, 5)
+          .map((d) => `• ${d.entry_date} — ${d.amount} € — ${d.label ?? ""}`)
+          .join("\n");
+        const skip = window.confirm(
+          `${res.duplicates.length} doublon(s) probable(s) détecté(s) (même date, montant, libellé) :\n${preview}\n\n` +
+            `OK = importer SANS les doublons · Annuler = choisir`,
+        );
+        if (skip) {
+          res = await importGl(file.name, mapped, "skip-duplicates");
+        } else if (window.confirm("Importer quand même TOUTES les écritures (doublons compris) ?")) {
+          res = await importGl(file.name, mapped, "force");
+        } else {
+          if (fileRef.current) fileRef.current.value = "";
+          return;
+        }
+      }
       if (!res.ok) setError(res.error ?? "Import échoué.");
       else {
         setImportMsg(`${res.count} écriture(s) importée(s)${note}.`);
         router.refresh();
       }
       if (fileRef.current) fileRef.current.value = "";
+    });
+  }
+
+  // I1 — demander des suggestions d'allocation à l'IA.
+  async function onSuggest() {
+    setError(null);
+    setAiBusy(true);
+    try {
+      const res = await suggestAllocations();
+      if (!res.ok || !res.suggestions) setError(res.error ?? "Suggestion IA échouée.");
+      else setAiSuggestions(res.suggestions);
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function applySuggestion(s: NonNullable<SuggestResult["suggestions"]>[number]) {
+    startTransition(async () => {
+      const res = await updateAllocation(s.entry_id, s.line_id, s.bailleur_id);
+      if (!res.ok) setError(res.error ?? "Erreur.");
+      else {
+        setAiSuggestions((arr) => arr.filter((x) => x.entry_id !== s.entry_id));
+        router.refresh();
+      }
     });
   }
 
@@ -207,7 +262,15 @@ export function GlTable({
           )}
           {importMsg && <span className="text-sm text-brand-emerald">{importMsg}</span>}
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          {/* I1 — catégorisation automatique des écritures non allouées */}
+          <button
+            onClick={onSuggest}
+            disabled={aiBusy || pending}
+            className="rounded border border-brand-emerald px-3 py-1.5 text-sm text-brand-emerald hover:bg-emerald-50 disabled:opacity-40"
+          >
+            {aiBusy ? "IA en cours…" : "✨ Suggérer LB (IA)"}
+          </button>
           <input
             ref={fileRef}
             type="file"
@@ -224,6 +287,55 @@ export function GlTable({
           </label>
         </div>
       </div>
+
+      {/* I1 — panneau des suggestions IA (l'humain valide, l'IA propose) */}
+      {aiSuggestions.length > 0 && (
+        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-brand-night">
+              ✨ {aiSuggestions.length} suggestion(s) IA — à valider
+            </span>
+            <button
+              onClick={() => setAiSuggestions([])}
+              className="text-xs text-slate-400 hover:text-slate-600"
+            >
+              Tout ignorer
+            </button>
+          </div>
+          <div className="space-y-1">
+            {aiSuggestions.map((s) => {
+              const entry = entries.find((e) => e.id === s.entry_id);
+              return (
+                <div key={s.entry_id} className="flex items-center gap-2 text-xs">
+                  <span className="w-44 truncate" title={entry?.label ?? ""}>
+                    {entry?.entry_date} — {entry?.label ?? "?"}
+                  </span>
+                  <span className="font-medium">→ {s.line_label}</span>
+                  {s.bailleur_code && <span className="text-slate-500">/ {s.bailleur_code}</span>}
+                  <span
+                    className={`rounded px-1 py-0.5 text-[10px] ${
+                      s.confidence === "haute"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : s.confidence === "moyenne"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {s.confidence}
+                  </span>
+                  <button
+                    onClick={() => applySuggestion(s)}
+                    disabled={pending}
+                    className="rounded border border-brand-emerald px-1.5 py-0.5 text-[10px] text-brand-emerald hover:bg-emerald-100 disabled:opacity-40"
+                  >
+                    Appliquer
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* F5.11 — bloc récap synthétique pour la maille ciblée */}
       {showSummary && (
@@ -416,12 +528,46 @@ export function GlTable({
                     </select>
                   </td>
                   <td className="px-2 py-1">
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-[10px] ${
-                        unallocated ? "bg-amber-200 text-amber-800" : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
-                      {statut}
+                    <span className="flex items-center gap-1">
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] ${
+                          unallocated ? "bg-amber-200 text-amber-800" : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {statut}
+                      </span>
+                      {/* C6 — allocation en attente de confirmation */}
+                      {!unallocated && e.confirmed === false && (
+                        <>
+                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700">
+                            À confirmer
+                          </span>
+                          {canConfirm && (
+                            <button
+                              disabled={pending}
+                              onClick={() =>
+                                startTransition(async () => {
+                                  const res = await confirmAllocation(e.id);
+                                  if (!res.ok) setError(res.error ?? "Erreur.");
+                                  else router.refresh();
+                                })
+                              }
+                              className="rounded border border-sky-300 px-1 py-0.5 text-[10px] text-sky-700 hover:bg-sky-50 disabled:opacity-40"
+                            >
+                              ✓
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {/* C2/C3 — avertissements éligibilité + anomalies */}
+                      {(warningsByEntry?.[e.id]?.length ?? 0) > 0 && (
+                        <span
+                          className="cursor-help text-amber-500"
+                          title={warningsByEntry![e.id].join("\n")}
+                        >
+                          ⚠
+                        </span>
+                      )}
                     </span>
                   </td>
                 </tr>

@@ -12,6 +12,8 @@ const E = (p: Partial<GlEntry>): GlEntry => ({
   raw: null,
   line_id: null,
   bailleur_id: null,
+  confirmed: true,
+  archived: false,
   created_at: "",
   ...p,
 });

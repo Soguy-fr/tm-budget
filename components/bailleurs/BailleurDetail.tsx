@@ -15,6 +15,7 @@ import {
   setLineMapping,
   saveIncome,
 } from "@/app/(app)/bailleurs/actions";
+import { getBailleurPack } from "@/app/(app)/bailleurs/pack-action";
 
 type Plan = { line_id: string; amount: number; bailleur_id: string | null };
 
@@ -94,11 +95,38 @@ export function BailleurDetail({
         <span className="inline-block h-4 w-4 rounded-sm" style={{ background: bailleur.color }} />
         {bailleur.code} — {bailleur.name}
       </h1>
-      <p className="mb-4 text-sm text-slate-500">
-        {bailleur.convention_start && bailleur.convention_end
-          ? `Convention ${bailleur.convention_start} → ${bailleur.convention_end}`
-          : "Convention non renseignée"}
-      </p>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">
+          {bailleur.convention_start && bailleur.convention_end
+            ? `Convention ${bailleur.convention_start} → ${bailleur.convention_end}`
+            : "Convention non renseignée"}
+          {bailleur.montant_conventionne != null &&
+            ` · Plafond conventionné : ${formatEur(Number(bailleur.montant_conventionne))}`}
+        </p>
+        {/* C5 — pack audit bailleur en un clic (CSV multi-sections) */}
+        <button
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const year = years.at(-1) ?? new Date().getFullYear();
+              const res = await getBailleurPack(bailleur.id, year);
+              if (!res.ok || !res.csv) {
+                setError(res.error ?? "Export échoué.");
+                return;
+              }
+              const blob = new Blob([res.csv], { type: "text/csv;charset=utf-8" });
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(blob);
+              a.download = res.filename ?? "pack-audit.csv";
+              a.click();
+              URL.revokeObjectURL(a.href);
+            })
+          }
+          className="shrink-0 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+        >
+          📦 Pack audit (CSV)
+        </button>
+      </div>
 
       {error && (
         <p className="mb-3 rounded border border-alert/30 bg-red-50 p-2 text-sm text-alert">{error}</p>

@@ -9,8 +9,9 @@ import {
   fluxBudgeted,
   fluxReal,
   chainCumulative,
-  lastClosedMonthIndex,
+  lastClosedMonthIndexExplicit,
 } from "@/lib/treasury";
+import type { ClosureRow } from "@/lib/closure";
 import { formatEur, formatEcart, MONTHS_FR } from "@/lib/format";
 import type { Bailleur } from "@/lib/types";
 import {
@@ -38,6 +39,7 @@ export function InterneGrid({
   incomePrevu,
   recReel,
   depReel,
+  closures = [],
 }: {
   budgetId: string;
   budgetName: string;
@@ -52,6 +54,7 @@ export function InterneGrid({
   incomePrevu: Record<string, number>;
   recReel: Record<string, number>;
   depReel: Record<string, number>;
+  closures?: ClosureRow[]; // BR-11.1 — clôtures explicites (M de la tréso réelle)
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -127,7 +130,7 @@ export function InterneGrid({
       if (tresoMode === "budget") {
         flux = fluxBudgeted(recBud, depBud);
       } else {
-        const M = lastClosedMonthIndex(year);
+        const M = lastClosedMonthIndexExplicit(year, closures);
         const recR = m12((i) => recReel[`${year}:${i + 1}`] ?? 0);
         const depR = m12((i) => depReel[`${year}:${i + 1}`] ?? 0);
         flux = fluxReal(M, recR, depR, recBud, depBud);

@@ -6,7 +6,9 @@ import {
   chainCumulative,
   negativeMonths,
   realFlowsByMonth,
+  lastClosedMonthIndexExplicit,
 } from "./treasury";
+import type { ClosureRow } from "./closure";
 
 describe("lastClosedMonthIndex (BR-7.3 option A)", () => {
   it("année passée : tout clos (11)", () => {
@@ -18,6 +20,28 @@ describe("lastClosedMonthIndex (BR-7.3 option A)", () => {
   it("année courante : mois en cours exclu", () => {
     // juin = index 5 → dernier clos = mai = 4
     expect(lastClosedMonthIndex(2026, new Date("2026-06-15"))).toBe(4);
+  });
+});
+
+describe("lastClosedMonthIndexExplicit (BR-7.3 + BR-11.1)", () => {
+  const closures: ClosureRow[] = [
+    { year: 2026, month: 1, reopened_at: null },
+    { year: 2026, month: 2, reopened_at: null },
+  ];
+
+  it("clôtures explicites présentes → M = dernier mois clos", () => {
+    expect(lastClosedMonthIndexExplicit(2026, closures, new Date("2026-06-15"))).toBe(1);
+    expect(lastClosedMonthIndexExplicit(2025, closures, new Date("2026-06-15"))).toBe(-1);
+  });
+
+  it("aucune clôture → fallback implicite (mois courant − 1)", () => {
+    expect(lastClosedMonthIndexExplicit(2026, [], new Date("2026-06-15"))).toBe(4);
+    expect(lastClosedMonthIndexExplicit(2025, [], new Date("2026-06-15"))).toBe(11);
+  });
+
+  it("toutes clôtures réouvertes → fallback implicite", () => {
+    const reopened: ClosureRow[] = [{ year: 2026, month: 1, reopened_at: "2026-02-01" }];
+    expect(lastClosedMonthIndexExplicit(2026, reopened, new Date("2026-06-15"))).toBe(4);
   });
 });
 

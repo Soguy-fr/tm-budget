@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
-  fluxBudgeted, fluxReal, chainCumulative, lastClosedMonthIndex, realFlowsByMonth,
+  fluxBudgeted, fluxReal, chainCumulative, lastClosedMonthIndexExplicit, realFlowsByMonth,
 } from "@/lib/treasury";
+import type { ClosureRow } from "@/lib/closure";
 import {
   barsByCategory, pieByCategory, pieByBailleur, tresoSeries,
 } from "@/lib/charts";
@@ -45,8 +46,14 @@ export default async function GraphiquesPage() {
     supabase.from("budget_monthly")
       .select("line_id, year, month, amount").eq("budget_id", budget.id).range(0, 99999),
     supabase.from("bailleur_income_monthly").select("year, month, amount"),
-    supabase.from("gl_entries").select("*").range(0, 99999),
+    supabase.from("gl_entries").select("*").eq("archived", false).range(0, 99999),
   ]);
+
+  // BR-11.1 — clôtures mensuelles (M de la trésorerie réelle).
+  const { data: closureRows } = await supabase
+    .from("month_closures")
+    .select("year, month, reopened_at");
+  const closures = (closureRows ?? []) as ClosureRow[];
 
   const years = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);
   const allDep = (depRows ?? []) as SuiviDepense[];
@@ -89,7 +96,7 @@ export default async function GraphiquesPage() {
     const recR = m12((i) => recReel[ym(y, i + 1)] ?? 0);
     const depR = m12((i) => depReel[ym(y, i + 1)] ?? 0);
     fluxBudFlat.push(...fluxBudgeted(recBud, depBud));
-    fluxReelFlat.push(...fluxReal(lastClosedMonthIndex(y), recR, depR, recBud, depBud));
+    fluxReelFlat.push(...fluxReal(lastClosedMonthIndexExplicit(y, closures), recR, depR, recBud, depBud));
   }
   const cumBud = chainCumulative(Number(budget.initial_cash), fluxBudFlat);
   const cumReel = chainCumulative(Number(budget.initial_cash), fluxReelFlat);
