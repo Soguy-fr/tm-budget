@@ -125,6 +125,7 @@ Sans cette migration, le Grand Livre et les nouvelles pages renverront des erreu
 ## Test 13 — Purge = soft-delete (A7)
 
 ⚠ NE PAS faire sur des données réelles. Optionnel, sur données de test uniquement :
+
 - [ ] /budgets → purge (« PURGER ») → les écritures GL disparaissent des écrans
 - [ ] Dans Supabase : `select count(*) from gl_entries where archived = true` → écritures conservées
 
@@ -140,19 +141,19 @@ Sans cette migration, le Grand Livre et les nouvelles pages renverront des erreu
 
 ## Résultat
 
-| Test | OK ? | Remarques |
-|---|---|---|
-| 0. Migration 0006 | ☐ | |
-| 1–2. Fixes tréso + avoirs | ☐ | |
-| 3. Rôles (U1) | ☐ | |
-| 4. Audit (U2) | ☐ | |
-| 5. Doublons (C1) | ☐ | |
-| 6. Éligibilité (C2) | ☐ | |
-| 7. Anomalies (C3) | ☐ | |
-| 8. Clôture (C4) | ☐ | |
-| 9. Double validation (C6) | ☐ | |
-| 10. IA suggestions (I1) | ☐ | |
-| 11. Pack audit (C5) | ☐ | |
-| 12. Chatbot (I2) | ☐ | |
+| Test                      | OK ? | Remarques |
+| ------------------------- | ---- | --------- |
+| 0. Migration 0006         | ☐    |           |
+| 1–2. Fixes tréso + avoirs | ☐    |           |
+| 3. Rôles (U1)             | ☐    |           |
+| 4. Audit (U2)             | ☐    |           |
+| 5. Doublons (C1)          | ☐    |           |
+| 6. Éligibilité (C2)       | ☐    |           |
+| 7. Anomalies (C3)         | ☐    |           |
+| 8. Clôture (C4)           | ☐    |           |
+| 9. Double validation (C6) | ☐    |           |
+| 10. IA suggestions (I1)   | ☐    |           |
+| 11. Pack audit (C5)       | ☐    |           |
+| 12. Chatbot (I2)          | ☐    |           |
 
 Si tout est vert → « ok push » pour publier les commits.
