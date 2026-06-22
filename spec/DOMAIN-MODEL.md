@@ -124,7 +124,8 @@ Le prévisionnel d'entrée d'argent d'un bailleur.
 
 Une ligne du grand livre comptable importée (CSV), représentant le réalisé.
 
-- Colonnes natives importées : Date, Type (Dépense/Recette), Libellé, Montant (€), + métadonnées comptables conservées.
+- Colonnes natives importées : Date, Type (Dépense/Recette), Libellé, Montant (€) **signé**
+  (négatif = avoir/remboursement, BR-4.4), + métadonnées comptables conservées.
 - `lb_interne` : allocation (saisie/pré-remplie en UI). Vide pour une recette pure.
 - `bailleur` : allocation (saisie/pré-remplie). Obligatoire pour calcul du suivi bailleur.
 - `statut_allocation` : OK / À allouer (calculé).
@@ -134,7 +135,28 @@ Une ligne du grand livre comptable importée (CSV), représentant le réalisé.
 - Pré-remplissage du bailleur d'après le plan (le bailleur prévu pour cette LB × mois). Modifiable.
 - Réalité ≠ plan autorisé (P : Tension D) : seul le total annuel par bailleur doit rester cohérent.
   Un écart plan/réel produit un **avertissement non bloquant**, pas un blocage.
-- Une écriture non allouée est surlignée et exclue des agrégats jusqu'à allocation.
+- Une écriture non allouée est surlignée et exclue des agrégats **analytiques**
+  (suivi LB, suivi bailleur) jusqu'à allocation — mais elle compte **toujours**
+  dans la trésorerie réelle (la caisse reflète la banque, BR-7.3).
+- Une écriture n'est jamais supprimée physiquement : la purge annuelle l'archive
+  (`archived`, BR-10.2) — conservation comptable 10 ans.
+
+### 2.9 Clôture mensuelle
+
+L'acte explicite qui fige un mois (BR-11).
+
+- clé : (année, mois). États : ouvert → clos → (réouvert, tracé) → clos.
+- Le dernier mois clos définit la frontière réel/budgété de la trésorerie (BR-7.3).
+- Mois clos = écritures GL du mois, leurs allocations et les montants budgétés
+  du mois **verrouillés** (BR-11.2).
+
+### 2.10 Rapprochement bancaire
+
+Le contrôle de complétude du GL (BR-7.5).
+
+- clé : (année, mois). `solde_relevé` saisi par l'utilisateur.
+- `écart` = solde_relevé − solde calculé (réel) : calculé, jamais saisi.
+- Écart ≠ 0 = signal : GL incomplet, doublon d'import, ou mouvement hors GL.
 
 ## 3. Relations clés
 
@@ -157,3 +179,11 @@ Une ligne du grand livre comptable importée (CSV), représentant le réalisé.
 - **INV3** : dans une vue bailleur, `Σ recettes prévues == Σ dépenses prévues` (assurée par la ligne « Non assigné »).
 - **INV4** : un bailleur assigné à une écriture GL doit financer la LB concernée à un moment de l'année (sinon avertissement, Tension A/D).
 - **INV5** (Phase) : `Σ dépenses réalisées d'un bailleur ≤ recettes du bailleur` (alerte de dépassement si faux).
+- **INV6** : la trésorerie réelle d'un mois clos = Σ de **toutes** les écritures GL
+  du mois (allouées ou non, signées), indépendante du statut d'allocation (BR-7.3).
+- **INV7** : `Σ dépenses réalisées (tous bailleurs) + réalisé non assigné == Σ dépenses GL allouées (LB)`
+  — les deux suivis se recoupent (BR-6.3).
+- **INV8** : aucune donnée (GL, allocation, montant budgété) d'un mois clos ne change
+  sans réouverture explicite et tracée (BR-11.2).
+- **INV9** : si un rapprochement bancaire existe pour un mois, `écart == 0` est attendu ;
+  sinon signal rouge non bloquant (BR-7.5).

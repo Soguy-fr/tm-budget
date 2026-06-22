@@ -9,7 +9,11 @@ const NAV = [
   { href: "/bailleurs", label: "Bailleurs" },
   { href: "/grand-livre", label: "Grand Livre" },
   { href: "/suivi", label: "Dashboard" },
+  { href: "/cloture", label: "Clôture" },
+  { href: "/chat", label: "Assistant IA" },
+  { href: "/audit", label: "Audit" },
   { href: "/structure", label: "Configuration" },
+  { href: "/guide", label: "📖 Guide" },
 ];
 
 export function Sidebar() {

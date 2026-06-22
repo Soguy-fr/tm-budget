@@ -2,9 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
 import { realiseByCell } from "@/lib/suivi";
-import { isAllocated } from "@/lib/gl";
+import { realFlowsByMonth } from "@/lib/treasury";
+import type { ClosureRow } from "@/lib/closure";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +52,13 @@ export default async function InternePage() {
       .select("line_id, year, total_input")
       .eq("budget_id", budget.id),
     supabase.from("bailleurs").select("*").order("code"),
-    supabase.from("gl_entries").select("*").range(0, 99999),
+    supabase.from("gl_entries").select("*").eq("archived", false).range(0, 99999),
   ]);
+
+  // BR-11.1 — clôtures mensuelles (M de la trésorerie réelle).
+  const { data: closureRows } = await supabase
+    .from("month_closures")
+    .select("year, month, reopened_at");
 
   // Recettes prévues (tous bailleurs) agrégées par année:mois (BR-7.2).
   const { data: incomeRows } = await supabase
@@ -85,18 +92,17 @@ export default async function InternePage() {
     incomePrevu[ym(r.year as number, r.month as number)] =
       (incomePrevu[ym(r.year as number, r.month as number)] ?? 0) + Number(r.amount);
   }
-  const recReel: Record<string, number> = {};
-  const depReel: Record<string, number> = {};
-  for (const e of allGl) {
-    if (!isAllocated(e)) continue;
-    const y = Number(e.entry_date.slice(0, 4));
-    const m = Number(e.entry_date.slice(5, 7));
-    if (e.entry_type === "Recette") recReel[ym(y, m)] = (recReel[ym(y, m)] ?? 0) + Number(e.amount);
-    else depReel[ym(y, m)] = (depReel[ym(y, m)] ?? 0) + Number(e.amount);
-  }
+  // BR-7.3 (A1) — la trésorerie réelle somme TOUTES les écritures, allouées ou
+  // non : la caisse reflète la banque, pas le suivi analytique.
+  const { rec: recReel, dep: depReel } = realFlowsByMonth(allGl);
 
   return (
-    <InterneGrid
+    <div>
+      <div className="mb-2 flex justify-end gap-2">
+        <GuideLink anchor="saisir-le-previsionnel" />
+        <GuideLink anchor="la-tresorerie-eviter-la-panne-seche" />
+      </div>
+      <InterneGrid
       budgetId={budget.id}
       budgetName={budget.name}
       rows={flat}
@@ -110,7 +116,9 @@ export default async function InternePage() {
       incomePrevu={incomePrevu}
       recReel={recReel}
       depReel={depReel}
-    />
+      closures={(closureRows ?? []) as ClosureRow[]}
+      />
+    </div>
   );
 }
 

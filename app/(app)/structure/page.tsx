@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { buildTree } from "@/lib/structure";
 import type { StructureLine } from "@/lib/types";
 import { StructureTree } from "@/components/structure/StructureTree";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,10 @@ export default async function StructurePage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Configuration</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Configuration</h1>
+        <GuideLink anchor="la-structure-budgetaire" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Structure budgétaire unique, partagée par tous les budgets (P2). Seul le
         niveau 3 porte des montants.

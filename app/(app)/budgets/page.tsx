@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Budget } from "@/lib/types";
 import { BudgetList } from "@/components/budgets/BudgetList";
 import { PurgeZone } from "@/components/budgets/PurgeZone";
+import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,10 @@ export default async function BudgetsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold text-brand-night">Scénarios</h1>
+      <div className="mb-1 flex items-center gap-2">
+        <h1 className="text-xl font-bold text-brand-night">Scénarios</h1>
+        <GuideLink anchor="travailler-un-nouveau-budget" />
+      </div>
       <p className="mb-4 text-sm text-slate-500">
         Créez, dupliquez et sélectionnez le budget actif. Un seul budget actif à
         la fois (F2.2).
