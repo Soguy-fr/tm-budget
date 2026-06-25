@@ -13,6 +13,15 @@ describe("slugify", () => {
   });
 });
 
+describe("mdToHtml — CRLF (régression crash liste)", () => {
+  it("gère les fins de ligne CRLF dans une liste sans planter", () => {
+    const md = "## Titre\r\n\r\n- un\r\n- deux\r\n";
+    const html = mdToHtml(md);
+    expect(html).toContain("<li>un</li>");
+    expect(html).toContain("<li>deux</li>");
+  });
+});
+
 describe("escapeHtml / inline", () => {
   it("échappe le HTML", () => {
     expect(escapeHtml('<script>"&')).toBe("&lt;script&gt;&quot;&amp;");

@@ -41,7 +41,9 @@ export function extractHeadings(md: string, level = 2): Heading[] {
 }
 
 export function mdToHtml(md: string): string {
-  const lines = md.split("\n");
+  // Normalise les fins de ligne (CRLF Windows) : sinon les regex ancrées sur `$`
+  // échouent avant un \r (liste, titre…) et provoquent des null inattendus.
+  const lines = md.replace(/\r\n?/g, "\n").split("\n");
   const out: string[] = [];
   let i = 0;
 
