@@ -70,13 +70,14 @@ export type MappedEntry = {
   entry_type: "Dépense" | "Recette";
   label: string | null;
   amount: number;
+  code_analytique: string | null; // F5.15/BR-4.5
   raw: Record<string, string>;
 };
 
 // Mappe une ligne CSV vers une écriture (P5 : date de paiement, P6 : euros).
 export function mapCsvRow(
   raw: Record<string, string>,
-  cols: { date: string; type: string; label: string; amount: string },
+  cols: { date: string; type: string; label: string; amount: string; code_analytique?: string | null },
 ): MappedEntry | { error: string } {
   const entry_date = parseDate(raw[cols.date] ?? "");
   if (!entry_date) return { error: `Date invalide : « ${raw[cols.date]} »` };
@@ -88,8 +89,33 @@ export function mapCsvRow(
     label: raw[cols.label] ?? null,
     // BR-4.4 — montant SIGNÉ : négatif = avoir / remboursement.
     amount: parseAmount(raw[cols.amount] ?? "0"),
+    code_analytique: (cols.code_analytique && raw[cols.code_analytique]?.trim()) || null,
     raw,
   };
+}
+
+// BR-4.5 — extrait le code en tête d'un libellé analytique : « 1.1 Core Team » → « 1.1 ».
+export function leadingCode(s: string | null): string | null {
+  if (!s) return null;
+  const m = /^\s*(\d+(?:\.\d+)*)/.exec(s);
+  return m ? m[1] : null;
+}
+
+// BR-4.5 — contrainte du choix de LB d'après le code analytique (= niveau 2).
+// Renvoie les feuilles (niveau 3) autorisées (enfants du niveau 2) et si le code
+// est reconnu. Non reconnu / vide → pas de contrainte (toutes les feuilles), recognized=false.
+export function leavesUnderAnalytic(
+  codeAnalytique: string | null,
+  leaves: { id: string; code: string }[],
+): { recognized: boolean; allowedIds: string[] } {
+  const code = leadingCode(codeAnalytique);
+  if (!code) return { recognized: false, allowedIds: leaves.map((l) => l.id) };
+  const allowed = leaves
+    .filter((l) => l.code === code || l.code.startsWith(`${code}.`))
+    .map((l) => l.id);
+  return allowed.length > 0
+    ? { recognized: true, allowedIds: allowed }
+    : { recognized: false, allowedIds: leaves.map((l) => l.id) };
 }
 
 // Agrégat : ne compter que les écritures OK (BR-4.1 — exclusion des « À allouer »).

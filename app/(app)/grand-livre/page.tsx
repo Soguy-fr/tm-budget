@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getRole } from "@/lib/auth/role";
 import { can } from "@/lib/roles";
-import { checkEntryEligibility } from "@/lib/eligibility";
+import { checkEntryEligibility, checkPlanMismatch } from "@/lib/eligibility";
 import { scoreAnomalies } from "@/lib/anomalies";
 import type { StructureLine, Bailleur, GlEntry } from "@/lib/types";
 import { GlTable } from "@/components/grand-livre/GlTable";
@@ -124,6 +124,13 @@ export default async function GrandLivrePage({
       ).map((w) => w.message),
     );
     if (e.entry_type === "Dépense" && e.line_id) {
+      // BR-4.6 #2 — financement imputé ≠ financement prévu au plan pour ce (LB × mois).
+      const y = Number(e.entry_date.slice(0, 4));
+      const m = Number(e.entry_date.slice(5, 7));
+      const planned = planByCell[`${e.line_id}:${y}:${m}`] ?? null;
+      const mismatch = checkPlanMismatch(e, planned);
+      if (mismatch) warnings.push(mismatch.message);
+
       // Historique = autres écritures de la LB (exclure l'écriture elle-même une
       // fois, sinon elle lisse son propre z-score).
       const history = historyByLine.get(e.line_id) ?? [];

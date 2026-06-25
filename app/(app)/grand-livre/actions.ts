@@ -94,6 +94,7 @@ export async function importGl(
     entry_type: e.entry_type,
     label: e.label,
     amount: e.amount,
+    code_analytique: e.code_analytique,
     raw: e.raw,
   }));
 

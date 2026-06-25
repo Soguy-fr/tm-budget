@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { checkEntryEligibility, checkPlafond } from "./eligibility";
+import { checkEntryEligibility, checkPlafond, checkPlanMismatch } from "./eligibility";
+
+describe("checkPlanMismatch (BR-4.6 #2)", () => {
+  const E = (bailleur_id: string | null) => ({ entry_type: "Dépense" as const, line_id: "L1", bailleur_id });
+  it("avertit si le financement diffère du plan", () => {
+    expect(checkPlanMismatch(E("F2"), "F1")?.code).toBe("FINANCEMENT_HORS_PLAN");
+  });
+  it("aucun avertissement si conforme au plan", () => {
+    expect(checkPlanMismatch(E("F1"), "F1")).toBeNull();
+  });
+  it("aucun avertissement sans plan, sans financement, ou sur recette", () => {
+    expect(checkPlanMismatch(E("F2"), null)).toBeNull();
+    expect(checkPlanMismatch(E(null), "F1")).toBeNull();
+    expect(checkPlanMismatch({ entry_type: "Recette", line_id: "L1", bailleur_id: "F2" }, "F1")).toBeNull();
+  });
+});
 
 const fpc = {
   code: "FPC",

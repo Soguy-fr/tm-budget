@@ -4,7 +4,7 @@
 // 3. Plafond conventionné dépassé (niveau bailleur, pas écriture).
 
 export type EligibilityWarning = {
-  code: "HORS_CONVENTION" | "LB_NON_MAPPEE" | "PLAFOND_DEPASSE";
+  code: "HORS_CONVENTION" | "LB_NON_MAPPEE" | "PLAFOND_DEPASSE" | "FINANCEMENT_HORS_PLAN";
   message: string;
 };
 
@@ -50,6 +50,23 @@ export function checkEntryEligibility(
   }
 
   return out;
+}
+
+// BR-4.6 #2 — Financement non prévu au plan : le financement imputé à l'écriture
+// diffère de celui prévu dans le budget pour ce (LB × mois). Avertissement non bloquant.
+// `plannedBailleurId` = financement prévu au plan (null si aucun plan pour cette maille).
+export function checkPlanMismatch(
+  entry: { entry_type: "Dépense" | "Recette"; line_id: string | null; bailleur_id: string | null },
+  plannedBailleurId: string | null,
+): EligibilityWarning | null {
+  if (entry.entry_type !== "Dépense") return null;
+  if (!entry.line_id || !entry.bailleur_id) return null;
+  if (!plannedBailleurId) return null; // aucun plan → rien à comparer
+  if (entry.bailleur_id === plannedBailleurId) return null;
+  return {
+    code: "FINANCEMENT_HORS_PLAN",
+    message: "Financement différent de celui prévu au plan pour cette LB ce mois-là",
+  };
 }
 
 // 3. Plafond contractuel : dépenses réalisées du bailleur vs montant conventionné.

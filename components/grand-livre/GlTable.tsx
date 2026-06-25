@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { StructureLine, Bailleur, GlEntry } from "@/lib/types";
 import { formatEur } from "@/lib/format";
 import { parseCsv } from "@/lib/csv";
-import { allocationStatus, findColumn, mapCsvRow, type MappedEntry } from "@/lib/gl";
+import { allocationStatus, findColumn, mapCsvRow, leavesUnderAnalytic, type MappedEntry } from "@/lib/gl";
 import {
   importGl, updateAllocation, confirmAllocation, suggestAllocations,
   type SuggestResult,
@@ -125,6 +125,8 @@ export function GlTable({
       type: findColumn(headers, ["type", "sens"]),
       label: findColumn(headers, ["libelle", "libellé", "label", "description"]),
       amount: findColumn(headers, ["montant", "montant (€)", "amount", "debit", "credit"]),
+      // F5.15 — colonne Code analytique (= niveau 2). Facultative.
+      code_analytique: findColumn(headers, ["code analytique", "analytique", "code analytique (niveau 2)"]),
     };
     if (!cols.date || !cols.type || !cols.amount) {
       setError(
@@ -141,6 +143,7 @@ export function GlTable({
         type: cols.type,
         label: cols.label ?? cols.date,
         amount: cols.amount,
+        code_analytique: cols.code_analytique,
       });
       if ("error" in res) errors.push(res.error);
       else mapped.push(res);
@@ -506,19 +509,40 @@ export function GlTable({
                     className={`px-2 py-1 ${e.line_id && commentByLine?.[e.line_id] ? "cursor-help" : ""}`}
                     title={e.line_id ? commentByLine?.[e.line_id] ?? lineLabel.get(e.line_id) ?? "" : ""}
                   >
-                    <select
-                      value={e.line_id ?? ""}
-                      disabled={pending}
-                      onChange={(ev) => onChangeLine(e, ev.target.value || null)}
-                      className="w-full rounded border border-slate-300 px-1 py-0.5"
-                    >
-                      <option value="">—</option>
-                      {lines.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.code} — {l.label}
-                        </option>
-                      ))}
-                    </select>
+                    {(() => {
+                      // BR-4.5 — restreint la LB aux sous-lignes du code analytique (niveau 2).
+                      const ana = leavesUnderAnalytic(e.code_analytique, lines);
+                      const allowed = new Set(ana.allowedIds);
+                      const optLines = ana.recognized
+                        ? lines.filter((l) => allowed.has(l.id) || l.id === e.line_id)
+                        : lines;
+                      const unrecognized = Boolean(e.code_analytique) && !ana.recognized;
+                      return (
+                        <div className="flex items-center gap-1">
+                          <select
+                            value={e.line_id ?? ""}
+                            disabled={pending}
+                            onChange={(ev) => onChangeLine(e, ev.target.value || null)}
+                            className="w-full rounded border border-slate-300 px-1 py-0.5"
+                          >
+                            <option value="">—</option>
+                            {optLines.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.code} — {l.label}
+                              </option>
+                            ))}
+                          </select>
+                          {unrecognized && (
+                            <span
+                              className="cursor-help text-amber-500"
+                              title={`Code analytique « ${e.code_analytique} » non reconnu (pas de niveau 2 correspondant) — choix de LB non restreint`}
+                            >
+                              ⚠
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-2 py-1">
                     <select

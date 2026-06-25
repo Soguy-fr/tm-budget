@@ -8,6 +8,8 @@ import {
   isAllocated,
   findColumn,
   mapCsvRow,
+  leadingCode,
+  leavesUnderAnalytic,
 } from "./gl";
 
 describe("parseCsv", () => {
@@ -56,6 +58,42 @@ describe("mapCsvRow (BR-4.4 — montant signé)", () => {
       cols,
     );
     expect(r).toMatchObject({ entry_type: "Recette", amount: 60000 });
+  });
+});
+
+describe("code analytique (BR-4.5)", () => {
+  const cols = { date: "Date", type: "Type", label: "Libellé", amount: "Montant", code_analytique: "Code analytique" };
+
+  it("mapCsvRow capture le code analytique", () => {
+    const r = mapCsvRow(
+      { Date: "2026-01-05", Type: "Dépense", Libellé: "x", Montant: "100", "Code analytique": "1.1 Core Team" },
+      cols,
+    );
+    expect(r).toMatchObject({ code_analytique: "1.1 Core Team" });
+  });
+
+  it("leadingCode extrait le code en tête", () => {
+    expect(leadingCode("1.1 Core Team")).toBe("1.1");
+    expect(leadingCode("2 Programme")).toBe("2");
+    expect(leadingCode("RH")).toBeNull();
+    expect(leadingCode(null)).toBeNull();
+  });
+
+  it("leavesUnderAnalytic restreint aux enfants niveau 3 du niveau 2", () => {
+    const leaves = [
+      { id: "a", code: "1.1.1" },
+      { id: "b", code: "1.1.2" },
+      { id: "c", code: "2.1.1" },
+    ];
+    const r = leavesUnderAnalytic("1.1 Core Team", leaves);
+    expect(r.recognized).toBe(true);
+    expect(r.allowedIds).toEqual(["a", "b"]);
+  });
+
+  it("code non reconnu / vide → toutes les feuilles, recognized=false", () => {
+    const leaves = [{ id: "a", code: "1.1.1" }];
+    expect(leavesUnderAnalytic("9.9", leaves)).toEqual({ recognized: false, allowedIds: ["a"] });
+    expect(leavesUnderAnalytic(null, leaves)).toEqual({ recognized: false, allowedIds: ["a"] });
   });
 });
 
