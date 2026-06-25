@@ -1,6 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { indicators, realiseByCell, realiseByLineYear } from "./suivi";
-import type { GlEntry } from "./types";
+import { indicators, realiseByCell, realiseByLineYear, aggregateByCategory } from "./suivi";
+import type { GlEntry, StructureLine } from "./types";
+
+const SL = (p: Partial<StructureLine>): StructureLine => ({
+  id: Math.random().toString(),
+  code: "",
+  level: 3,
+  label: "",
+  parent_id: null,
+  sort_order: 0,
+  active: true,
+  comment: null,
+  created_at: "",
+  updated_at: "",
+  ...p,
+});
 
 const E = (p: Partial<GlEntry>): GlEntry => ({
   id: Math.random().toString(),
@@ -57,6 +71,42 @@ describe("realiseByCell (BR-5.3 — réalisé = Σ GL par LB×mois)", () => {
       E({ line_id: null, bailleur_id: "B", amount: 100, entry_type: "Recette", entry_date: "2026-01-05" }),
     ];
     expect(Object.keys(realiseByCell(entries))).toHaveLength(0);
+  });
+});
+
+describe("aggregateByCategory (BR-5.4 — Dashboard niveaux 1 et 2)", () => {
+  // 1 / 1.1 / {1.1.1, 1.1.2} ; 2 / 2.1 / {2.1.1}
+  const lines = [
+    SL({ id: "n1", code: "1", level: 1, label: "Operating", sort_order: 10, comment: "cat 1" }),
+    SL({ id: "n11", code: "1.1", level: 2, label: "Core Team", parent_id: "n1", sort_order: 10 }),
+    SL({ id: "n111", code: "1.1.1", level: 3, label: "Director", parent_id: "n11", sort_order: 10 }),
+    SL({ id: "n112", code: "1.1.2", level: 3, label: "PM", parent_id: "n11", sort_order: 20 }),
+    SL({ id: "n2", code: "2", level: 1, label: "Activities", sort_order: 20 }),
+    SL({ id: "n21", code: "2.1", level: 2, label: "Field", parent_id: "n2", sort_order: 10 }),
+    SL({ id: "n211", code: "2.1.1", level: 3, label: "Atelier", parent_id: "n21", sort_order: 10 }),
+  ];
+  const leaf = {
+    n111: { prevu: 1000, realise: 900 },
+    n112: { prevu: 500, realise: 600 },
+    n211: { prevu: 2000, realise: 1500 },
+  };
+
+  it("ne renvoie que les niveaux 1 et 2 (pas le 3)", () => {
+    const rows = aggregateByCategory(lines, leaf);
+    expect(rows.map((r) => r.code)).toEqual(["1", "1.1", "2", "2.1"]);
+  });
+
+  it("agrège prévu/réalisé des feuilles vers les parents", () => {
+    const rows = aggregateByCategory(lines, leaf);
+    const byCode = Object.fromEntries(rows.map((r) => [r.code, r]));
+    expect(byCode["1.1"]).toMatchObject({ prevu: 1500, realise: 1500 });
+    expect(byCode["1"]).toMatchObject({ prevu: 1500, realise: 1500 });
+    expect(byCode["2"]).toMatchObject({ prevu: 2000, realise: 1500 });
+  });
+
+  it("conserve le commentaire de la catégorie", () => {
+    const rows = aggregateByCategory(lines, leaf);
+    expect(rows.find((r) => r.code === "1")?.comment).toBe("cat 1");
   });
 });
 

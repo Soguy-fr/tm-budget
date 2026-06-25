@@ -95,7 +95,8 @@ export async function updateLine(
   return { ok: true };
 }
 
-// F1.7 — Mettre à jour le commentaire libre d'une LB.
+// F1.7 / F8.5 — Mettre à jour le commentaire libre d'une LB.
+// Édité depuis Configuration ET le Dashboard onglet Dépense (même champ partagé).
 export async function updateComment(
   id: string,
   comment: string,
@@ -109,6 +110,7 @@ export async function updateComment(
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/structure");
+  revalidatePath("/suivi");
   return { ok: true };
 }
 

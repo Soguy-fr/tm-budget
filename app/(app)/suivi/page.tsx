@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { indicators } from "@/lib/suivi";
+import { indicators, aggregateByCategory } from "@/lib/suivi";
 import { formatEur, formatEcart } from "@/lib/format";
-import type { SuiviDepense } from "@/lib/types";
+import type { SuiviDepense, StructureLine } from "@/lib/types";
 import { SuiviTabs } from "@/components/suivi/SuiviTabs";
+import { CommentCell } from "@/components/suivi/CommentCell";
 import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,13 @@ export default async function SuiviPage() {
     .select("*")
     .eq("budget_id", budget.id);
 
+  // BR-5.4 — structure complète (tous niveaux + commentaire) pour agréger vers niv.1/2.
+  const { data: structure } = await supabase
+    .from("structure_lines")
+    .select("*")
+    .eq("active", true);
+  const lines = (structure ?? []) as StructureLine[];
+
   const all = (rows ?? []) as SuiviDepense[];
   const years = Array.from(new Set(all.map((r) => r.year))).sort((a, b) => a - b);
 
@@ -41,15 +49,18 @@ export default async function SuiviPage() {
       <SuiviTabs />
       <p className="mb-4 text-sm text-slate-500">
         Prévu (budget interne) vs réalisé (Grand Livre, écritures allouées) par
-        ligne budgétaire — {budget.name}.
+        catégorie (niveaux 1 et 2) — {budget.name}.
       </p>
 
       {years.length === 0 && <p className="text-sm text-slate-500">Aucune donnée.</p>}
 
       {years.map((year) => {
-        const yearRows = all
-          .filter((r) => r.year === year)
-          .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+        // BR-5.4 — agrège les feuilles de l'année vers les catégories niv.1/2.
+        const leaf: Record<string, { prevu: number; realise: number }> = {};
+        for (const r of all) {
+          if (r.year === year) leaf[r.line_id] = { prevu: r.prevu, realise: r.realise };
+        }
+        const catRows = aggregateByCategory(lines, leaf);
         return (
           <div key={year} className="mb-4 overflow-hidden rounded border border-slate-200 bg-white">
             <div className="bg-slate-50 px-3 py-2 font-heading text-sm font-bold text-brand-night">
@@ -64,15 +75,21 @@ export default async function SuiviPage() {
                   <th className="px-2 py-1 text-right">Réalisé</th>
                   <th className="px-2 py-1 text-right">Écart</th>
                   <th className="px-2 py-1 text-right">% consommé</th>
+                  <th className="px-2 py-1">Commentaire</th>
                 </tr>
               </thead>
               <tbody>
-                {yearRows.map((r) => {
+                {catRows.map((r) => {
                   const ind = indicators(r.prevu, r.realise);
                   return (
-                    <tr key={r.line_id} className="border-b border-slate-50">
+                    <tr
+                      key={r.id}
+                      className={`border-b border-slate-50 ${r.level === 1 ? "bg-slate-50/60 font-medium text-brand-night" : ""}`}
+                    >
                       <td className="px-2 py-1 font-mono text-[11px] text-slate-400">{r.code}</td>
-                      <td className="px-2 py-1">{r.label}</td>
+                      <td className="px-2 py-1" style={{ paddingLeft: r.level === 2 ? 20 : undefined }}>
+                        {r.label}
+                      </td>
                       <td className="px-2 py-1 text-right">{formatEur(r.prevu)}</td>
                       <td className={`px-2 py-1 text-right ${ind.depassement ? "font-medium text-alert" : ""}`}>
                         {formatEur(r.realise)}
@@ -82,6 +99,9 @@ export default async function SuiviPage() {
                       </td>
                       <td className={`px-2 py-1 text-right ${ind.depassement ? "text-alert" : "text-slate-500"}`}>
                         {Math.round(ind.pctConso * 100)}%
+                      </td>
+                      <td className="px-2 py-1 align-top">
+                        <CommentCell lineId={r.id} comment={r.comment} />
                       </td>
                     </tr>
                   );
