@@ -11,10 +11,14 @@ Nomenclature des entrées de menu (les routes techniques restent inchangées) :
 |------------------|----------------|------------|
 | Scénario         | `/budgets`     | Budgets    |
 | Suivi interne    | `/interne`     | Interne    |
-| Bailleurs        | `/bailleurs`   | Bailleurs  |
+| Trésorerie       | `/tresorerie`  | *(nouveau, F7.7)* |
+| Financement      | `/bailleurs`   | Bailleurs (renommé) |
 | Grand Livre      | `/grand-livre` | Grand Livre|
 | Dashboard        | `/suivi`       | Suivi      |
 | Configuration    | `/structure`   | Structure (déplacé en **dernier**) |
+
+> **Financement** : la route technique `/bailleurs` reste inchangée ; seul le libellé
+> change. Le menu liste les financements (fonds), groupés par bailleur (acteur).
 
 - **Scénario** : on y teste plusieurs budgets (créer / dupliquer / activer).
 - **Configuration** : structure budgétaire + futurs réglages. Toujours en bas du menu.
@@ -36,15 +40,18 @@ Nomenclature des entrées de menu (les routes techniques restent inchangées) :
 
 Arbre hiérarchique éditable.
 ```
-Code     Intitulé                    [+ Ligne] [Masquer vides]
-1        Operating Costs
-  1.1    Core Team
-    1.1.1 Director              [renommer] [supprimer]
+Code     Intitulé              Description (comment, tronqué…)   [+ Ligne] [Masquer vides]
+1        Operating Costs       Coûts de fonctionnement…
+  1.1    Core Team             Équipe permanente du siège…
+    1.1.1 Director             Directeur exécutif (ED)…       [renommer] [supprimer]
     1.1.2 Programme Manager
   1.2    Office & Admin
 2        Programme Activities
   ...
 ```
+- **Colonne « Description »** (F1.8) toujours affichée = champ `comment`. Si long, tronqué
+  aux X premiers caractères avec « … » ; **aperçu complet au survol souris**. Édité via
+  l'éditeur de ligne (multiligne), comme aujourd'hui.
 - **Ajouter** sous une branche → numéro suivant auto (1.1.25), placé en fin de groupe (P3).
 - **Éditer** (un seul bouton par ligne) → panneau : intitulé (1 ligne) + commentaire
   (multiligne). Note de propagation « le changement d'intitulé s'applique à tous les
@@ -111,19 +118,22 @@ Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
   (pas de boutons stepper sur les champs numériques).
 - Re-clic / « Enregistrer » : envoi groupé + recalcul. Indicateur ● si non enregistré.
 
-## 4. Pages « Bailleur » (F4) — même gabarit
+## 4. Pages « Financement » (F4) — même gabarit
 
-Identiques au tableur interne, mais centrées sur le bailleur (sert au **rapport financier** du bailleur).
+Identiques au tableur interne, mais centrées sur le financement (sert au **rapport financier**).
 
 ```
-Bailleur FPC — convention 04/2026 → 03/2028   [Éditer] [Suivi] [+ année]
+Financement JFN-001  (Bailleur : Fondation JFN)   montant total 10 000 €
+Éligibilité 04/2026 → 03/2028                      [Éditer] [Suivi] [+ année]
+Description : Fonds de soutien au programme jeunesse…
+                                                   [Assigner les lignes dans le budget]
 
-BLOC DÉPENSES PRÉVUES
-  Code  Ligne bailleur       LB mappées       Total   Jan ... Déc
-  A1    Ressources humaines  1.1.1, 1.1.2     ...
-  A2    Frais de bureau      1.2.1, 1.2.2     ...
-  (Non assigné)†                              ...     ← calculé, équilibre
-  TOTAL DÉPENSES
+BLOC DÉPENSES PRÉVUES (dérivées du plan interne)
+  Code  Ligne financement    LB mappées       Budgété   Dépensé   Total   Jan ... Déc
+  A1    Ressources humaines  1.1.1, 1.1.2     6 000     5 200     ...
+  A2    Frais de bureau      1.2.1, 1.2.2     3 500     3 400     ...
+  (Non assigné)†                              ...                 ← calculé, équilibre
+  TOTAL                       Budgété 9 500 · Dépensé 8 600 · Fonds 10 000 (reste 500 à budgéter)
 
 BLOC RECETTES PRÉVUES (déblocages)
   Tranche / source           Total   Jan  Fev(60k) ... Jul(40k) ...
@@ -131,10 +141,16 @@ BLOC RECETTES PRÉVUES (déblocages)
 
 Solde prévu (recettes − dépenses)
 ```
+- **En-tête** : référence, bailleur (acteur), `montant_total`, fenêtre d'éligibilité, description (F4.9/F4.10).
+- Colonnes **Budgété** / **Dépensé** par ligne + récap d'écart vs `montant_total` (F4.11, BR-3.4) :
+  « reste X à budgéter » si sous-budgété, « sur-budgété » / dépassement (rouge) sinon.
+- Bouton **« Assigner les lignes dans le budget »** (F4.12, BR-3.5) : impute les LB mappées
+  au financement sur la fenêtre d'éligibilité. **Confirmation** listant les conflits si des
+  mailles portent déjà un autre financement (écrasement).
 - La ligne **« Non assigné »** est calculée (BR-3.2) pour équilibrer recettes = dépenses.
-- Le **mapping** ligne bailleur → LB internes se définit ici.
-- L'assignation des mois aux bailleurs reste pilotée côté **page interne** (couche couleur) :
-  ici on voit le résultat, on n'édite que la nomenclature/recettes du bailleur.
+- Le **mapping** ligne financement → LB internes se définit ici.
+- L'assignation fine des mois reste pilotée côté **page interne** (couche couleur) ; le bouton
+  d'assignation ci-dessus est le raccourci « gros sel » par fenêtre d'éligibilité.
 
 > Important (décision G.) : sur la page interne, on ne voit le bailleur que via le **code couleur**.
 > Pour éditer finement, une ligne « ↳ bailleur » sous chaque LB apparaît en mode édition
@@ -150,7 +166,12 @@ Date       Type     Libellé              Montant   LB      Bailleur  Statut
 2026-05-20 Dépense  Café & divers          95 €   (vide)  (vide)    À allouer  ← surligné
 ...
 ```
-- Colonnes **LB** et **Bailleur** éditables ; bailleur pré-rempli depuis le plan (BR-2.4).
+- Colonnes **LB** et **Financement** éditables ; financement pré-rempli depuis le plan (BR-2.4).
+- Colonne **Code analytique** (importée) : équivaut au niveau 2 (ex `1.1 Core Team`). Le
+  dropdown **LB est restreint** aux sous-lignes niveau 3 du niveau 2 reconnu (BR-4.5) ;
+  si vide/non reconnu → dropdown complet + petit **avertissement** sur la ligne.
+- À l'allocation d'un financement : avertissements **hors éligibilité** et **non prévu au
+  plan** (BR-4.6), non bloquants.
 - Colonne **Description LB** : à l'allocation d'une LB, son libellé complet (code + intitulé)
   s'affiche pour lever toute ambiguïté (F5.10).
 - Lignes non allouées surlignées (BR-4.1).
@@ -159,11 +180,32 @@ Date       Type     Libellé              Montant   LB      Bailleur  Statut
 - **Largeur des colonnes ajustable** par glisser d'une poignée d'entête (F5.9).
 - Avertissement discret si réalisé ≠ plan (BR-4.2), non bloquant.
 
-## 6. Pages « Suivi » (F6)
+## 6. Pages « Dashboard / Suivi » (F6, F8)
 
-- **Suivi dépenses** : tableau prévu / réalisé / écart / % par LB (BR-5).
-- **Suivi bailleurs** : tableau recettes & dépenses prévues vs réelles par bailleur (BR-6).
+- **Onglet Dépense** : tableau prévu / réalisé / écart / % — **niveaux 1 et 2 uniquement**
+  (pas niveau 3, BR-5.4). Colonne **Commentaire** éditable (bouton **Édit / OK**), liée au
+  champ `comment` partagé (F1.7) : éditer ici met à jour la bulle partout.
+- **Onglet Bailleurs** : tableau recettes & dépenses prévues vs réelles par financement (BR-6).
 - Dépassements en rouge.
+
+## 6b. Page « Trésorerie » (F7.7)
+
+Synthèse lisible, **budgété pur** ; mêmes montants que la ligne solde de Suivi interne (BR-7.7).
+
+```
+Trésorerie — Budgété          Date du jour du calcul : [13/06/2025]
+
+              (grisé) Jan  Fev  Mar  Avr  Mai  | Jun  Jul  ... Déc
+Financement JFN-001          …    …    …    …    | 60k  …
+Financement FPC              …    …    …    …    | …
+Dépenses totales             …    …    …    …    | …
+─────────────────────────────────────────────────────────────────
+Solde            (grisé)…              [Forcé: 12 000]| 13k  …
+```
+- **Une ligne par financement** (recettes prévues du mois), **Dépenses totales**, **Solde** (BR-7.7).
+- **Date du jour** saisissable : grise les colonnes des mois antérieurs ; la cellule **Solde
+  forcé** se pose dans le **mois précédent** (ici Mai 2025) et le chaînage repart de là.
+- Vocabulaire : **Financement** (pas « Bailleur »). Solde négatif → rouge (trou de tréso).
 
 ## 7. Page « Dashboard » — onglet Graphiques (F8, Phase 2 / Jalon 10)
 

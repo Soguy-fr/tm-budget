@@ -62,6 +62,34 @@ Si négative, c'est un signal de sur-affectation (dépenses fléchées > recette
 ### BR-3.3 — Recettes prévues
 Saisie directe du montant attendu par mois (pas de %). Le total = Σ des 12 mois × années.
 
+### BR-3.4 — Colonnes Budgété / Dépensé d'un financement
+Sur la page d'un financement, chaque ligne (et le total) affiche :
+```
+budgété(ligne)  = Σ budget_monthly.amount des LB mappées, restreint aux mailles imputées à CE financement
+                  (= ancien « Total dérivé »)
+dépensé(ligne)  = Σ gl_entries.amount (type Dépense, non archivées) imputées à CE financement
+                  et dont la LB est l'une des LB mappées
+```
+Au niveau du financement :
+```
+écart_budgété = montant_total − Σ budgété   → > 0 : « reste X à budgéter » ; < 0 : « sur-budgété de X »
+écart_dépensé = montant_total − Σ dépensé   → > 0 : sous-dépensé ; < 0 : dépassement (rouge)
+```
+- `montant_total` est saisi sur le financement. S'il est nul, les écarts ne sont pas calculés.
+- La colonne « Total dérivé » existante est **renommée « Budgété »** ; on ajoute « Dépensé » et l'écart.
+
+### BR-3.5 — Bouton « Assigner les lignes dans le budget »
+Propage le mapping d'un financement dans le prévisionnel interne. Pour **chaque** LB mappée
+(toutes lignes de financement confondues) et **chaque mois** compris dans la fenêtre
+d'éligibilité (`convention_start`..`convention_end`), pose `budget_monthly.financement = ce financement`.
+- **Écrasement contrôlé** : avant d'écrire, si des mailles cibles portent déjà un **autre**
+  financement, lister les conflits (LB × mois) et demander **confirmation** (globale ou par maille).
+  Les mailles non assignées ou déjà imputées à ce même financement sont écrites sans confirmation.
+- **Cofinancement même période** : comme un seul financement par maille (BR-2.1), le bouton ne
+  peut pas répartir une même LB entre deux fonds sur la **même** période. Le cofinancement se
+  règle ensuite à la main via la couche couleur de Suivi interne (BR-2.2). *(Limite documentée.)*
+- Le bouton n'agit que sur les mailles ; il ne crée pas de montant (un mois à 0 reste à 0 mais imputé).
+
 ## 4. Grand Livre & allocation
 
 ### BR-4.1 — Statut d'allocation
@@ -97,6 +125,24 @@ Le montant d'une écriture GL est **signé** (négatif autorisé) :
 - Tous les agrégats (suivi LB, suivi bailleur, trésorerie) somment les montants signés
   sans traitement particulier.
 
+### BR-4.5 — Code analytique → contrainte de LB
+Le CSV du GL peut porter une colonne **« Code analytique »**, qui équivaut au **niveau 2**
+d'une LB (ex : `1.1 Core Team`).
+- **Matching** : on extrait le code en tête de chaîne (ex `1.1` dans `1.1 Core Team`) et on le
+  compare à `structure_lines.code` où `level = 2`. Le libellé après le code est ignoré.
+- **Contrainte** : si reconnu, le menu déroulant de LB à l'allocation ne propose que les
+  **sous-lignes niveau 3** de ce niveau 2 (ex `1.1.1`, `1.1.2`…), jamais `2.1.1`.
+- **Vide ou non reconnu** : aucun filtre (dropdown complet, comportement actuel) **+ avertissement**
+  visuel sur l'écriture (« code analytique non reconnu »). Non bloquant.
+
+### BR-4.6 — Contrôles à l'allocation d'un financement (non bloquants)
+À l'imputation d'une écriture GL à un financement, deux avertissements s'ajoutent à BR-4.2 :
+1. **Hors éligibilité** : `entry_date` hors de `[convention_start, convention_end]` du
+   financement choisi → avertissement « écriture hors fenêtre d'éligibilité ».
+2. **Financement non prévu au plan** : le financement choisi diffère de celui prévu dans
+   `budget_monthly` pour ce (LB × mois) → avertissement (recoupe BR-4.2).
+Aucun des deux ne bloque l'enregistrement (P : Tension D).
+
 ## 5. Suivi des dépenses (prévu vs réalisé)
 
 ### BR-5.1 — Réalisé par LB
@@ -123,6 +169,14 @@ Le **total annuel réalisé** (cellule Total de la ligne réalisé) passe en **r
 en cas de dépassement (réalisé annuel > prévu annuel), pas seulement mois par mois.
 L'entête de chaque année affiche le **réalisé annuel à côté du budget annuel**
 (BR-8.4), rouge si dépassement.
+
+### BR-5.4 — Dashboard, onglet Dépense : niveaux 1 et 2 + commentaire
+L'onglet **Dépense** du Dashboard n'affiche que les LB de **niveau 1** (ex `1 Operating Costs`)
+et **niveau 2** (ex `1.1 Core Team`) — **pas le niveau 3**. Les montants niveau 1/2 restent
+l'agrégat de leurs feuilles (BR-5.3).
+- Colonne **« Commentaire »** éditable (bouton Édit / OK) sur ces lignes. Elle édite le
+  **même champ `comment`** que la page Configuration (F1.7) : un seul champ partagé, pas de
+  doublon. Affecter le commentaire d'une niveau 1/2 ici le met à jour partout (bulles incluses).
 
 ## 6. Suivi par bailleur
 
@@ -195,6 +249,24 @@ Pour chaque mois, l'utilisateur peut saisir le **solde du relevé bancaire** en 
 - Un mois sans solde de relevé saisi est signalé « non rapproché ».
 - Le rapprochement (écart = 0) est un prérequis **recommandé** (non bloquant au début)
   de la clôture mensuelle (BR-11.1).
+
+### BR-7.7 — Page Trésorerie (synthèse budgété)
+Une page dédiée (menu **« Trésorerie »**) présente une **synthèse lisible**, en mode
+**Budgété uniquement** : ses montants sont **identiques** à la ligne « Solde trésorerie
+(Budgété) » de Suivi interne (BR-7.2). Tableau, colonnes = mois (multi-années) :
+- une **ligne par financement** : ses recettes prévues du mois (BR-3.3) ;
+- une ligne **« Dépenses totales »** : `Σ budget_monthly.amount` (toutes LB) du mois ;
+- une ligne **« Solde »** : cumul chaîné (`solde = solde_précédent + Σ recettes − dépenses`).
+- Vocabulaire : on parle de **Financement** (pas « Bailleur »).
+
+**Date du jour du calcul** (`calc_date`, saisissable pour simuler à différentes dates) :
+- toutes les colonnes de mois **antérieures** au mois de `calc_date` sont **grisées** ;
+- une cellule **« Solde initial / forcé »** (`forced_balance`, saisie) porte le solde réel
+  en caisse ; elle se pose dans la case **Solde du mois précédant** `calc_date`
+  (ex : `calc_date = 13 juin 2025` → solde forcé affiché en **Solde mai 2025**) ;
+- le chaînage du solde **repart de `forced_balance`** au premier mois non grisé ; les mois
+  grisés ne sont pas recalculés. Si `forced_balance` est null, fallback sur le chaînage
+  budgété normal depuis `initial_cash` (BR-7.1), la `calc_date` ne faisant que griser.
 
 ## 8. Multi-années & accordéon
 

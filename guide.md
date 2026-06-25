@@ -58,6 +58,8 @@ Seul le **niveau 3** reçoit des montants. Les niveaux 1 et 2 s'additionnent tou
 
 Bon à savoir : les numéros (1.1.1, 1.1.2…) ne sont jamais renumérotés. Si tu ajoutes une ligne, elle prend le numéro suivant. Pas de panique si ça saute un numéro un jour : c'est cosmétique, pas comptable.
 
+Chaque ligne a aussi une **Description** (colonne visible directement dans Configuration) qui explique à quoi elle correspond — « salaire chargé, 0,8 ETP, basée à Yaoundé ». Si le texte est long, il est tronqué dans la colonne ; **passe la souris dessus** pour lire l'intégralité. C'est le même texte que tu retrouves en bulle dans le tableur et le Grand Livre.
+
 ---
 
 ## Travailler un nouveau budget
@@ -109,25 +111,41 @@ Le bouton **Afficher bailleur** colore les cases aux couleurs de chaque bailleur
 
 ---
 
-## Ajouter un bailleur
+## Ajouter un financement
 
-*Page : Bailleurs*
+*Page : Financement*
 
-Un bailleur = une source de financement. Pour chacun :
+Un mot de vocabulaire d'abord : un **bailleur** est un *acteur* (la Fondation JFN), un **financement** est un *fonds* qu'il accorde (JFN-001, doté de 10 000 €). Un même bailleur peut accorder **plusieurs** financements — d'où la distinction. Dans l'appli (et la page Trésorerie), on raisonne surtout par **financement**.
 
-- **Code** court (FSV), **nom** complet, **couleur** (celle des cases du tableur).
-- **Période de convention** : du 1er avril 2026 au 31 mars 2028 par exemple. Oui, les bailleurs adorent les années qui ne ressemblent pas aux nôtres.
-- **Montant conventionné** : le plafond du contrat. Si tes dépenses imputées FSV dépassent ce plafond, l'appli lève le drapeau rouge.
+Pour chaque financement :
 
-### Les lignes bailleur et le mapping
+- **Référence** (JFN-001), **bailleur** (l'acteur qui donne), **couleur** (celle des cases du tableur).
+- **Montant total** : ce que le bailleur va verser (ex 10 000 €). Sert aux écarts Budgété/Dépensé et au drapeau rouge de dépassement.
+- **Dates d'éligibilité** : du 1er avril 2026 au 31 mars 2028 par exemple — la fenêtre pendant laquelle une dépense peut être imputée à ce fonds. Oui, les bailleurs adorent les années qui ne ressemblent pas aux nôtres.
+- **Description** : à quoi sert ce fonds.
 
-Chaque bailleur a SA nomenclature à lui (A1 « Ressources humaines », A2 « Activités terrain »…). Plutôt que de tenir deux comptabilités, tu **mappes** : la ligne A1 de la FSV correspond à tes LB 1.1.1 et 1.1.2. L'appli traduit automatiquement ton budget interne dans le format du bailleur. Une saisie, deux langues.
+### Les lignes de financement et le mapping
+
+Chaque financement a SA nomenclature à lui (A1 « Ressources humaines », A2 « Activités terrain »…). Plutôt que de tenir deux comptabilités, tu **mappes** : la ligne A1 du fonds correspond à tes LB 1.1.1, 1.1.2 et 1.1.3. L'appli traduit automatiquement ton budget interne dans le format du bailleur. Une saisie, deux langues.
+
+### Assigner les lignes dans le budget
+
+Une fois le mapping fait, le bouton **« Assigner les lignes dans le budget »** fait le gros du travail : pour chaque LB mappée, sur **chaque mois de la fenêtre d'éligibilité**, il impute la maille à ce financement. Plus besoin de colorier case par case dans Suivi interne.
+
+> ⚠️ **Ça écrase l'existant** : si certaines mailles étaient déjà imputées à un **autre** financement, l'appli te les liste et demande **confirmation** avant d'écraser. Comme une maille ne peut porter qu'**un seul** financement (règle de cofinancement), si deux fonds couvrent la même ligne **sur la même période**, le bouton ne peut pas les partager : règle ce cas à la main ensuite, via la couche couleur de Suivi interne (ex : FPC janvier-mai, SW juin-décembre).
+
+### Budgété et Dépensé
+
+En face de chaque ligne du fonds, deux colonnes parlent d'elles-mêmes :
+
+- **Budgété** : la somme des lignes de TON budget prévisionnel actuellement imputées à ce financement. Si le fonds vaut 10 000 € et que tu n'as budgété que 8 000 €, l'appli indique « reste 2 000 à budgéter ». Si tu as budgété 12 000 €, elle crie « sur-budgété de 2 000 ».
+- **Dépensé** : la somme des écritures du Grand Livre réellement imputées à ce financement. Même logique d'écart : sous-dépensé ou dépassement (rouge).
 
 ### Les recettes prévues
 
-Saisis quand l'argent doit **arriver** : FSV verse 60 000 € en février et 40 000 € en septembre. C'est le carburant de la courbe de trésorerie.
+Saisis quand l'argent doit **arriver** : le fonds verse 60 000 € en février et 40 000 € en septembre. C'est le carburant de la courbe de trésorerie.
 
-> ⚠️ **Attention** : la ligne « Non assigné » de la vue bailleur est calculée automatiquement (recettes prévues − dépenses fléchées). Si elle devient négative, tu as promis plus de dépenses à ce bailleur qu'il ne donne d'argent. Aïe. À corriger avant de signer quoi que ce soit.
+> ⚠️ **Attention** : la ligne « Non assigné » de la vue financement est calculée automatiquement (recettes prévues − dépenses fléchées). Si elle devient négative, tu as promis plus de dépenses à ce fonds qu'il ne donne d'argent. Aïe. À corriger avant de signer quoi que ce soit.
 
 ### Le pack audit
 
@@ -151,6 +169,7 @@ Le fichier doit avoir ces colonnes, en-têtes sur la 1re ligne, séparateur poin
 - **Type** (obligatoire) : « Dépense » ou « Recette ».
 - **Montant** (obligatoire) : en euros, **une seule colonne signée** (ex : 5,34 ou −37,56).
 - **Libellé** (facultatif) : le texte de l'écriture.
+- **Code analytique** (facultatif) : le **niveau 2** d'une ligne budgétaire (ex « 1.1 Core Team »). Pratique : quand tu choisis ensuite la LB de l'écriture, l'appli ne te propose **que les sous-lignes** de ce niveau 2 (1.1.1, 1.1.2…) — impossible de te tromper et d'aller piocher dans 2.1.1. Si le code est vide ou inconnu, le menu reste complet et un petit avertissement t'invite à vérifier.
 
 - **Montant = une seule colonne, déjà en euros.** Si ton export comptable a deux colonnes Débit et Crédit séparées, calcule d'abord Débit − Crédit dans une colonne unique avant d'importer (sinon l'appli n'en lit qu'une et le total est faux).
 - Les montants **négatifs** sont acceptés : un avoir (le traiteur de Kribi rembourse 120 € de trop-perçu) se saisit en Dépense à −120. Il vient en déduction de la ligne — pas en recette.
@@ -168,7 +187,7 @@ Une écriture importée doit être rangée : quelle LB ? quel bailleur ?
 
 Tu as 47 écritures à allouer un lundi matin ? Clique sur **✨ Suggérer LB (IA)**. L'assistant lit les libellés (« Carburant pirogue mission Mbandaka »… ça sent la ligne 2.2.2), s'inspire de tes allocations passées et propose LB + bailleur avec un niveau de confiance. **Rien n'est appliqué sans ton clic** — l'IA propose, l'humaine dispose.
 
-> ⚠️ **Attention aux petits drapeaux ⚠** dans la colonne Statut : ils signalent une dépense hors période de convention, une LB non couverte par le bailleur, un montant inhabituel (10× la moyenne de la ligne), ou un paiement daté un dimanche. Ce ne sont pas des blocages, ce sont des « regarde-moi ça de plus près ».
+> ⚠️ **Attention aux petits drapeaux ⚠** dans la colonne Statut : ils signalent une dépense **hors fenêtre d'éligibilité** du financement, un financement **différent de celui prévu au plan** pour cette ligne ce mois-là, une LB non couverte, un montant inhabituel (10× la moyenne de la ligne), ou un paiement daté un dimanche. Ce ne sont pas des blocages, ce sont des « regarde-moi ça de plus près ».
 
 ---
 
@@ -188,11 +207,13 @@ Astuce : **clique sur n'importe quelle case mois** du tableur → tu atterris su
 
 Le **Dashboard** ajoute les graphiques : dépenses vs budget par catégorie, répartition par bailleur, courbe de trésorerie. Parfait pour la réunion d'équipe (ou pour briller au CA).
 
+Sur l'**onglet Dépense** du Dashboard, on reste volontairement à la vue d'ensemble : seuls les **niveaux 1 et 2** s'affichent (1 Operating Costs, 1.1 Core Team…), pas le détail niveau 3. Une colonne **Commentaire** (bouton **Édit / OK**) te laisse annoter chaque catégorie — « dépassement assumé, mission supplémentaire validée par le CA ». Ce commentaire est le **même** que celui de la page Configuration : tu l'écris ici, il apparaît partout (et inversement).
+
 ---
 
 ## La trésorerie : éviter la panne sèche
 
-*Sur la page Suivi interne, ligne du bas*
+*Sur la page Suivi interne (ligne du bas) — et la page Trésorerie dédiée*
 
 La trésorerie répond à une question vitale : **aura-t-on assez d'argent sur le compte chaque mois ?** Avoir un budget équilibré sur l'année ne suffit pas — si la FSV verse en septembre mais que les salaires tombent tous les mois, juillet peut faire mal.
 
@@ -204,6 +225,14 @@ Deux modes :
 Un mois en **rouge** = solde négatif prévu. Exemple typique : la mission fluviale d'avril coûte cher, le versement Sista Climat n'arrive qu'en juin → mai est rouge. Solutions : décaler la mission, demander une avance au bailleur, ou pleurer (déconseillé, préférer les deux premières).
 
 > 💡 **Le saviez-vous** : la trésorerie compte TOUTES les écritures, même celles pas encore allouées. Normal : la banque, elle, n'attend pas que tu ranges tes étiquettes.
+
+### La page Trésorerie : la même chose, en plus lisible
+
+*Page : Trésorerie*
+
+Cette page est une **synthèse** du solde budgété (les mêmes chiffres que la ligne du bas de Suivi interne, mode Budgété) présentée clairement : une ligne par **financement** (ses recettes prévues mois par mois), une ligne **Dépenses totales**, une ligne **Solde**.
+
+Le petit plus malin : la case **« Date du jour du calcul »**. Tu y mets une date (par défaut aujourd'hui) et l'appli **grise tous les mois passés** — tu ne regardes que l'avenir. Le solde réellement en caisse à cette date se saisit dans la case **Solde forcé**, qui se pose dans le mois juste avant (date au 13 juin 2025 → solde forcé affiché en « Solde mai 2025 »), et la projection repart de là. Change la date pour simuler « et si on était déjà en septembre ? » sans toucher à ton budget.
 
 ---
 

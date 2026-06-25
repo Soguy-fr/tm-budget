@@ -22,6 +22,7 @@
 | F1.5 | Supprimer une LB (interdit si montant/écriture liés ; sinon soft-delete)                                                                                                                                                                                                                            | 🟢    | P8     |
 | F1.6 | Masquer les LB vides sur Suivi interne (toggle « Masquer vides »). Masquage **par année affichée** : une feuille est masquée si son **montant affiché** (total saisi `total_input` s'il existe, sinon Σ mois) pour cette année = 0 ; un parent est masqué si l'agrégat de ses mois pour l'année = 0 | 🟡    | —      |
 | F1.7 | Commentaire libre par LB (édité dans Configuration), affiché en bulle au survol dans Suivi interne et Grand Livre                                                                                                                                                                                   | 🟢    | —      |
+| F1.8 | Colonne **« Description »** toujours visible dans Configuration = champ `comment` ; tronqué aux X premiers caractères si long, aperçu complet au survol souris                                                                                                                                       | 🟢    | F1.7   |
 
 ## F2 — Gestion des budgets
 
@@ -52,37 +53,46 @@
 | F3.13 | Total annuel du budget affiché dans l'entête de chaque année (Σ de toutes les LB niv.3)                                                                | 🟢    | BR-8.4         |
 | F3.14 | Clic sur une cellule mois (hors édition) → ouvre le Grand Livre filtré sur cette LB + année + mois                                                     | 🟢    | —              |
 
-## F4 — Bailleurs (pages dédiées, même gabarit que l'interne)
+## F4 — Financement (pages dédiées, même gabarit que l'interne)
 
-| #    | Fonctionnalité                                                             | Phase | Règles         |
-| ---- | -------------------------------------------------------------------------- | ----- | -------------- |
-| F4.1 | Créer un bailleur (nom, code, couleur, période convention)                 | 🟢    | —              |
-| F4.2 | Créer des lignes bailleur (A1, A2…)                                        | 🟢    | —              |
-| F4.3 | Mapper une ligne bailleur → une ou plusieurs LB internes                   | 🟢    | BR-3.1         |
-| F4.4 | Saisir les dépenses prévues du bailleur (mensuel, multi-années, accordéon) | 🟡    | BR-3.1         |
-| F4.5 | Saisir les recettes prévues (déblocages attendus par mois)                 | 🟢    | BR-3.3         |
-| F4.6 | Ligne « Non assigné » calculée (équilibre recettes = dépenses)             | 🟢    | BR-3.2         |
-| F4.7 | Affichage du réalisé sur la page bailleur (bouton, comme l'interne)        | 🟡    | BR-5.3, BR-6.1 |
-| F4.8 | Export rapport financier par bailleur                                      | 🟡    | BR-10.1        |
+> Menu renommé **« Financement »** (anciennement « Bailleurs »). Distinction Bailleur
+> (acteur) / Financement (fonds), voir DOMAIN-MODEL 2.5/2.5b.
+
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F4.1 | Créer un financement (référence, couleur, fenêtre d'éligibilité) | 🟢 | — |
+| F4.2 | Créer des lignes de financement (A1, A2…) | 🟢 | — |
+| F4.3 | Mapper une ligne de financement → une ou plusieurs LB internes | 🟢 | BR-3.1 |
+| F4.4 | Saisir les dépenses prévues du financement (mensuel, multi-années, accordéon) | 🟡 | BR-3.1 |
+| F4.5 | Saisir les recettes prévues (déblocages attendus par mois) | 🟢 | BR-3.3 |
+| F4.6 | Ligne « Non assigné » calculée (équilibre recettes = dépenses) | 🟢 | BR-3.2 |
+| F4.7 | Affichage du réalisé sur la page financement (bouton, comme l'interne) | 🟡 | BR-5.3, BR-6.1 |
+| F4.8 | Export rapport financier par financement | 🟡 | BR-10.1 |
+| F4.9 | **Bailleur (acteur)** : entité parente ; un bailleur porte 1..N financements ; sélection du bailleur à la création d'un financement | 🟢 | — |
+| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total** | 🟢 | — |
+| F4.11 | Colonnes **Budgété** (ancien « Total dérivé ») + **Dépensé** (GL) + écart vs `montant_total` (reste à budgéter / sous-/sur-dépensé) | 🟢 | BR-3.4 |
+| F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement | 🟢 | BR-3.5 |
 
 ## F5 — Grand Livre
 
-| #     | Fonctionnalité                                                                                                                                                                                                        | Phase | Règles         |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------- |
-| F5.1  | Importer un GL au format CSV (conserver toutes colonnes en `raw`)                                                                                                                                                     | 🟢    | —              |
-| F5.2  | Allouer une écriture à une LB interne                                                                                                                                                                                 | 🟢    | BR-4.1         |
-| F5.3  | Allouer / corriger le bailleur (pré-rempli depuis le plan)                                                                                                                                                            | 🟢    | BR-2.4, BR-4.2 |
-| F5.4  | Surlignage des écritures non allouées                                                                                                                                                                                 | 🟢    | BR-4.1         |
-| F5.5  | Filtrer par plusieurs colonnes (tri rapide pour classer)                                                                                                                                                              | 🟢    | —              |
-| F5.6  | Avertissement « réalisé non conforme au plan »                                                                                                                                                                        | 🟡    | BR-4.2         |
-| F5.7  | Indicateur conforme au plan (oui/non) par écriture                                                                                                                                                                    | 🟡    | BR-4.2         |
-| F5.8  | Filtre date en accordéon (année puis mois) + bouton « Réinitialiser les filtres »                                                                                                                                     | 🟢    | —              |
-| F5.9  | Largeur des colonnes ajustable (poignée de redimensionnement)                                                                                                                                                         | 🟢    | —              |
-| F5.10 | Menu déroulant LB (filtre + ligne) affichant code ET intitulé, trié dans l'ordre naturel de la structure (1.1.2 avant 1.1.10) ; bulle commentaire au survol de la colonne LB. Plus de colonne « Description » dédiée. | 🟢    | F1.7           |
-| F5.11 | Sur GL filtré par LB+année+mois : bloc récap synthétique — nom de la ligne en avant, commentaire dessous, puis réalisé / planifié / solde, couleur si dépassement                                                     | 🟢    | BR-5.1, F1.7   |
-| F5.12 | Bouton « Retour au budget » → ancre sur la ligne budgétaire (`/interne#lb-<id>`)                                                                                                                                      | 🟢    | F3.14          |
-| F5.13 | Bouton « Importer CSV » en haut à droite                                                                                                                                                                              | 🟢    | —              |
-| F5.14 | Montants signés : avoirs / remboursements en négatif (Dépense négative, jamais Recette)                                                                                                                               | 🟢    | BR-4.4         |
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F5.1 | Importer un GL au format CSV (conserver toutes colonnes en `raw`) | 🟢 | — |
+| F5.2 | Allouer une écriture à une LB interne | 🟢 | BR-4.1 |
+| F5.3 | Allouer / corriger le bailleur (pré-rempli depuis le plan) | 🟢 | BR-2.4, BR-4.2 |
+| F5.4 | Surlignage des écritures non allouées | 🟢 | BR-4.1 |
+| F5.5 | Filtrer par plusieurs colonnes (tri rapide pour classer) | 🟢 | — |
+| F5.6 | Avertissement « réalisé non conforme au plan » | 🟡 | BR-4.2 |
+| F5.7 | Indicateur conforme au plan (oui/non) par écriture | 🟡 | BR-4.2 |
+| F5.8 | Filtre date en accordéon (année puis mois) + bouton « Réinitialiser les filtres » | 🟢 | — |
+| F5.9 | Largeur des colonnes ajustable (poignée de redimensionnement) | 🟢 | — |
+| F5.10 | Menu déroulant LB (filtre + ligne) affichant code ET intitulé, trié dans l'ordre naturel de la structure (1.1.2 avant 1.1.10) ; bulle commentaire au survol de la colonne LB. Plus de colonne « Description » dédiée. | 🟢 | F1.7 |
+| F5.11 | Sur GL filtré par LB+année+mois : bloc récap synthétique — nom de la ligne en avant, commentaire dessous, puis réalisé / planifié / solde, couleur si dépassement | 🟢 | BR-5.1, F1.7 |
+| F5.12 | Bouton « Retour au budget » → ancre sur la ligne budgétaire (`/interne#lb-<id>`) | 🟢 | F3.14 |
+| F5.13 | Bouton « Importer CSV » en haut à droite | 🟢 | — |
+| F5.14 | Montants signés : avoirs / remboursements en négatif (Dépense négative, jamais Recette) | 🟢 | BR-4.4 |
+| F5.15 | Import colonne **« Code analytique »** (= niveau 2) → contraint le dropdown LB aux sous-lignes niveau 3 ; avertissement si non reconnu | 🟢 | BR-4.5 |
+| F5.16 | Contrôles d'allocation financement : hors éligibilité + financement non prévu au plan (avertissements non bloquants) | 🟢 | BR-4.6 |
 
 ## F6 — Suivi
 
@@ -96,23 +106,25 @@
 
 ## F7 — Trésorerie
 
-| #    | Fonctionnalité                                                                               | Phase | Règles |
-| ---- | -------------------------------------------------------------------------------------------- | ----- | ------ |
-| F7.1 | Solde tréso intégré au tableau interne (ligne du bas, Budgété/Réel)                          | 🟢    | BR-7.* |
-| F7.2 | Prévision glissante (réel jusqu'au dernier mois clos, budget ensuite)                        | 🟢    | BR-7.3 |
-| F7.3 | Chaînage des soldes entre années                                                             | 🟡    | BR-7.1 |
-| F7.4 | Détection visuelle des trous de trésorerie                                                   | 🟢    | BR-7.4 |
-| F7.5 | Tréso réelle = toutes écritures GL (allouées ou non) — la caisse reflète la banque           | 🟢    | BR-7.3 |
-| F7.6 | Rapprochement bancaire : saisie solde relevé mensuel + écart vs solde calculé (rouge si ≠ 0) | 🟡    | BR-7.5 |
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F7.1 | Solde tréso intégré au tableau interne (ligne du bas, Budgété/Réel) | 🟢 | BR-7.* |
+| F7.2 | Prévision glissante (réel jusqu'au dernier mois clos, budget ensuite) | 🟢 | BR-7.3 |
+| F7.3 | Chaînage des soldes entre années | 🟡 | BR-7.1 |
+| F7.4 | Détection visuelle des trous de trésorerie | 🟢 | BR-7.4 |
+| F7.5 | Tréso réelle = toutes écritures GL (allouées ou non) — la caisse reflète la banque | 🟢 | BR-7.3 |
+| F7.6 | Rapprochement bancaire : saisie solde relevé mensuel + écart vs solde calculé (rouge si ≠ 0) | 🟡 | BR-7.5 |
+| F7.7 | **Page « Trésorerie »** (menu dédié) : synthèse budgété — ligne recettes par financement, dépenses totales, solde ; cellule solde forcé + date du jour grisant le passé | 🟢 | BR-7.7 |
 
 ## F8 — Dashboard
 
-| #    | Fonctionnalité                                        | Phase | Règles |
-| ---- | ----------------------------------------------------- | ----- | ------ |
-| F8.1 | Graphique dépenses vs budget par LB                   | 🟡    | —      |
-| F8.2 | Répartition des dépenses par catégorie / par bailleur | 🟡    | —      |
-| F8.3 | Courbe trésorerie cumulée prévu vs réel               | 🟡    | BR-7.* |
-| F8.4 | Tableau de bord complet multi-indicateurs             | 🔵    | —      |
+| # | Fonctionnalité | Phase | Règles |
+|---|---|---|---|
+| F8.1 | Graphique dépenses vs budget par LB | 🟡 | — |
+| F8.2 | Répartition des dépenses par catégorie / par bailleur | 🟡 | — |
+| F8.3 | Courbe trésorerie cumulée prévu vs réel | 🟡 | BR-7.* |
+| F8.4 | Tableau de bord complet multi-indicateurs | 🔵 | — |
+| F8.5 | Onglet **Dépense** : n'afficher que les niveaux 1 et 2 (pas niveau 3) + colonne **Commentaire** éditable (édit/OK), liée au champ `comment` partagé | 🟢 | BR-5.4, F1.7 |
 
 ## F9 — Export & maintenance
 

@@ -63,19 +63,46 @@ create table budget_years (
 );
 ```
 
-### bailleurs
+### funders (bailleur = acteur)
+
+> **Terminologie (migration 0007).** Le domaine distingue désormais le **Bailleur**
+> (acteur, ex « Fondation JFN ») du **Financement** (fonds, ex « JFN-001 », 10 000 €).
+> Pour limiter la réécriture, la table physique `bailleurs` **reste** et représente le
+> **financement** (le fonds) ; toutes les FK `bailleur_id` existantes continuent de
+> pointer vers le fonds. On ajoute une table parente `funders` pour l'**acteur**.
+> Côté UI, le menu et les libellés parlent de « Financement » (le fonds) et de
+> « Bailleur » (l'acteur).
+
+```sql
+create table funders (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,                   -- 'Fondation JFN' (acteur)
+  created_at  timestamptz not null default now()
+);
+```
+
+### bailleurs (= financement / fonds)
 
 ```sql
 create table bailleurs (
   id            uuid primary key default gen_random_uuid(),
-  code          text not null unique,          -- 'FPC'
-  name          text not null,                 -- 'Fondation ...'
+  code          text not null unique,          -- 'FPC' (conservé ; = référence courte)
+  name          text not null,                 -- libellé du fonds
   color         text not null,                 -- hex, pour le code couleur
-  convention_start date,                       -- période décalée possible (P9)
-  convention_end   date,
+  convention_start date,                       -- = date début éligibilité (P9)
+  convention_end   date,                       -- = date fin éligibilité
   created_at    timestamptz not null default now()
 );
+-- Colonnes ajoutées (migration 0007) :
+--   funder_id     uuid references funders(id)  -- l'acteur qui accorde le fonds
+--   reference     text                         -- 'JFN-001' (identifiant du fonds)
+--   description   text                         -- description libre du fonds
+--   montant_total numeric(14,2)                -- montant total accordé (remplace l'usage
+--                                              --   de montant_conventionne, F12.4)
 ```
+> `convention_start`/`convention_end` portent la **fenêtre d'éligibilité** des dépenses
+> (BR-3.5, BR-4.6). `montant_total` est le total du fonds servant aux écarts Budgété/Dépensé
+> (BR-3.4) ; il reprend le rôle de `montant_conventionne` (migration 0006), désormais déprécié.
 
 ### budget_monthly
 
@@ -182,6 +209,8 @@ create table gl_entries (
   entry_type    text not null check (entry_type in ('Dépense','Recette')),
   label         text,
   amount        numeric(14,2) not null,         -- SIGNÉ : négatif = avoir/remboursement (BR-4.4)
+  code_analytique text,                          -- colonne CSV (ex '1.1 Core Team') = niveau 2,
+                                                 -- contraint le choix de LB à l'allocation (BR-4.5)
   -- métadonnées comptables natives conservées (colonnes du CSV source) :
   raw           jsonb,                          -- toutes les colonnes d'origine du grand livre
   -- allocations (UI) :
@@ -259,9 +288,20 @@ create table audit_log (
 );
 ```
 
+### Colonnes ajoutées (migration 0007) — page Trésorerie
+La page Trésorerie (F7.7) est une synthèse **budgété pur** : mêmes montants que la ligne
+solde de Suivi interne (mode Budgété, BR-7.2). Deux réglages persistés par budget :
+```sql
+-- alter table budgets add column:
+--   calc_date        date           -- "date du jour du calcul" : grise les colonnes < ce mois
+--   forced_balance   numeric(14,2)  -- solde forcé en caisse, posé au mois précédant calc_date ;
+--                                   --   le chaînage budgété repart de là (BR-7.7). null = pas de forçage.
+```
+
 ### Colonnes ajoutées (migration 0006)
 
 - `bailleurs.montant_conventionne numeric(14,2)` — plafond contractuel (Q4, F12.4).
+  **Déprécié en 0007** au profit de `bailleurs.montant_total` (même rôle).
 - `gl_entries.confirmed boolean default true` — double validation (F12.6) :
   allocation par non-admin → `false`, confirmation admin → `true`.
 - `gl_entries.archived boolean default false` — purge soft-delete (BR-10.2).

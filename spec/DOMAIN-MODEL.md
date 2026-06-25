@@ -25,9 +25,10 @@
      └────────┬──────────────────────────────────┬─────────┘
               │ agrège vers                       │ réalisé via
      ┌────────▼─────────┐              ┌──────────▼─────────┐
-     │     BAILLEUR     │              │   GRAND LIVRE (GL) │
-     │  + lignes A1..An │              │  écritures + alloc │
-     │  + recettes prév.│              └────────────────────┘
+     │   FINANCEMENT    │◀── BAILLEUR  │   GRAND LIVRE (GL) │
+     │  + lignes A1..An │   (acteur,   │  écritures + alloc │
+     │  + recettes prév.│    1→N fonds)│  + code analytique │
+     │  + montant_total │              └────────────────────┘
      └──────────────────┘
 ```
 
@@ -87,36 +88,64 @@ La maille atomique du prévisionnel de dépense.
 - Le **total annuel saisi** d'une LB peut différer de la somme de ses 12 mois :
   l'écart est affiché (rouge) et réconciliable via les boutons « Répartir » / « Mettre à jour le total » (voir BUSINESS-RULES).
 
-### 2.5 Bailleur
+### 2.5 Bailleur (acteur)
 
-Une source de financement (ex : FPC, SW, JFN).
+L'**acteur** qui finance (ex : Fondation JFN, Union Européenne). Un bailleur peut
+accorder **plusieurs financements** (fonds) distincts.
 
-- `nom`, `code` court, `couleur` (pour le code couleur d'assignation).
-- `période_convention` : date début / fin (peut être décalée de l'année civile, P9).
-- `lignes_bailleur` : liste de lignes propres au bailleur (voir 2.6).
+- `nom` : nom de l'acteur (ex : « Fondation JFN »).
+
+**Règles**
+
+- Un bailleur regroupe 1..N financements (2.5b). Supprimer un bailleur est interdit
+  s'il porte encore des financements.
+
+### 2.5b Financement (fonds)
+
+Un **fonds** accordé par un bailleur (ex : JFN-001, doté de 10 000 €). C'est l'entité
+imputée sur les mailles du budget et les écritures GL (anciennement « bailleur »
+au sens du code). Le **menu s'appelle « Financement »**.
+
+- `bailleur_id` : l'acteur qui accorde ce fonds (2.5).
+- `référence` : identifiant du fonds (ex : `JFN-001`). Sert de code court / clé d'affichage.
+- `montant_total` : montant total accordé par le bailleur (ex : 10 000 €). Saisi.
+- `date_début_éligibilité` / `date_fin_éligibilité` : fenêtre pendant laquelle les
+  dépenses sont éligibles à ce fonds (peut être décalée de l'année civile, P9).
+- `description` : texte libre décrivant le fonds.
+- `couleur` : pour le code couleur d'assignation.
+- `lignes_financement` : nomenclature propre au fonds (voir 2.6).
 - `recettes_prévues` : prévisionnel mensuel des déblocages attendus (voir 2.7).
 
-### 2.6 Ligne bailleur
+**Indicateurs dérivés** (calculés, non saisis ; voir BR-3.4) :
+- `budgété` = Σ des mailles `budget_monthly` assignées à ce financement (sur ses LB mappées).
+- `dépensé` = Σ des écritures GL de type Dépense imputées à ce financement.
+- `écart_budgété` = `montant_total − budgété` (reste à budgéter si > 0, sur-budgété si < 0).
+- `écart_dépensé` = `montant_total − dépensé` (sous/sur-dépensé).
 
-Une ligne de la nomenclature **propre** au bailleur (ex : `A1 Ressources humaines`),
+### 2.6 Ligne de financement
+
+Une ligne de la nomenclature **propre** au financement (ex : `A1 Ressources humaines`),
 mappée vers une ou plusieurs LB internes.
 
-- `code` bailleur (ex : `A1`), `intitulé`.
+- `code` (ex : `A1`), `intitulé`.
 - `lb_internes_mappées` : une ou plusieurs LB internes (ex : `1.1.1` + `1.1.2`).
 - `montants_prévus` : dépenses prévues, mensuelles, multi-années (même gabarit que l'interne).
 
 **Règles**
 
-- La structure d'un bailleur est libre et créée au fil de l'eau (pas de structure imposée).
-- Le mapping ligne bailleur → LB internes est le pont entre les deux mondes.
+- La nomenclature d'un financement est libre et créée au fil de l'eau (pas de structure imposée).
+- Le mapping ligne financement → LB internes est le pont entre les deux mondes.
+- Le bouton **« Assigner les lignes dans le budget »** (BR-3.5) propage ce mapping dans
+  le prévisionnel : chaque LB mappée, sur chaque mois de la fenêtre d'éligibilité, est
+  imputée à ce financement.
 - Une ligne calculée **« Non assigné »** porte le solde (recettes prévues − dépenses prévues assignées)
-  pour garantir l'équilibre recettes = dépenses dans la vue bailleur. Calculée, non saisie.
+  pour garantir l'équilibre recettes = dépenses dans la vue financement. Calculée, non saisie.
 
 ### 2.7 Recette prévue (déblocage attendu)
 
-Le prévisionnel d'entrée d'argent d'un bailleur.
+Le prévisionnel d'entrée d'argent d'un financement.
 
-- clé : (bailleur, année, mois).
+- clé : (financement, année, mois).
 - `montant` attendu ce mois-là (saisie bleue). Ex : Fév 60 000, Avr 40 000.
 - Pas de modélisation en pourcentages : on saisit directement le montant espéré par mois.
 
@@ -126,15 +155,22 @@ Une ligne du grand livre comptable importée (CSV), représentant le réalisé.
 
 - Colonnes natives importées : Date, Type (Dépense/Recette), Libellé, Montant (€) **signé**
   (négatif = avoir/remboursement, BR-4.4), + métadonnées comptables conservées.
+- `code_analytique` : colonne importée du CSV (ex : `1.1 Core Team`). Équivaut au
+  **niveau 2** d'une LB. **Contraint** le choix de la LB à l'allocation : seules les
+  sous-lignes niveau 3 de ce niveau 2 sont proposées (BR-4.5). Vide/non reconnu →
+  avertissement + dropdown complet (pas de blocage).
 - `lb_interne` : allocation (saisie/pré-remplie en UI). Vide pour une recette pure.
-- `bailleur` : allocation (saisie/pré-remplie). Obligatoire pour calcul du suivi bailleur.
+- `financement` : allocation (saisie/pré-remplie). Obligatoire pour calcul du suivi par financement.
 - `statut_allocation` : OK / À allouer (calculé).
 
 **Règles**
 
-- Pré-remplissage du bailleur d'après le plan (le bailleur prévu pour cette LB × mois). Modifiable.
-- Réalité ≠ plan autorisé (P : Tension D) : seul le total annuel par bailleur doit rester cohérent.
+- Pré-remplissage du financement d'après le plan (le financement prévu pour cette LB × mois). Modifiable.
+- Réalité ≠ plan autorisé (P : Tension D) : seul le total annuel par financement doit rester cohérent.
   Un écart plan/réel produit un **avertissement non bloquant**, pas un blocage.
+- À l'allocation, deux contrôles supplémentaires (avertissements non bloquants, BR-4.6) :
+  (1) la date de l'écriture est hors de la fenêtre d'éligibilité du financement choisi ;
+  (2) le financement choisi diffère de celui prévu au plan pour ce (LB × mois).
 - Une écriture non allouée est surlignée et exclue des agrégats **analytiques**
   (suivi LB, suivi bailleur) jusqu'à allocation — mais elle compte **toujours**
   dans la trésorerie réelle (la caisse reflète la banque, BR-7.3).
@@ -165,20 +201,25 @@ Le contrôle de complétude du GL (BR-7.5).
 | Structure → Budgets                    | 1 structure, N budgets | structure partagée (P2)         |
 | Budget → Périodes                      | 1 → N                  | années civiles                  |
 | (Budget,LB,Année,Mois) → Montant prévu | 1 → 1                  | maille atomique                 |
-| Montant prévu → Bailleur               | N → 0..1               | un bailleur max par maille (P4) |
-| Bailleur → Lignes bailleur             | 1 → N                  | nomenclature propre             |
-| Ligne bailleur → LB internes           | N → N                  | mapping                         |
-| Bailleur → Recettes prévues            | 1 → N (par mois)       | déblocages attendus             |
+| Bailleur (acteur) → Financements       | 1 → N                  | un acteur, plusieurs fonds      |
+| Montant prévu → Financement            | N → 0..1               | un financement max par maille (P4) |
+| Financement → Lignes de financement    | 1 → N                  | nomenclature propre             |
+| Ligne de financement → LB internes     | N → N                  | mapping                         |
+| Financement → Recettes prévues         | 1 → N (par mois)       | déblocages attendus             |
 | GL → LB interne                        | N → 0..1               | allocation                      |
-| GL → Bailleur                          | N → 0..1               | allocation                      |
+| GL → Financement                       | N → 0..1               | allocation                      |
 
 ## 4. Invariants de cohérence (à vérifier en continu)
 
 - **INV1** : pour toute LB niveau 3, `total_annuel_saisi == Σ(12 mois)` OU un écart est affiché (rouge).
-- **INV2** : tout (LB × mois) avec montant > 0 devrait avoir un bailleur ; sinon « non assigné » signalé.
-- **INV3** : dans une vue bailleur, `Σ recettes prévues == Σ dépenses prévues` (assurée par la ligne « Non assigné »).
-- **INV4** : un bailleur assigné à une écriture GL doit financer la LB concernée à un moment de l'année (sinon avertissement, Tension A/D).
-- **INV5** (Phase) : `Σ dépenses réalisées d'un bailleur ≤ recettes du bailleur` (alerte de dépassement si faux).
+- **INV2** : tout (LB × mois) avec montant > 0 devrait avoir un financement ; sinon « non assigné » signalé.
+- **INV3** : dans une vue financement, `Σ recettes prévues == Σ dépenses prévues` (assurée par la ligne « Non assigné »).
+- **INV4** : un financement assigné à une écriture GL doit financer la LB concernée à un moment de l'année (sinon avertissement, Tension A/D).
+- **INV5** (Phase) : `Σ dépenses réalisées d'un financement ≤ montant_total du financement` (alerte de dépassement si faux).
+- **INV10** : une écriture GL imputée à un financement devrait avoir une date dans sa
+  fenêtre d'éligibilité (sinon avertissement, BR-4.6).
+- **INV11** : le code analytique d'une écriture, s'il est reconnu, correspond à une LB
+  niveau 2 dont la LB allouée (niveau 3) est enfant (BR-4.5).
 - **INV6** : la trésorerie réelle d'un mois clos = Σ de **toutes** les écritures GL
   du mois (allouées ou non, signées), indépendante du statut d'allocation (BR-7.3).
 - **INV7** : `Σ dépenses réalisées (tous bailleurs) + réalisé non assigné == Σ dépenses GL allouées (LB)`
