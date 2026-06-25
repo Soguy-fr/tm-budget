@@ -143,8 +143,16 @@ Le Grand Livre (GL), c'est l'export de ta comptabilité réelle : chaque paiemen
 
 ### Importer le CSV
 
-Bouton **Importer CSV** → choisis l'export de ta compta. L'appli reconnaît les colonnes Date, Type, Libellé, Montant.
+Bouton **Importer CSV** → choisis l'export de ta compta. L'appli reconnaît les colonnes Date, Type, Libellé, Montant. Pas sûr du format ? Le bouton **Télécharger un fichier exemple** te donne un modèle prêt à remplir.
 
+Le fichier doit avoir ces colonnes, en-têtes sur la 1re ligne, séparateur point-virgule ou virgule :
+
+- **Date** (obligatoire) : au format AAAA-MM-JJ ou JJ/MM/AAAA — la date où l'argent bouge.
+- **Type** (obligatoire) : « Dépense » ou « Recette ».
+- **Montant** (obligatoire) : en euros, **une seule colonne signée** (ex : 5,34 ou −37,56).
+- **Libellé** (facultatif) : le texte de l'écriture.
+
+- **Montant = une seule colonne, déjà en euros.** Si ton export comptable a deux colonnes Débit et Crédit séparées, calcule d'abord Débit − Crédit dans une colonne unique avant d'importer (sinon l'appli n'en lit qu'une et le total est faux).
 - Les montants **négatifs** sont acceptés : un avoir (le traiteur de Kribi rembourse 120 € de trop-perçu) se saisit en Dépense à −120. Il vient en déduction de la ligne — pas en recette.
 - **Doublons** : si tu réimportes par erreur le même fichier (ça arrive aux meilleures), l'appli repère les écritures déjà présentes (même date, même montant, même libellé) et te propose d'importer **sans** les doublons. Merci qui ?
 
