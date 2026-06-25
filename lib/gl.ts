@@ -19,6 +19,12 @@ export function allocationStatus(e: {
 export function parseAmount(raw: string): number {
   let s = raw.replace(/[\s €]/g, "");
   if (s === "") return 0;
+  // Comptabilité : montant entre parenthèses = négatif, ex « (120,00) ».
+  let parenNeg = false;
+  if (/^\(.*\)$/.test(s)) {
+    parenNeg = true;
+    s = s.slice(1, -1);
+  }
   const lastComma = s.lastIndexOf(",");
   const lastDot = s.lastIndexOf(".");
   if (lastComma > lastDot) {
@@ -29,21 +35,36 @@ export function parseAmount(raw: string): number {
     s = s.replace(/,/g, "");
   }
   const n = Number.parseFloat(s);
-  return Number.isNaN(n) ? 0 : n;
+  if (Number.isNaN(n)) return 0;
+  return parenNeg ? -n : n;
 }
 
-// Parse une date AAAA-MM-JJ ou JJ/MM/AAAA → ISO (AAAA-MM-JJ). null si invalide.
+// Parse une date en tolérant les formats courants → ISO (AAAA-MM-JJ). null si invalide.
+// Gère : AAAA-MM-JJ (ISO), AAAA/MM/JJ, JJ/MM/AAAA, JJ-MM-AAAA, JJ.MM.AAAA, MM-JJ-AA (US),
+// années sur 2 chiffres (→ 20AA), séparateurs / - . , désambiguïsation jour/mois si l'un > 12.
 export function parseDate(raw: string): string | null {
   const s = raw.trim();
-  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/.exec(s);
-  if (m) {
-    const d = m[1].padStart(2, "0");
-    const mo = m[2].padStart(2, "0");
-    return `${m[3]}-${mo}-${d}`;
-  }
-  return null;
+  const iso = (y: number, mo: number, d: number): string | null => {
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return `${String(y).padStart(4, "0")}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  };
+  const yr = (n: number) => (n < 100 ? 2000 + n : n); // année 2 chiffres → 20xx
+
+  const m = /^(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,4})$/.exec(s);
+  if (!m) return null;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  const c = Number(m[3]);
+
+  // Premier champ sur 4 chiffres → AAAA-MM-JJ (ou AAAA/MM/JJ).
+  if (m[1].length === 4) return iso(a, b, c);
+
+  // Sinon AAAA en dernier. a,b = jour/mois ou mois/jour : le champ > 12 est le JOUR.
+  const year = yr(c);
+  if (a > 12 && b <= 12) return iso(year, b, a); // JJ?MM?AAAA → mais a>12 donc a=jour
+  if (b > 12 && a <= 12) return iso(year, a, b); // MM?JJ?AAAA (US) → a=mois, b=jour
+  // Ambigu (les deux ≤ 12) : défaut européen JJ/MM/AAAA.
+  return iso(year, b, a);
 }
 
 // Normalise le type d'écriture.

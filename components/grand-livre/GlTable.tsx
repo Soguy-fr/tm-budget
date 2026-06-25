@@ -17,6 +17,7 @@ const COLUMNS = [
   { key: "type", label: "Type", w: 84 },
   { key: "label", label: "Libellé", w: 220 },
   { key: "amount", label: "Montant", w: 96 },
+  { key: "code_ana", label: "Code analytique", w: 130 },
   { key: "lb", label: "LB", w: 220 },
   { key: "bailleur", label: "Bailleur", w: 90 },
   { key: "statut", label: "Statut", w: 96 },
@@ -504,6 +505,10 @@ export function GlTable({
                     {e.label}
                   </td>
                   <td className="px-2 py-1 text-right">{formatEur(e.amount)}</td>
+                  {/* F5.15 — code analytique importé (= niveau 2) */}
+                  <td className="truncate px-2 py-1 text-slate-500" title={e.code_analytique ?? ""}>
+                    {e.code_analytique ?? <span className="text-slate-300">—</span>}
+                  </td>
                   {/* F1.7 — bulle commentaire au survol de la cellule LB */}
                   <td
                     className={`px-2 py-1 ${e.line_id && commentByLine?.[e.line_id] ? "cursor-help" : ""}`}

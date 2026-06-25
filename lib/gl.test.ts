@@ -39,6 +39,11 @@ describe("parseAmount", () => {
     expect(parseAmount("-120,00")).toBe(-120);
     expect(parseAmount("-1 250,50")).toBe(-1250.5);
   });
+
+  it("parenthèses comptables = négatif", () => {
+    expect(parseAmount("(120,00)")).toBe(-120);
+    expect(parseAmount("(1 250,50)")).toBe(-1250.5);
+  });
 });
 
 describe("mapCsvRow (BR-4.4 — montant signé)", () => {
@@ -97,12 +102,24 @@ describe("code analytique (BR-4.5)", () => {
   });
 });
 
-describe("parseDate (Q7)", () => {
+describe("parseDate (Q7 — tolérant)", () => {
   it("accepte AAAA-MM-JJ et JJ/MM/AAAA", () => {
     expect(parseDate("2026-01-05")).toBe("2026-01-05");
     expect(parseDate("05/01/2026")).toBe("2026-01-05");
     expect(parseDate("5/1/2026")).toBe("2026-01-05");
     expect(parseDate("nope")).toBeNull();
+  });
+  it("séparateurs - / . et JJ-MM-AAAA", () => {
+    expect(parseDate("05.01.2026")).toBe("2026-01-05");
+    expect(parseDate("18-05-2026")).toBe("2026-05-18"); // 18 = jour
+    expect(parseDate("2026/01/05")).toBe("2026-01-05");
+  });
+  it("désambiguïse via le champ > 12 (US MM-JJ-AA)", () => {
+    expect(parseDate("05-18-26")).toBe("2026-05-18"); // 18 = jour → mois 05
+    expect(parseDate("18/05/26")).toBe("2026-05-18");
+  });
+  it("rejette une date impossible", () => {
+    expect(parseDate("32/13/2026")).toBeNull();
   });
 });
 
