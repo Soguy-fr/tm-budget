@@ -29,8 +29,9 @@ export function StructureTree({ tree }: { tree: TreeNode[] }) {
       )}
 
       <div className="overflow-hidden rounded border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="flex items-center border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-500">
           <span>Code · Intitulé</span>
+          <span className="min-w-0 flex-1 px-3">Description</span>
           <span>Actions</span>
         </div>
 
@@ -97,7 +98,7 @@ function Row({
   return (
     <div>
       <div
-        className="flex items-center justify-between border-b border-slate-50 px-3 py-1.5 text-sm hover:bg-slate-50"
+        className="flex items-center border-b border-slate-50 px-3 py-1.5 text-sm hover:bg-slate-50"
         style={{ paddingLeft: 12 + depth * 20 }}
       >
         <span className={node.level === 3 ? "text-formula" : "font-medium text-brand-night"}>
@@ -105,11 +106,13 @@ function Row({
             {node.code}
           </span>
           {node.label}
-          {node.comment && (
-            <span className="ml-2 cursor-help text-xs text-slate-400" title={node.comment}>
-              💬
-            </span>
-          )}
+        </span>
+        {/* F1.8 — colonne Description (= champ comment) : tronquée, aperçu complet au survol */}
+        <span
+          className="min-w-0 flex-1 truncate px-3 text-xs text-slate-400"
+          title={node.comment ?? undefined}
+        >
+          {node.comment}
         </span>
         <span className="flex items-center gap-2 text-xs">
           <span className="flex gap-0.5">
