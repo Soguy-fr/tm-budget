@@ -2,6 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ReferenceLine,
+} from "recharts";
 import type { TreasuryCell } from "@/lib/treasury";
 import { formatEur, MONTHS_FR } from "@/lib/format";
 import { saveTreasurySettings } from "@/app/(app)/tresorerie/actions";
@@ -43,6 +52,23 @@ export function TresorerieTable({
   const key = (c: TreasuryCell) => `${c.year}:${c.month}`;
   const years = Array.from(new Set(cells.map((c) => c.year)));
   const grey = "bg-slate-100 text-slate-300";
+
+  // Accordéon : années repliées (colonnes masquées).
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const toggleYear = (y: number) =>
+    setCollapsed((s) => {
+      const n = new Set(s);
+      if (n.has(y)) n.delete(y);
+      else n.add(y);
+      return n;
+    });
+  const view = cells.filter((c) => !collapsed.has(c.year));
+  const visibleYears = years.filter((y) => !collapsed.has(y));
+
+  // Données du graphique : solde des cellules calculées (non grisées), tous mois.
+  const chartData = cells
+    .filter((c) => c.solde != null)
+    .map((c) => ({ label: `${MONTHS_FR[c.month - 1]} ${String(c.year).slice(2)}`, solde: c.solde as number }));
 
   return (
     <div>
@@ -100,13 +126,33 @@ export function TresorerieTable({
         <p className="mb-3 rounded border border-alert/30 bg-red-50 p-2 text-sm text-alert">{error}</p>
       )}
 
+      {/* Accordéon années : afficher/masquer les colonnes d'une année */}
+      {years.length > 1 && (
+        <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-slate-500">
+          <span>Années :</span>
+          {years.map((y) => (
+            <button
+              key={y}
+              onClick={() => toggleYear(y)}
+              className={`rounded border px-2 py-0.5 ${
+                collapsed.has(y)
+                  ? "border-slate-200 text-slate-400"
+                  : "border-brand-olive bg-brand-lime/20 text-brand-brown"
+              }`}
+            >
+              {collapsed.has(y) ? "▶" : "▼"} {y}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded border border-slate-200 bg-white">
         <table className="border-collapse text-xs">
           <thead>
             {/* Bandeau années */}
             <tr className="border-b border-slate-200 text-slate-500">
               <th className="sticky left-0 bg-white px-2 py-1 text-left">Financement</th>
-              {years.map((y) => (
+              {visibleYears.map((y) => (
                 <th key={y} colSpan={12} className="border-l border-slate-200 px-2 py-1 text-center font-bold">
                   {y}
                 </th>
@@ -114,7 +160,7 @@ export function TresorerieTable({
             </tr>
             <tr className="border-b border-slate-200 text-slate-400">
               <th className="sticky left-0 bg-white px-2 py-1"></th>
-              {cells.map((c) => (
+              {view.map((c) => (
                 <th key={key(c)} className={`px-1.5 py-1 text-right ${c.greyed ? grey : ""} ${c.month === 1 ? "border-l border-slate-200" : ""}`}>
                   {MONTHS_FR[c.month - 1]}
                 </th>
@@ -129,11 +175,16 @@ export function TresorerieTable({
                   <span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: f.color }} />
                   <span title={f.name}>{f.label}</span>
                 </td>
-                {cells.map((c) => {
+                {view.map((c) => {
                   const v = f.recByCell[key(c)] ?? 0;
                   return (
-                    <td key={key(c)} className={`px-1.5 py-1 text-right ${c.greyed ? grey : "text-slate-600"}`}>
-                      {v ? formatEur(v) : ""}
+                    <td
+                      key={key(c)}
+                      className={`px-1.5 py-1 text-right ${
+                        c.greyed ? grey : v ? "bg-brand-lime/15 font-medium text-brand-night" : "text-slate-400"
+                      }`}
+                    >
+                      {v ? formatEur(v) : c.greyed ? "" : "--"}
                     </td>
                   );
                 })}
@@ -143,27 +194,27 @@ export function TresorerieTable({
             {/* Dépenses totales */}
             <tr className="border-b border-slate-100 bg-slate-50/50">
               <td className="sticky left-0 bg-white px-2 py-1 font-medium text-brand-night">Dépenses totales</td>
-              {cells.map((c) => (
+              {view.map((c) => (
                 <td key={key(c)} className={`px-1.5 py-1 text-right ${c.greyed ? grey : "text-slate-600"}`}>
-                  {c.dep ? formatEur(c.dep) : ""}
+                  {c.dep ? formatEur(c.dep) : c.greyed ? "" : "--"}
                 </td>
               ))}
             </tr>
 
-            {/* Solde chaîné */}
+            {/* Solde chaîné — couleurs : forcé = bleu (repère), négatif = rouge, sinon neutre */}
             <tr className="font-medium">
-              <td className="sticky left-0 bg-white px-2 py-1 text-brand-night">Solde</td>
-              {cells.map((c) => (
+              <td className="sticky left-0 bg-white px-2 py-1 text-slate-700">Solde</td>
+              {view.map((c) => (
                 <td
                   key={key(c)}
                   className={`px-1.5 py-1 text-right ${
                     c.forcedHere
-                      ? "bg-brand-cream font-bold text-brand-brown"
+                      ? "bg-sky-100 font-bold text-sky-700"
                       : c.greyed
                         ? grey
                         : c.solde != null && c.solde < 0
-                          ? "text-alert"
-                          : "text-brand-night"
+                          ? "font-semibold text-alert"
+                          : "text-slate-700"
                   }`}
                   title={c.forcedHere ? "Solde forcé (point de départ de la projection)" : undefined}
                 >
@@ -174,6 +225,31 @@ export function TresorerieTable({
           </tbody>
         </table>
       </div>
+
+      {/* Graphique du solde (BR-7.7) */}
+      {chartData.length > 1 && (
+        <div className="mt-4 rounded border border-slate-200 bg-white p-3">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            Courbe du solde
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={chartData} margin={{ top: 5, right: 12, bottom: 5, left: 0 }}>
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatEur(v)} />
+              <Tooltip formatter={(value) => formatEur(Number(value))} />
+              <ReferenceLine y={0} stroke="#9b2207" strokeDasharray="3 3" />
+              <Line
+                type="monotone"
+                dataKey="solde"
+                stroke="#7e9d3d"
+                strokeWidth={2}
+                dot={{ r: 2 }}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

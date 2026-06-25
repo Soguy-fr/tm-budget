@@ -47,6 +47,18 @@ describe("treasuryForecast (BR-7.7 — page Trésorerie)", () => {
     expect(cells[0].greyed).toBe(true);
     expect(cells[5].solde).toBe(900); // chaîne normale, juin
   });
+
+  it("date AVANT la 1re colonne : le solde forcé sert de départ (jan)", () => {
+    // 1re colonne = jan 2025 ; date forcée au 12/2024 avec solde 5000.
+    const cells = treasuryForecast({
+      ...base,
+      calc: { year: 2024, month: 12 },
+      forcedBalance: 5000,
+    });
+    expect(cells[0].greyed).toBe(false);
+    expect(cells[0].solde).toBe(5000 - 100); // jan : départ 5000 + flux jan (−100)
+    expect(cells[5].solde).toBe(5000 - 600 + 1000); // juin
+  });
 });
 
 describe("lastClosedMonthIndex (BR-7.3 option A)", () => {

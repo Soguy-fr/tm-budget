@@ -102,9 +102,14 @@ export function treasuryForecast(opts: {
     (opts.recByMonth[`${y}:${m}`] ?? 0) - (opts.depByMonth[`${y}:${m}`] ?? 0);
 
   const calcV = opts.calc ? ymv(opts.calc.year, opts.calc.month) : null;
-  const calcIdx = opts.calc
+  let calcIdx = opts.calc
     ? seq.findIndex((c) => c.year === opts.calc!.year && c.month === opts.calc!.month)
     : -1;
+  // Date AVANT la première colonne affichée : on démarre la projection au 1er mois,
+  // le solde forcé sert de solde de départ (avant ce mois). Sinon il serait ignoré.
+  if (opts.calc && calcIdx === -1 && calcV !== null && seq.length > 0) {
+    if (calcV < ymv(seq[0].year, seq[0].month)) calcIdx = 0;
+  }
   const useForced = opts.forcedBalance != null && calcIdx >= 0;
 
   const soldes: (number | null)[] = new Array(seq.length).fill(null);
