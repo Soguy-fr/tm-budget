@@ -27,7 +27,7 @@ export default async function BailleursPage() {
     <div className="max-w-2xl">
       <div className="mb-1 flex items-center gap-2">
         <h1 className="text-xl font-bold text-brand-night">Bailleurs</h1>
-        <GuideLink anchor="ajouter-un-bailleur" />
+        <GuideLink anchor="ajouter-un-financement" />
       </div>
       <p className="mb-4 text-sm text-slate-500">
         Sources de financement. Chaque bailleur a sa nomenclature, son mapping

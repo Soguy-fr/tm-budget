@@ -32,7 +32,7 @@ export type Heading = { level: number; text: string; slug: string };
 export function extractHeadings(md: string, level = 2): Heading[] {
   const out: Heading[] = [];
   for (const line of md.split("\n")) {
-    const m = /^(#{1,3})\s+(.*)$/.exec(line);
+    const m = /^(#{1,3})\s+(.*)$/.exec(line.replace(/\r$/, ""));
     if (m && m[1].length === level) {
       out.push({ level, text: m[2].trim(), slug: slugify(m[2]) });
     }
