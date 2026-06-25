@@ -20,9 +20,20 @@ export type Budget = {
   is_active: boolean;
   initial_cash: number;
   archived: boolean;
+  calc_date: string | null;       // F7.7 — date du jour du calcul (grise le passé)
+  forced_balance: number | null;  // F7.7 — solde forcé à calc_date (null = aucun)
   created_at: string;
   updated_at: string;
 };
+
+// Bailleur = acteur (migration 0007). Un acteur porte 1..N financements.
+export type Funder = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+// Financement = la table physique `bailleurs` (le fonds). Voir DOMAIN-MODEL 2.5b.
 
 export type BudgetYear = {
   id: string;
@@ -35,9 +46,13 @@ export type Bailleur = {
   code: string;
   name: string;
   color: string;
-  convention_start: string | null;
-  convention_end: string | null;
-  montant_conventionne: number | null; // C2/Q4 — plafond contractuel
+  convention_start: string | null;     // = date début éligibilité (BR-3.5/4.6)
+  convention_end: string | null;        // = date fin éligibilité
+  montant_conventionne: number | null;  // C2/Q4 — plafond (déprécié, voir montant_total)
+  funder_id: string | null;             // 0007 — l'acteur qui accorde le fonds
+  reference: string | null;             // 0007 — 'JFN-001'
+  description: string | null;           // 0007 — description du fonds
+  montant_total: number | null;         // 0007 — total accordé (BR-3.4)
   created_at: string;
 };
 
@@ -93,6 +108,7 @@ export type GlEntry = {
   raw: Record<string, unknown> | null;
   line_id: string | null;
   bailleur_id: string | null;
+  code_analytique: string | null; // F5.15/BR-4.5 — = niveau 2, contraint le choix de LB
   confirmed: boolean;  // C6 — double validation des allocations
   archived: boolean;   // BR-10.2 — purge = soft-delete
   created_at: string;
