@@ -271,6 +271,14 @@ export function GlTable({
           >
             {aiBusy ? "IA en cours…" : "✨ Suggérer LB (IA)"}
           </button>
+          {/* Modèle de CSV à importer (Date;Type;Libellé;Montant) */}
+          <a
+            href="/exemple-grand-livre.csv"
+            download
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            Télécharger un fichier exemple
+          </a>
           <input
             ref={fileRef}
             type="file"
