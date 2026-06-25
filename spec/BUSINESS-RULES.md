@@ -177,6 +177,36 @@ l'agrégat de leurs feuilles (BR-5.3).
 - Colonne **« Commentaire »** éditable (bouton Édit / OK) sur ces lignes. Elle édite le
   **même champ `comment`** que la page Configuration (F1.7) : un seul champ partagé, pas de
   doublon. Affecter le commentaire d'une niveau 1/2 ici le met à jour partout (bulles incluses).
+- **Lisibilité & accordéon (F8.6)** : la hiérarchie niv.1/niv.2 est indentée et typée pour se
+  lire d'un coup d'œil ; chaque niveau 1 est un bloc **accordéon** repliant ses sous-catégories
+  niveau 2 (l'agrégat niv.1 reste visible replié).
+
+### BR-5.5 — Colonne « Vitesse » (rythme de dépense à la date du jour)
+Mesure si le **rythme** de dépense respecte le prévisionnel **à la date courante** (pas
+seulement sur l'année entière). Soit `m` = mois de la **date de référence** (date du jour ;
+réutilise `calc_date` si définie, BR-7.7) dans l'année affichée. Pour une LB (ou agrégat niv.1/2) :
+```
+prévu_à_date   = Σ budget_monthly.amount des mois 1..m         (prévu cumulé attendu à ce jour)
+réalisé_à_date = Σ GL dépenses allouées (BR-5.1) des mois 1..m (réalisé cumulé à ce jour)
+vitesse (%)    = 100 × réalisé_à_date / prévu_à_date           (0 si prévu_à_date = 0)
+```
+- **Bornes de l'année** : année entièrement passée → `m = 12` ; année entièrement future → `m = 0`
+  (rien d'attendu, vitesse non significative, affichée « — »).
+- **Exemple** : LB 1.1.1, prévu 1 200 €/an = 100 €/mois. Au 15 juin, `m = 6` → prévu_à_date = 600.
+  Réalisé = 800 → vitesse = 133 % (surrégime). Réalisé = 480 → vitesse = 80 % (limite basse).
+- **Affichage** : jauge **0 → 200 %** (valeur clampée à 200 pour le visuel). Zones :
+  - **vert** : 80 % ≤ vitesse ≤ 120 % (rythme conforme) ;
+  - **rouge** : vitesse < 80 % (**sous-régime**, on dépense trop lentement) OU vitesse > 120 %
+    (**surrégime**, on dépense trop vite).
+- **Agrégation niv.1/2** : sommer `prévu_à_date` et `réalisé_à_date` des feuilles, **puis** faire
+  le ratio (ne jamais moyenner des pourcentages).
+
+### BR-5.6 — Barre de dégradé « % consommé »
+La colonne « % consommé » (BR-5.2, réalisé annuel / prévu annuel) affiche une **barre de
+couleur en dégradé** proportionnelle :
+- **0 %** = blanc, **100 %** = vert (interpolation linéaire blanc→vert entre les deux) ;
+- valeur **négative** (réalisé net négatif, ex. avoirs > dépenses, BR-4.4) = **rouge** ;
+- au-delà de 100 % la barre reste pleine (le dépassement est déjà signalé en rouge, BR-5.2).
 
 ## 6. Suivi par bailleur
 

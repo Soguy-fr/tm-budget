@@ -185,6 +185,19 @@ Date       Type     Libellé              Montant   LB      Bailleur  Statut
 - **Onglet Dépense** : tableau prévu / réalisé / écart / % — **niveaux 1 et 2 uniquement**
   (pas niveau 3, BR-5.4). Colonne **Commentaire** éditable (bouton **Édit / OK**), liée au
   champ `comment` partagé (F1.7) : éditer ici met à jour la bulle partout.
+  - **Hiérarchie & accordéon (F8.6)** : niv.1 en bloc repliable (chevron ▶/▼) ; niv.2 indentés
+    dessous. Agrégat niv.1 visible même replié.
+  - **% consommé (F8.7, BR-5.6)** : barre de dégradé 0 % blanc → 100 % vert ; négatif rouge.
+  - **Vitesse (F8.8, BR-5.5)** : jauge 0→200 % du rythme à la date du jour. Vert 80–120 %,
+    rouge < 80 % (sous-régime) / > 120 % (surrégime). « — » si l'année n'a pas encore commencé.
+
+```
+[Dépenses] [Bailleurs] [Graphiques]                    Date du jour : [25/06/2026]
+Code  Ligne                Prévu   Réalisé  Écart  % consommé        Vitesse        Comment.
+▼ 1   Operating Costs      52 800  41 200   …      [▓▓▓▓░ 78%]        [|███ 110%|]   …  [Édit]
+   1.1 Core Team           69 600  …        …      [▓▓▓▓▓ 100%]       [|██ 95%|]      …  [Édit]
+▶ 2   Programme Activities …       …                …                 …
+```
 - **Onglet Bailleurs** : tableau recettes & dépenses prévues vs réelles par financement (BR-6).
 - Dépassements en rouge.
 

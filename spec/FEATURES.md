@@ -125,6 +125,9 @@
 | F8.3 | Courbe trésorerie cumulée prévu vs réel | 🟡 | BR-7.* |
 | F8.4 | Tableau de bord complet multi-indicateurs | 🔵 | — |
 | F8.5 | Onglet **Dépense** : n'afficher que les niveaux 1 et 2 (pas niveau 3) + colonne **Commentaire** éditable (édit/OK), liée au champ `comment` partagé | 🟢 | BR-5.4, F1.7 |
+| F8.6 | Onglet **Dépense** : hiérarchie niv.1/2 plus lisible (indentation, typo) + **accordéon** repliant les sous-catégories niv.2 sous leur niv.1 | 🟢 | BR-5.4 |
+| F8.7 | Onglet **Dépense** : **barre de couleur en dégradé** dans la colonne « % consommé » — 0 % blanc → 100 % vert ; négatif (avoir net) rouge | 🟢 | BR-5.6 |
+| F8.8 | Onglet **Dépense** : colonne **Vitesse** — jauge 0→200 % du rythme de dépense à la date du jour (réalisé à date / prévu cumulé à date) ; vert 80–120 %, rouge < 80 % (sous-régime) ou > 120 % (surrégime) | 🟢 | BR-5.5 |
 
 ## F9 — Export & maintenance
 
