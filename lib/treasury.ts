@@ -71,6 +71,74 @@ export function chainCumulative(initialCash: number, flux: number[]): number[] {
   return out;
 }
 
+// F7.7 / BR-7.7 — Prévision de trésorerie budgétée pour la page « Trésorerie ».
+// Chaîne multi-années (BR-7.1) avec point de départ FORCÉ optionnel à `calc`
+// (la date du jour) : le solde forcé est posé sur le mois PRÉCÉDANT `calc` et le
+// chaînage repart de là ; les mois antérieurs à `calc` sont grisés.
+export type TreasuryCell = {
+  year: number;
+  month: number; // 1..12
+  rec: number;
+  dep: number;
+  solde: number | null; // null = mois grisé non calculé
+  greyed: boolean;
+  forcedHere: boolean; // cellule portant le solde forcé
+};
+
+export function treasuryForecast(opts: {
+  years: number[];
+  recByMonth: Record<string, number>; // clé `year:month`
+  depByMonth: Record<string, number>; // clé `year:month`
+  initialCash: number;
+  calc?: { year: number; month: number } | null;
+  forcedBalance?: number | null;
+}): TreasuryCell[] {
+  const years = [...opts.years].sort((a, b) => a - b);
+  const seq: { year: number; month: number }[] = [];
+  for (const year of years) for (let month = 1; month <= 12; month++) seq.push({ year, month });
+
+  const ymv = (y: number, m: number) => y * 12 + (m - 1);
+  const flux = (y: number, m: number) =>
+    (opts.recByMonth[`${y}:${m}`] ?? 0) - (opts.depByMonth[`${y}:${m}`] ?? 0);
+
+  const calcV = opts.calc ? ymv(opts.calc.year, opts.calc.month) : null;
+  const calcIdx = opts.calc
+    ? seq.findIndex((c) => c.year === opts.calc!.year && c.month === opts.calc!.month)
+    : -1;
+  const useForced = opts.forcedBalance != null && calcIdx >= 0;
+
+  const soldes: (number | null)[] = new Array(seq.length).fill(null);
+  if (useForced) {
+    const boundary = calcIdx - 1;
+    let running = opts.forcedBalance as number;
+    if (boundary >= 0) soldes[boundary] = running; // solde forcé posé au mois précédent
+    for (let i = calcIdx; i < seq.length; i++) {
+      running += flux(seq[i].year, seq[i].month);
+      soldes[i] = running;
+    }
+  } else {
+    // Chaîne budgétée normale depuis initial_cash (BR-7.1/7.2).
+    let running = opts.initialCash;
+    for (let i = 0; i < seq.length; i++) {
+      running += flux(seq[i].year, seq[i].month);
+      soldes[i] = running;
+    }
+  }
+
+  return seq.map((c, i) => {
+    const greyed = calcV != null && ymv(c.year, c.month) < calcV;
+    return {
+      year: c.year,
+      month: c.month,
+      rec: opts.recByMonth[`${c.year}:${c.month}`] ?? 0,
+      dep: opts.depByMonth[`${c.year}:${c.month}`] ?? 0,
+      solde: greyed && !(useForced && i === calcIdx - 1) ? null : soldes[i],
+      greyed,
+      forcedHere: useForced && i === calcIdx - 1,
+    };
+  });
+}
+
 // Détecte les mois en trou de trésorerie (cumul négatif) — BR-7.4.
 export function negativeMonths(cumul: number[]): number[] {
   const out: number[] = [];

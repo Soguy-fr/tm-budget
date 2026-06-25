@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  treasuryForecast,
   lastClosedMonthIndex,
   fluxBudgeted,
   fluxReal,
@@ -9,6 +10,44 @@ import {
   lastClosedMonthIndexExplicit,
 } from "./treasury";
 import type { ClosureRow } from "./closure";
+
+describe("treasuryForecast (BR-7.7 — page Trésorerie)", () => {
+  const base = {
+    years: [2025],
+    recByMonth: { "2025:6": 1000 } as Record<string, number>,
+    depByMonth: Object.fromEntries(
+      Array.from({ length: 12 }, (_, i) => [`2025:${i + 1}`, 100]),
+    ) as Record<string, number>,
+    initialCash: 500,
+  };
+
+  it("sans calc/forced : chaîne budgétée depuis initial_cash", () => {
+    const cells = treasuryForecast(base);
+    // jan : 500 - 100 = 400 ; fev : 300 ; ... mai : 100 ; juin : 100 +1000-100 = 1000
+    expect(cells[0].solde).toBe(400);
+    expect(cells[4].solde).toBe(0);
+    expect(cells[5].solde).toBe(900); // mai 0 + (1000 − 100)
+    expect(cells.every((c) => !c.greyed)).toBe(true);
+  });
+
+  it("calc juin 2025 : grise jan-mai, solde forcé posé en mai, chaîne dès juin", () => {
+    const cells = treasuryForecast({ ...base, calc: { year: 2025, month: 6 }, forcedBalance: 12000 });
+    const may = cells[4];
+    const jun = cells[5];
+    expect(may.greyed).toBe(true);
+    expect(may.forcedHere).toBe(true);
+    expect(may.solde).toBe(12000); // solde forcé
+    expect(cells[0].solde).toBeNull(); // jan grisé non calculé
+    expect(jun.greyed).toBe(false);
+    expect(jun.solde).toBe(12000 + 1000 - 100); // repart du forcé
+  });
+
+  it("calc sans forced : grise le passé mais garde la chaîne depuis initial_cash", () => {
+    const cells = treasuryForecast({ ...base, calc: { year: 2025, month: 6 } });
+    expect(cells[0].greyed).toBe(true);
+    expect(cells[5].solde).toBe(900); // chaîne normale, juin
+  });
+});
 
 describe("lastClosedMonthIndex (BR-7.3 option A)", () => {
   it("année passée : tout clos (11)", () => {
