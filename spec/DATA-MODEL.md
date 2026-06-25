@@ -15,7 +15,9 @@
 ## 2. Tables
 
 ### structure_lines
+
 La structure budgétaire unique et partagée.
+
 ```sql
 create table structure_lines (
   id           uuid primary key default gen_random_uuid(),
@@ -34,6 +36,7 @@ create index on structure_lines(sort_order);
 ```
 
 ### budgets
+
 ```sql
 create table budgets (
   id             uuid primary key default gen_random_uuid(),
@@ -50,6 +53,7 @@ create unique index one_active_budget on budgets(is_active) where is_active = tr
 ```
 
 ### budget_years
+
 ```sql
 create table budget_years (
   id          uuid primary key default gen_random_uuid(),
@@ -60,6 +64,7 @@ create table budget_years (
 ```
 
 ### bailleurs
+
 ```sql
 create table bailleurs (
   id            uuid primary key default gen_random_uuid(),
@@ -73,7 +78,9 @@ create table bailleurs (
 ```
 
 ### budget_monthly
+
 La maille atomique du prévisionnel interne : (budget × LB × année × mois).
+
 ```sql
 create table budget_monthly (
   id           uuid primary key default gen_random_uuid(),
@@ -91,8 +98,10 @@ create index on budget_monthly(bailleur_id);
 ```
 
 ### budget_line_totals (optionnel)
+
 Stocke le « total annuel saisi » d'une LB quand il diffère volontairement de la somme des mois
 (permet d'afficher l'écart rouge sans l'écraser). Si non présent, total = Σ mois.
+
 ```sql
 create table budget_line_totals (
   id          uuid primary key default gen_random_uuid(),
@@ -105,7 +114,9 @@ create table budget_line_totals (
 ```
 
 ### bailleur_lines
+
 Nomenclature propre au bailleur (A1, A2…), mappée vers des LB internes.
+
 ```sql
 create table bailleur_lines (
   id           uuid primary key default gen_random_uuid(),
@@ -118,7 +129,9 @@ create table bailleur_lines (
 ```
 
 ### bailleur_line_mapping
+
 Mapping N–N : une ligne bailleur ↔ une ou plusieurs LB internes.
+
 ```sql
 create table bailleur_line_mapping (
   bailleur_line_id uuid not null references bailleur_lines(id) on delete cascade,
@@ -128,7 +141,9 @@ create table bailleur_line_mapping (
 ```
 
 ### bailleur_expense_monthly
+
 Dépenses prévues côté bailleur (même gabarit mensuel multi-années que l'interne).
+
 ```sql
 create table bailleur_expense_monthly (
   id               uuid primary key default gen_random_uuid(),
@@ -141,7 +156,9 @@ create table bailleur_expense_monthly (
 ```
 
 ### bailleur_income_monthly
+
 Recettes prévues (déblocages attendus) par bailleur, par mois.
+
 ```sql
 create table bailleur_income_monthly (
   id           uuid primary key default gen_random_uuid(),
@@ -154,7 +171,9 @@ create table bailleur_income_monthly (
 ```
 
 ### gl_entries
+
 Le Grand Livre importé + allocations.
+
 ```sql
 create table gl_entries (
   id            uuid primary key default gen_random_uuid(),
@@ -178,7 +197,9 @@ create index on gl_entries(entry_type);
 ```
 
 ### gl_imports
+
 Trace des imports CSV (pour purge/rollback).
+
 ```sql
 create table gl_imports (
   id           uuid primary key default gen_random_uuid(),
@@ -189,7 +210,9 @@ create table gl_imports (
 ```
 
 ### month_closures
+
 Clôture mensuelle explicite (BR-11). Le dernier mois clos = `M` de la trésorerie réelle (BR-7.3).
+
 ```sql
 create table month_closures (
   id          uuid primary key default gen_random_uuid(),
@@ -200,13 +223,16 @@ create table month_closures (
   unique (year, month)
 );
 ```
+
 > Le verrouillage (BR-11.2) s'applique côté API : refuser tout upsert sur
 > `budget_monthly` (année, mois clos) et toute modification d'écriture GL
 > (`entry_date` dans un mois clos) tant que `reopened_at` est null.
 
 ### user_roles (F12.1)
+
 Rôle applicatif par utilisateur. Absent = lecteur. RLS : transactionnel = gestionnaire+,
 référentiel/clôture = admin (helper SQL `current_app_role()`, security definer).
+
 ```sql
 create table user_roles (
   user_id    uuid primary key references auth.users(id) on delete cascade,
@@ -216,8 +242,10 @@ create table user_roles (
 ```
 
 ### audit_log (F12.2)
+
 Piste d'audit alimentée par triggers (`fn_audit`, security definer) sur les tables
 métier. Lecture admin uniquement ; écriture impossible hors trigger.
+
 ```sql
 create table audit_log (
   id         uuid primary key default gen_random_uuid(),
@@ -232,13 +260,16 @@ create table audit_log (
 ```
 
 ### Colonnes ajoutées (migration 0006)
+
 - `bailleurs.montant_conventionne numeric(14,2)` — plafond contractuel (Q4, F12.4).
 - `gl_entries.confirmed boolean default true` — double validation (F12.6) :
   allocation par non-admin → `false`, confirmation admin → `true`.
 - `gl_entries.archived boolean default false` — purge soft-delete (BR-10.2).
 
 ### bank_reconciliations
+
 Rapprochement bancaire mensuel (BR-7.5) : solde du relevé saisi par l'utilisateur.
+
 ```sql
 create table bank_reconciliations (
   id                 uuid primary key default gen_random_uuid(),
@@ -250,12 +281,14 @@ create table bank_reconciliations (
   unique (year, month)
 );
 ```
+
 > `écart_rapprochement` = `statement_balance` − solde calculé (mode Réel) :
 > calculé côté application, jamais stocké.
 
 ## 3. Vues (calculs agrégés côté base — limite les appels)
 
 ### v_suivi_depenses — prévu vs réalisé par LB
+
 ```sql
 create view v_suivi_depenses as
 select
@@ -278,6 +311,7 @@ group by b.id, sl.id, sl.code, sl.label, by_.year;
 ```
 
 ### v_suivi_bailleurs — recettes/dépenses prévues vs réalisées par bailleur
+
 ```sql
 create view v_suivi_bailleurs as
 select
@@ -300,8 +334,10 @@ cross join (select distinct year from budget_years) by_;
 ```
 
 ### v_realise_non_assigne — réconciliation suivi bailleur (BR-6.3)
+
 Dépenses réalisées avec LB mais sans bailleur : comptées dans le suivi des dépenses,
 affichées en ligne « Réalisé non assigné » dans le suivi bailleur.
+
 ```sql
 create view v_realise_non_assigne as
 select
