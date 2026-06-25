@@ -20,8 +20,16 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <nav className="w-48 shrink-0 border-r border-slate-200 bg-white p-3">
-      <div className="mb-4 px-2 font-heading text-sm font-bold text-brand-night">
-        Budget ONG
+      <div className="mb-4 flex flex-col items-start gap-2 px-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="Terra Mucho"
+          className="h-16 w-auto"
+        />
+        <span className="font-heading text-sm font-bold leading-tight text-brand-terracotta">
+          Suivi financier Terra Mucho
+        </span>
       </div>
       <ul className="space-y-1">
         {NAV.map((item) => {
