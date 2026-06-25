@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { indicators, realiseByCell, realiseByLineYear, aggregateByCategory } from "./suivi";
+import {
+  indicators,
+  realiseByCell,
+  realiseByLineYear,
+  aggregateByCategory,
+  vitesse,
+  vitesseZone,
+} from "./suivi";
 import type { GlEntry, StructureLine } from "./types";
 
 const SL = (p: Partial<StructureLine>): StructureLine => ({
@@ -108,6 +115,35 @@ describe("aggregateByCategory (BR-5.4 — Dashboard niveaux 1 et 2)", () => {
   it("conserve le commentaire de la catégorie", () => {
     const rows = aggregateByCategory(lines, leaf);
     expect(rows.find((r) => r.code === "1")?.comment).toBe("cat 1");
+  });
+
+  it("agrège aussi les cumuls à date (BR-5.5)", () => {
+    const rows = aggregateByCategory(lines, {
+      n111: { prevu: 1200, realise: 800, prevuToDate: 600, realiseToDate: 800 },
+      n112: { prevu: 0, realise: 0, prevuToDate: 0, realiseToDate: 0 },
+      n211: { prevu: 0, realise: 0 },
+    });
+    const r = rows.find((x) => x.code === "1.1")!;
+    expect(r.prevuToDate).toBe(600);
+    expect(r.realiseToDate).toBe(800);
+  });
+});
+
+describe("vitesse / vitesseZone (BR-5.5)", () => {
+  it("ratio réalisé à date / prévu à date en %", () => {
+    expect(vitesse(600, 800)).toBeCloseTo(133.33, 1); // surrégime
+    expect(vitesse(600, 480)).toBe(80); // limite basse
+  });
+  it("null si rien attendu à ce jour", () => {
+    expect(vitesse(0, 500)).toBeNull();
+  });
+  it("zones : vert 80–120, rouge sinon", () => {
+    expect(vitesseZone(100)).toBe("vert");
+    expect(vitesseZone(80)).toBe("vert");
+    expect(vitesseZone(120)).toBe("vert");
+    expect(vitesseZone(79)).toBe("rouge");
+    expect(vitesseZone(133)).toBe("rouge");
+    expect(vitesseZone(null)).toBe("none");
   });
 });
 

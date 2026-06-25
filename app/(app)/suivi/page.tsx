@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { indicators, aggregateByCategory } from "@/lib/suivi";
-import { formatEur, formatEcart } from "@/lib/format";
-import type { SuiviDepense, StructureLine } from "@/lib/types";
+import { aggregateByCategory, type LeafAmounts } from "@/lib/suivi";
+import { isAllocated } from "@/lib/gl";
+import type { StructureLine, Budget, GlEntry } from "@/lib/types";
 import { SuiviTabs } from "@/components/suivi/SuiviTabs";
-import { CommentCell } from "@/components/suivi/CommentCell";
+import { DepenseTable } from "@/components/suivi/DepenseTable";
 import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
@@ -15,30 +15,71 @@ export default async function SuiviPage() {
   }
 
   const supabase = createClient();
-  const { data: budget } = await supabase
+  const { data: budgetRow } = await supabase
     .from("budgets")
-    .select("id, name")
+    .select("*")
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!budget) {
-    return <Notice>Aucun budget actif. Activez un budget dans « Budgets ».</Notice>;
+  if (!budgetRow) {
+    return <Notice>Aucun budget actif. Activez un budget dans « Scénario ».</Notice>;
+  }
+  const budget = budgetRow as Budget;
+
+  const [{ data: structure }, { data: yearRows }, { data: monthly }, { data: gl }] =
+    await Promise.all([
+      supabase.from("structure_lines").select("*").eq("active", true),
+      supabase.from("budget_years").select("year").eq("budget_id", budget.id),
+      supabase.from("budget_monthly").select("line_id, year, month, amount").eq("budget_id", budget.id).range(0, 99999),
+      supabase.from("gl_entries").select("*").eq("entry_type", "Dépense").eq("archived", false).range(0, 99999),
+    ]);
+
+  const lines = (structure ?? []) as StructureLine[];
+  const years = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);
+
+  // BR-5.5 — date de référence : calc_date du budget, sinon aujourd'hui.
+  const today = new Date();
+  const refYear = budget.calc_date ? Number(budget.calc_date.slice(0, 4)) : today.getFullYear();
+  const refMonth = budget.calc_date ? Number(budget.calc_date.slice(5, 7)) : today.getMonth() + 1;
+  const mFor = (year: number) => (year < refYear ? 12 : year > refYear ? 0 : refMonth);
+
+  // Prévu (budget_monthly) annuel + cumulé à date, par (LB × année).
+  const prevu: Record<string, number> = {};
+  const prevuTD: Record<string, number> = {};
+  for (const r of monthly ?? []) {
+    const k = `${r.line_id}:${r.year}`;
+    const a = Number(r.amount);
+    prevu[k] = (prevu[k] ?? 0) + a;
+    if (r.month <= mFor(r.year)) prevuTD[k] = (prevuTD[k] ?? 0) + a;
   }
 
-  const { data: rows } = await supabase
-    .from("v_suivi_depenses")
-    .select("*")
-    .eq("budget_id", budget.id);
+  // Réalisé (GL dépenses allouées, BR-5.1) annuel + cumulé à date, par (LB × année).
+  const realise: Record<string, number> = {};
+  const realiseTD: Record<string, number> = {};
+  for (const e of (gl ?? []) as GlEntry[]) {
+    if (!e.line_id || !isAllocated(e)) continue;
+    const y = Number(e.entry_date.slice(0, 4));
+    const mo = Number(e.entry_date.slice(5, 7));
+    const k = `${e.line_id}:${y}`;
+    const a = Number(e.amount);
+    realise[k] = (realise[k] ?? 0) + a;
+    if (mo <= mFor(y)) realiseTD[k] = (realiseTD[k] ?? 0) + a;
+  }
 
-  // BR-5.4 — structure complète (tous niveaux + commentaire) pour agréger vers niv.1/2.
-  const { data: structure } = await supabase
-    .from("structure_lines")
-    .select("*")
-    .eq("active", true);
-  const lines = (structure ?? []) as StructureLine[];
-
-  const all = (rows ?? []) as SuiviDepense[];
-  const years = Array.from(new Set(all.map((r) => r.year))).sort((a, b) => a - b);
+  const leafLines = lines.filter((l) => l.level === 3);
+  const data = years.map((year) => {
+    const leaf: Record<string, LeafAmounts> = {};
+    for (const l of leafLines) {
+      const k = `${l.id}:${year}`;
+      leaf[l.id] = {
+        prevu: prevu[k] ?? 0,
+        realise: realise[k] ?? 0,
+        prevuToDate: prevuTD[k] ?? 0,
+        realiseToDate: realiseTD[k] ?? 0,
+      };
+    }
+    return { year, rows: aggregateByCategory(lines, leaf) };
+  });
 
   return (
     <div>
@@ -48,69 +89,15 @@ export default async function SuiviPage() {
       </div>
       <SuiviTabs />
       <p className="mb-4 text-sm text-slate-500">
-        Prévu (budget interne) vs réalisé (Grand Livre, écritures allouées) par
-        catégorie (niveaux 1 et 2) — {budget.name}.
+        Prévu vs réalisé par catégorie (niveaux 1 et 2) — {budget.name}. Vitesse calculée
+        au {refMonth.toString().padStart(2, "0")}/{refYear}
+        {budget.calc_date ? " (date du jour, Trésorerie)" : " (aujourd'hui)"}.
       </p>
 
-      {years.length === 0 && <p className="text-sm text-slate-500">Aucune donnée.</p>}
-
-      {years.map((year) => {
-        // BR-5.4 — agrège les feuilles de l'année vers les catégories niv.1/2.
-        const leaf: Record<string, { prevu: number; realise: number }> = {};
-        for (const r of all) {
-          if (r.year === year) leaf[r.line_id] = { prevu: r.prevu, realise: r.realise };
-        }
-        const catRows = aggregateByCategory(lines, leaf);
-        return (
-          <div key={year} className="mb-4 overflow-hidden rounded border border-slate-200 bg-white">
-            <div className="bg-slate-50 px-3 py-2 font-heading text-sm font-bold text-brand-night">
-              {year}
-            </div>
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="px-2 py-1">Code</th>
-                  <th className="px-2 py-1">Ligne</th>
-                  <th className="px-2 py-1 text-right">Prévu</th>
-                  <th className="px-2 py-1 text-right">Réalisé</th>
-                  <th className="px-2 py-1 text-right">Écart</th>
-                  <th className="px-2 py-1 text-right">% consommé</th>
-                  <th className="px-2 py-1">Commentaire</th>
-                </tr>
-              </thead>
-              <tbody>
-                {catRows.map((r) => {
-                  const ind = indicators(r.prevu, r.realise);
-                  return (
-                    <tr
-                      key={r.id}
-                      className={`border-b border-slate-50 ${r.level === 1 ? "bg-slate-50/60 font-medium text-brand-night" : ""}`}
-                    >
-                      <td className="px-2 py-1 font-mono text-[11px] text-slate-400">{r.code}</td>
-                      <td className="px-2 py-1" style={{ paddingLeft: r.level === 2 ? 20 : undefined }}>
-                        {r.label}
-                      </td>
-                      <td className="px-2 py-1 text-right">{formatEur(r.prevu)}</td>
-                      <td className={`px-2 py-1 text-right ${ind.depassement ? "font-medium text-alert" : ""}`}>
-                        {formatEur(r.realise)}
-                      </td>
-                      <td className={`px-2 py-1 text-right ${ind.depassement ? "text-alert" : "text-slate-500"}`}>
-                        {formatEcart(ind.ecart)}
-                      </td>
-                      <td className={`px-2 py-1 text-right ${ind.depassement ? "text-alert" : "text-slate-500"}`}>
-                        {Math.round(ind.pctConso * 100)}%
-                      </td>
-                      <td className="px-2 py-1 align-top">
-                        <CommentCell lineId={r.id} comment={r.comment} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
+      {data.length === 0 && <p className="text-sm text-slate-500">Aucune donnée.</p>}
+      {data.map(({ year, rows }) => (
+        <DepenseTable key={year} year={year} rows={rows} />
+      ))}
     </div>
   );
 }
