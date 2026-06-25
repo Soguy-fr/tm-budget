@@ -21,7 +21,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
     return (
       <div>
         <Link href="/bailleurs" className="text-sm text-brand-emerald">
-          ← Bailleurs
+          ← Financement
         </Link>
         <p className="mt-2 text-sm text-slate-500">Bailleur introuvable.</p>
       </div>
@@ -85,7 +85,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
   return (
     <div>
       <Link href="/bailleurs" className="text-sm text-brand-emerald">
-        ← Bailleurs
+        ← Financement
       </Link>
       <BailleurDetail
         bailleur={bailleur as Bailleur}

@@ -73,6 +73,7 @@ export function BailleurDetail({
   // ── Recettes (état de travail éditable) ───────────────────────────────────
   const [workIncome, setWorkIncome] = useState<Record<string, number>>(income);
   const [incomeDirty, setIncomeDirty] = useState(false);
+  const [editingIncome, setEditingIncome] = useState(false);
   function setInc(year: number, month: number, v: number) {
     setWorkIncome((w) => ({ ...w, [`${year}:${month}`]: v }));
     setIncomeDirty(true);
@@ -89,7 +90,10 @@ export function BailleurDetail({
     }
     run(async () => {
       const res = await saveIncome(bailleur.id, rows);
-      if (res.ok) setIncomeDirty(false);
+      if (res.ok) {
+        setIncomeDirty(false);
+        setEditingIncome(false);
+      }
       return res;
     });
   }
@@ -98,6 +102,11 @@ export function BailleurDetail({
     (s, y) => s + Array.from({ length: 12 }, (_, i) => workIncome[`${y}:${i + 1}`] ?? 0).reduce((a, b) => a + b, 0),
     0,
   );
+  // Recettes RÉELLEMENT reçues (GL, type Recette non archivée) imputées à ce financement.
+  const recettesRecues = glEntries
+    .filter((g) => g.entry_type === "Recette" && !g.archived)
+    .reduce((s, g) => s + Number(g.amount), 0);
+  const ecartRecettes = recettesTotal - recettesRecues;
   const depensesAssignees = totalAssignedExpenses(planMonthly, bailleur.id);
   const reste = nonAssigne(recettesTotal, depensesAssignees);
 
@@ -324,9 +333,16 @@ export function BailleurDetail({
         <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
           Recettes prévues (déblocages attendus)
         </h2>
-        {incomeDirty && (
+        {!editingIncome ? (
+          <button
+            onClick={() => setEditingIncome(true)}
+            className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+          >
+            Éditer
+          </button>
+        ) : (
           <button onClick={saveRecettes} disabled={pending} className="rounded bg-brand-emerald px-3 py-1 text-xs text-white">
-            Enregistrer les recettes
+            Enregistrer{incomeDirty ? " ●" : ""}
           </button>
         )}
       </div>
@@ -354,13 +370,19 @@ export function BailleurDetail({
                   {Array.from({ length: 12 }, (_, i) => {
                     const v = workIncome[`${year}:${i + 1}`] ?? 0;
                     return (
-                      <td key={i} className="px-1 py-1">
-                        <input
-                          type="number"
-                          value={v}
-                          onChange={(e) => setInc(year, i + 1, Number(e.target.value) || 0)}
-                          className="w-16 rounded border border-slate-300 px-1 py-0.5 text-right text-input"
-                        />
+                      <td key={i} className={`px-1 py-1 text-right ${!editingIncome && v ? "bg-brand-lime/20 font-medium text-brand-night" : ""}`}>
+                        {editingIncome ? (
+                          <input
+                            type="number"
+                            value={v}
+                            onChange={(e) => setInc(year, i + 1, Number(e.target.value) || 0)}
+                            className="w-16 rounded border border-slate-300 px-1 py-0.5 text-right text-input"
+                          />
+                        ) : v ? (
+                          formatEur(v)
+                        ) : (
+                          <span className="text-slate-300">--</span>
+                        )}
                       </td>
                     );
                   })}
@@ -371,13 +393,26 @@ export function BailleurDetail({
         );
       })}
 
-      {/* Solde prévu */}
-      <div className="mt-2 text-sm">
-        <span className="text-slate-500">Total recettes prévues : </span>
-        <span className="font-medium">{formatEur(recettesTotal)}</span>
-        <span className="ml-4 text-slate-500">Solde prévu (recettes − dépenses) : </span>
-        <span className="font-medium">{formatEur(recettesTotal - (depensesAssignees + reste))}</span>
-        <span className="ml-1 text-xs text-slate-400">(équilibré par « Non assigné »)</span>
+      {/* Total + vérif reçu vs attendu */}
+      <div className="mt-2 space-y-0.5 text-sm">
+        <div>
+          <span className="text-slate-500">Total recettes prévues : </span>
+          <span className="font-medium">{formatEur(recettesTotal)}</span>
+          <span className="ml-4 text-slate-500">Reçues (GL) : </span>
+          <span className="font-medium">{formatEur(recettesRecues)}</span>
+          <span className={`ml-2 text-xs ${ecartRecettes === 0 ? "text-brand-green" : "text-alert"}`}>
+            {ecartRecettes === 0
+              ? "✓ reçu = attendu"
+              : ecartRecettes > 0
+                ? `reste ${formatEur(ecartRecettes)} à recevoir`
+                : `reçu ${formatEur(-ecartRecettes)} de plus que prévu`}
+          </span>
+        </div>
+        <div>
+          <span className="text-slate-500">Solde prévu (recettes − dépenses) : </span>
+          <span className="font-medium">{formatEur(recettesTotal - (depensesAssignees + reste))}</span>
+          <span className="ml-1 text-xs text-slate-400">(équilibré par « Non assigné »)</span>
+        </div>
       </div>
     </div>
   );
