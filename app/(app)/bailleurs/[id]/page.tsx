@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Bailleur, BailleurLine, StructureLine } from "@/lib/types";
-import { BailleurDetail } from "@/components/bailleurs/BailleurDetail";
+import type { Bailleur, BailleurLine, StructureLine, Funder } from "@/lib/types";
+import { BailleurDetail, type GlLite } from "@/components/bailleurs/BailleurDetail";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
     .eq("is_active", true)
     .maybeSingle();
 
-  const [{ data: lines }, { data: mapping }, { data: structure }, { data: income }, planRes, yearRes] =
+  const [{ data: lines }, { data: mapping }, { data: structure }, { data: income }, planRes, yearRes, { data: gl }, { data: funders }] =
     await Promise.all([
       supabase.from("bailleur_lines").select("*").eq("bailleur_id", params.id).order("sort_order"),
       supabase.from("bailleur_line_mapping").select("bailleur_line_id, line_id"),
@@ -57,6 +57,12 @@ export default async function BailleurPage({ params }: { params: { id: string } 
       budget
         ? supabase.from("budget_years").select("year").eq("budget_id", budget.id)
         : Promise.resolve({ data: [] as { year: number }[] }),
+      // F4.11/BR-3.4 — écritures GL du financement (pour la colonne Dépensé)
+      supabase
+        .from("gl_entries")
+        .select("line_id, bailleur_id, amount, entry_type, archived")
+        .eq("bailleur_id", params.id),
+      supabase.from("funders").select("*").order("name"),
     ]);
 
   // mapping bailleur_line_id → line_ids[] (limité à ce bailleur)
@@ -83,10 +89,12 @@ export default async function BailleurPage({ params }: { params: { id: string } 
       </Link>
       <BailleurDetail
         bailleur={bailleur as Bailleur}
+        funders={(funders ?? []) as Funder[]}
         lines={(lines ?? []) as BailleurLine[]}
         mappingByLine={mappingByLine}
         structure={(structure ?? []) as StructureLine[]}
         planMonthly={(planRes.data ?? []) as { line_id: string; amount: number; bailleur_id: string | null }[]}
+        glEntries={(gl ?? []) as GlLite[]}
         income={income2}
         years={yearList}
       />

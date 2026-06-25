@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Bailleur } from "@/lib/types";
+import type { Bailleur, Funder } from "@/lib/types";
 import { BailleurCreate } from "@/components/bailleurs/BailleurCreate";
 import { GuideLink } from "@/components/GuideLink";
 
@@ -11,7 +11,7 @@ export default async function BailleursPage() {
   if (!isSupabaseConfigured()) {
     return (
       <div>
-        <h1 className="mb-2 text-xl font-bold text-brand-night">Bailleurs</h1>
+        <h1 className="mb-2 text-xl font-bold text-brand-night">Financement</h1>
         <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
           Supabase n&apos;est pas encore configuré.
         </p>
@@ -20,25 +20,30 @@ export default async function BailleursPage() {
   }
 
   const supabase = createClient();
-  const { data } = await supabase.from("bailleurs").select("*").order("code");
+  const [{ data }, { data: fundersData }] = await Promise.all([
+    supabase.from("bailleurs").select("*").order("code"),
+    supabase.from("funders").select("*").order("name"),
+  ]);
   const bailleurs = (data ?? []) as Bailleur[];
+  const funders = (fundersData ?? []) as Funder[];
+  const funderName = new Map(funders.map((f) => [f.id, f.name]));
 
   return (
     <div className="max-w-2xl">
       <div className="mb-1 flex items-center gap-2">
-        <h1 className="text-xl font-bold text-brand-night">Bailleurs</h1>
+        <h1 className="text-xl font-bold text-brand-night">Financement</h1>
         <GuideLink anchor="ajouter-un-financement" />
       </div>
       <p className="mb-4 text-sm text-slate-500">
-        Sources de financement. Chaque bailleur a sa nomenclature, son mapping
-        vers les LB internes et ses recettes prévues.
+        Fonds accordés par les bailleurs. Chaque financement a sa nomenclature, son
+        mapping vers les LB internes, sa fenêtre d&apos;éligibilité et ses recettes prévues.
       </p>
 
-      <BailleurCreate />
+      <BailleurCreate funders={funders} />
 
       <div className="mt-4 space-y-2">
         {bailleurs.length === 0 && (
-          <p className="text-sm text-slate-500">Aucun bailleur.</p>
+          <p className="text-sm text-slate-500">Aucun financement.</p>
         )}
         {bailleurs.map((b) => (
           <Link
@@ -48,8 +53,11 @@ export default async function BailleursPage() {
           >
             <span className="flex items-center gap-2">
               <span className="inline-block h-3 w-3 rounded-sm" style={{ background: b.color }} />
-              <span className="font-medium text-brand-night">{b.code}</span>
+              <span className="font-medium text-brand-night">{b.reference || b.code}</span>
               <span className="text-sm text-slate-500">{b.name}</span>
+              {b.funder_id && (
+                <span className="text-xs text-slate-400">· {funderName.get(b.funder_id)}</span>
+              )}
             </span>
             <span className="text-xs text-slate-400">
               {b.convention_start && b.convention_end

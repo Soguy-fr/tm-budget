@@ -2,11 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Bailleur, BailleurLine, StructureLine } from "@/lib/types";
+import type { Bailleur, BailleurLine, StructureLine, Funder } from "@/lib/types";
 import { formatEur, MONTHS_FR } from "@/lib/format";
 import {
   derivedExpenseForLine,
   totalAssignedExpenses,
+  realisedExpenseForLine,
+  totalRealisedExpenses,
+  fundGap,
   nonAssigne,
 } from "@/lib/bailleur-report";
 import {
@@ -14,25 +17,38 @@ import {
   deleteBailleurLine,
   setLineMapping,
   saveIncome,
+  assignLinesToBudget,
+  updateFinancement,
 } from "@/app/(app)/bailleurs/actions";
 import { getBailleurPack } from "@/app/(app)/bailleurs/pack-action";
 
 type Plan = { line_id: string; amount: number; bailleur_id: string | null };
+export type GlLite = {
+  line_id: string | null;
+  bailleur_id: string | null;
+  amount: number;
+  entry_type: "Dépense" | "Recette";
+  archived: boolean;
+};
 
 export function BailleurDetail({
   bailleur,
+  funders,
   lines,
   mappingByLine,
   structure,
   planMonthly,
+  glEntries,
   income,
   years,
 }: {
   bailleur: Bailleur;
+  funders: Funder[];
   lines: BailleurLine[];
   mappingByLine: Record<string, string[]>;
   structure: StructureLine[];
   planMonthly: Plan[];
+  glEntries: GlLite[];
   income: Record<string, number>;
   years: number[];
 }) {
@@ -85,6 +101,37 @@ export function BailleurDetail({
   const depensesAssignees = totalAssignedExpenses(planMonthly, bailleur.id);
   const reste = nonAssigne(recettesTotal, depensesAssignees);
 
+  // BR-3.4 — Dépensé (GL) + écarts vs montant_total.
+  const totalDepense = totalRealisedExpenses(glEntries, bailleur.id);
+  const gapBudget = fundGap(bailleur.montant_total, depensesAssignees);
+  const gapDepense = fundGap(bailleur.montant_total, totalDepense);
+  const funderName = funders.find((f) => f.id === bailleur.funder_id)?.name ?? null;
+
+  // BR-3.5 — bouton « Assigner les lignes dans le budget » (avec confirmation des conflits).
+  function assignLines() {
+    setError(null);
+    startTransition(async () => {
+      const res = await assignLinesToBudget(bailleur.id, false);
+      if (!res.ok) {
+        setError(res.error ?? "Erreur.");
+        return;
+      }
+      if (res.conflicts && res.conflicts > 0) {
+        const ok = window.confirm(
+          `${res.conflicts} maille(s) (LB × mois) sont déjà imputées à un AUTRE financement.\n\n` +
+            "Les écraser et les imputer à ce financement ? (les mailles déjà à ce financement ou libres sont assignées sans confirmation)",
+        );
+        if (!ok) return;
+        const res2 = await assignLinesToBudget(bailleur.id, true);
+        if (!res2.ok) {
+          setError(res2.error ?? "Erreur.");
+          return;
+        }
+      }
+      router.refresh();
+    });
+  }
+
   // ── Ajout ligne bailleur ──────────────────────────────────────────────────
   const [newCode, setNewCode] = useState("");
   const [newLabel, setNewLabel] = useState("");
@@ -93,16 +140,32 @@ export function BailleurDetail({
     <div className="mt-2 max-w-5xl">
       <h1 className="flex items-center gap-2 text-xl font-bold text-brand-night">
         <span className="inline-block h-4 w-4 rounded-sm" style={{ background: bailleur.color }} />
-        {bailleur.code} — {bailleur.name}
+        {bailleur.reference || bailleur.code} — {bailleur.name}
       </h1>
+      <div className="mb-1 text-sm text-slate-500">
+        {funderName && <>Bailleur : <span className="font-medium text-brand-night">{funderName}</span> · </>}
+        {bailleur.convention_start && bailleur.convention_end
+          ? `Éligibilité ${bailleur.convention_start} → ${bailleur.convention_end}`
+          : "Éligibilité non renseignée"}
+        {bailleur.montant_total != null &&
+          ` · Montant total : ${formatEur(Number(bailleur.montant_total))}`}
+      </div>
+      {bailleur.description && (
+        <p className="mb-2 max-w-3xl text-sm text-slate-600">{bailleur.description}</p>
+      )}
       <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">
-          {bailleur.convention_start && bailleur.convention_end
-            ? `Convention ${bailleur.convention_start} → ${bailleur.convention_end}`
-            : "Convention non renseignée"}
-          {bailleur.montant_conventionne != null &&
-            ` · Plafond conventionné : ${formatEur(Number(bailleur.montant_conventionne))}`}
-        </p>
+        <div className="relative flex gap-2">
+          {/* F4.12/BR-3.5 — assigner les LB mappées sur la fenêtre d'éligibilité */}
+          <button
+            disabled={pending}
+            onClick={assignLines}
+            className="rounded bg-brand-night px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            title="Impute les LB mappées à ce financement sur sa fenêtre d'éligibilité"
+          >
+            Assigner les lignes dans le budget
+          </button>
+          <FinancementEdit bailleur={bailleur} funders={funders} pending={pending} run={run} />
+        </div>
         {/* C5 — pack audit bailleur en un clic (CSV multi-sections) */}
         <button
           disabled={pending}
@@ -143,7 +206,8 @@ export function BailleurDetail({
               <th className="px-2 py-1">Code</th>
               <th className="px-2 py-1">Ligne bailleur</th>
               <th className="px-2 py-1">LB internes mappées</th>
-              <th className="px-2 py-1 text-right">Total dérivé</th>
+              <th className="px-2 py-1 text-right">Budgété</th>
+              <th className="px-2 py-1 text-right">Dépensé</th>
               <th className="px-2 py-1"></th>
             </tr>
           </thead>
@@ -151,6 +215,7 @@ export function BailleurDetail({
             {lines.map((l) => {
               const mapped = mappingByLine[l.id] ?? [];
               const total = derivedExpenseForLine(planMonthly, bailleur.id, mapped);
+              const depense = realisedExpenseForLine(glEntries, bailleur.id, mapped);
               return (
                 <tr key={l.id} className="border-b border-slate-50 align-top">
                   <td className="px-2 py-1 font-mono text-xs text-slate-400">{l.code}</td>
@@ -165,6 +230,7 @@ export function BailleurDetail({
                     />
                   </td>
                   <td className="px-2 py-1 text-right">{formatEur(total)}</td>
+                  <td className="px-2 py-1 text-right text-slate-600">{formatEur(depense)}</td>
                   <td className="px-2 py-1 text-right">
                     <button
                       onClick={() => run(() => deleteBailleurLine(bailleur.id, l.id))}
@@ -187,18 +253,37 @@ export function BailleurDetail({
               <td className={`px-2 py-1 text-right ${reste < 0 ? "font-medium text-alert" : ""}`}>
                 {formatEur(reste)}
               </td>
-              <td></td>
+              <td colSpan={2}></td>
             </tr>
             <tr className="font-medium">
               <td className="px-2 py-1" colSpan={3}>
-                Total dépenses (= recettes)
+                Total
               </td>
-              <td className="px-2 py-1 text-right">{formatEur(depensesAssignees + reste)}</td>
+              <td className="px-2 py-1 text-right">{formatEur(depensesAssignees)}</td>
+              <td className="px-2 py-1 text-right">{formatEur(totalDepense)}</td>
               <td></td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      {/* BR-3.4 — récap écarts vs montant total du fonds */}
+      {bailleur.montant_total != null && (
+        <p className="mt-1 text-xs text-slate-500">
+          Fonds {formatEur(Number(bailleur.montant_total))} ·{" "}
+          <span className={gapBudget != null && gapBudget < 0 ? "text-alert" : ""}>
+            {gapBudget != null && gapBudget >= 0
+              ? `reste ${formatEur(gapBudget)} à budgéter`
+              : `sur-budgété de ${formatEur(Math.abs(gapBudget ?? 0))}`}
+          </span>
+          {" · "}
+          <span className={gapDepense != null && gapDepense < 0 ? "text-alert" : ""}>
+            {gapDepense != null && gapDepense >= 0
+              ? `${formatEur(gapDepense)} non encore dépensés`
+              : `dépassement de ${formatEur(Math.abs(gapDepense ?? 0))}`}
+          </span>
+        </p>
+      )}
       {reste < 0 && (
         <p className="mt-1 text-xs text-alert">
           Sur-affectation : les dépenses fléchées dépassent les recettes promises (BR-3.2).
@@ -293,6 +378,121 @@ export function BailleurDetail({
         <span className="ml-4 text-slate-500">Solde prévu (recettes − dépenses) : </span>
         <span className="font-medium">{formatEur(recettesTotal - (depensesAssignees + reste))}</span>
         <span className="ml-1 text-xs text-slate-400">(équilibré par « Non assigné »)</span>
+      </div>
+    </div>
+  );
+}
+
+// F4.10 — Éditer les champs d'un financement (acteur, référence, montant, éligibilité, description).
+function FinancementEdit({
+  bailleur,
+  funders,
+  pending,
+  run,
+}: {
+  bailleur: Bailleur;
+  funders: Funder[];
+  pending: boolean;
+  run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({
+    funder_id: bailleur.funder_id ?? "",
+    reference: bailleur.reference ?? "",
+    montant_total: bailleur.montant_total != null ? String(bailleur.montant_total) : "",
+    convention_start: bailleur.convention_start ?? "",
+    convention_end: bailleur.convention_end ?? "",
+    description: bailleur.description ?? "",
+  });
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={pending}
+        className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+      >
+        Modifier
+      </button>
+    );
+  }
+
+  return (
+    <div className="absolute z-10 mt-10 w-[28rem] space-y-2 rounded border border-slate-300 bg-white p-3 shadow">
+      <div className="flex gap-2">
+        <input
+          placeholder="Référence (JFN-001)"
+          value={f.reference}
+          onChange={(e) => setF({ ...f, reference: e.target.value })}
+          className="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
+        />
+        <input
+          type="number"
+          placeholder="Montant total (€)"
+          value={f.montant_total}
+          onChange={(e) => setF({ ...f, montant_total: e.target.value })}
+          className="flex-1 rounded border border-slate-300 px-2 py-1 text-right text-sm text-input"
+        />
+      </div>
+      <select
+        value={f.funder_id}
+        onChange={(e) => setF({ ...f, funder_id: e.target.value })}
+        className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+      >
+        <option value="">— bailleur (acteur) : aucun —</option>
+        {funders.map((fn) => (
+          <option key={fn.id} value={fn.id}>{fn.name}</option>
+        ))}
+      </select>
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-slate-500">Éligibilité</span>
+        <input
+          type="date"
+          value={f.convention_start}
+          onChange={(e) => setF({ ...f, convention_start: e.target.value })}
+          className="rounded border border-slate-300 px-2 py-1"
+        />
+        <span>→</span>
+        <input
+          type="date"
+          value={f.convention_end}
+          onChange={(e) => setF({ ...f, convention_end: e.target.value })}
+          className="rounded border border-slate-300 px-2 py-1"
+        />
+      </div>
+      <textarea
+        placeholder="Description du fonds"
+        value={f.description}
+        onChange={(e) => setF({ ...f, description: e.target.value })}
+        rows={2}
+        className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={() => {
+            run(() =>
+              updateFinancement(bailleur.id, {
+                funder_id: f.funder_id || null,
+                reference: f.reference || null,
+                description: f.description || null,
+                montant_total: f.montant_total ? Number(f.montant_total) : null,
+                convention_start: f.convention_start || null,
+                convention_end: f.convention_end || null,
+              }),
+            );
+            setOpen(false);
+          }}
+          disabled={pending}
+          className="rounded bg-brand-emerald px-3 py-1 text-sm text-white"
+        >
+          Enregistrer
+        </button>
+        <button
+          onClick={() => setOpen(false)}
+          className="rounded border border-slate-300 px-3 py-1 text-sm text-slate-600"
+        >
+          Annuler
+        </button>
       </div>
     </div>
   );
