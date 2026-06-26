@@ -19,6 +19,12 @@ export function DepenseTable({ year, rows }: { year: number; rows: CategoryRow[]
 
   const visible = rows.filter((r) => r.level === 1 || !(r.parentId && collapsed.has(r.parentId)));
 
+  // Total = Σ des catégories niveau 1 (= total du budget pour l'année).
+  const tot = rows
+    .filter((r) => r.level === 1)
+    .reduce((a, r) => ({ prevu: a.prevu + r.prevu, realise: a.realise + r.realise }), { prevu: 0, realise: 0 });
+  const totInd = indicators(tot.prevu, tot.realise);
+
   return (
     <div className="mb-4 overflow-hidden rounded border border-slate-200 bg-white">
       <div className="bg-slate-50 px-3 py-2 font-heading text-sm font-bold text-brand-night">{year}</div>
@@ -80,6 +86,22 @@ export function DepenseTable({ year, rows }: { year: number; rows: CategoryRow[]
             );
           })}
         </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-slate-300 bg-slate-50 font-bold text-brand-night">
+            <td className="px-2 py-1"></td>
+            <td className="px-2 py-1">Total</td>
+            <td className="px-2 py-1 text-right">{formatEur(tot.prevu)}</td>
+            <td className={`px-2 py-1 text-right ${totInd.depassement ? "text-alert" : ""}`}>
+              {formatEur(tot.realise)}
+            </td>
+            <td className={`px-2 py-1 text-right ${totInd.depassement ? "text-alert" : "text-slate-500"}`}>
+              {formatEcart(totInd.ecart)}
+            </td>
+            <td className="px-2 py-1 text-slate-500">{Math.round(totInd.pctConso * 100)}%</td>
+            <td className="px-2 py-1"></td>
+            <td className="px-2 py-1"></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );

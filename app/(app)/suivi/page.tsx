@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { aggregateByCategory, type LeafAmounts } from "@/lib/suivi";
@@ -9,7 +10,11 @@ import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
-export default async function SuiviPage() {
+export default async function SuiviPage({
+  searchParams,
+}: {
+  searchParams: { year?: string };
+}) {
   if (!isSupabaseConfigured()) {
     return <Notice>Supabase n&apos;est pas encore configuré.</Notice>;
   }
@@ -35,7 +40,9 @@ export default async function SuiviPage() {
     ]);
 
   const lines = (structure ?? []) as StructureLine[];
-  const years = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);
+  const allYears = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);
+  const selectedYear = searchParams.year ? Number(searchParams.year) : null;
+  const years = selectedYear ? allYears.filter((y) => y === selectedYear) : allYears;
 
   // BR-5.5 — date de référence : calc_date du budget, sinon aujourd'hui.
   const today = new Date();
@@ -88,11 +95,33 @@ export default async function SuiviPage() {
         <GuideLink anchor="suivre-les-depenses" />
       </div>
       <SuiviTabs />
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-3 text-sm text-slate-500">
         Prévu vs réalisé par catégorie (niveaux 1 et 2) — {budget.name}. Vitesse calculée
         au {refMonth.toString().padStart(2, "0")}/{refYear}
         {budget.calc_date ? " (date du jour, Trésorerie)" : " (aujourd'hui)"}.
       </p>
+
+      {/* Filtre année */}
+      {allYears.length > 1 && (
+        <div className="mb-4 flex items-center gap-1 text-xs">
+          <span className="text-slate-500">Année :</span>
+          <Link
+            href="/suivi"
+            className={`rounded border px-2 py-0.5 ${!selectedYear ? "border-brand-olive bg-brand-lime/20 text-brand-brown" : "border-slate-200 text-slate-500"}`}
+          >
+            Toutes
+          </Link>
+          {allYears.map((y) => (
+            <Link
+              key={y}
+              href={`/suivi?year=${y}`}
+              className={`rounded border px-2 py-0.5 ${selectedYear === y ? "border-brand-olive bg-brand-lime/20 text-brand-brown" : "border-slate-200 text-slate-500"}`}
+            >
+              {y}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {data.length === 0 && <p className="text-sm text-slate-500">Aucune donnée.</p>}
       {data.map(({ year, rows }) => (

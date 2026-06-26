@@ -56,6 +56,8 @@ export function GlTable({
   // I1 — suggestions IA en attente d'application.
   const [aiSuggestions, setAiSuggestions] = useState<NonNullable<SuggestResult["suggestions"]>>([]);
   const [aiBusy, setAiBusy] = useState(false);
+  // Vérification d'erreurs d'allocation : masquée par défaut, affichée sur demande.
+  const [showChecks, setShowChecks] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Filtres multi-colonnes (F5.5, F5.8).
@@ -267,6 +269,17 @@ export function GlTable({
           {importMsg && <span className="text-sm text-brand-emerald">{importMsg}</span>}
         </div>
         <div className="flex items-center gap-2">
+          {/* Vérification des erreurs d'allocation (à la demande, BR-4.5/4.6) */}
+          <button
+            onClick={() => setShowChecks((v) => !v)}
+            className={`rounded border px-3 py-1.5 text-sm ${
+              showChecks
+                ? "border-amber-400 bg-amber-50 text-amber-700"
+                : "border-slate-300 text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {showChecks ? "Masquer les erreurs" : "Vérification erreur"}
+          </button>
           {/* I1 — catégorisation automatique des écritures non allouées */}
           <button
             onClick={onSuggest}
@@ -596,13 +609,12 @@ export function GlTable({
                           )}
                         </>
                       )}
-                      {/* C2/C3 — avertissements éligibilité + anomalies */}
-                      {(warningsByEntry?.[e.id]?.length ?? 0) > 0 && (
-                        <span
-                          className="cursor-help text-amber-500"
-                          title={warningsByEntry![e.id].join("\n")}
-                        >
-                          ⚠
+                      {/* C2/C3 — avertissements éligibilité + anomalies, à la demande */}
+                      {showChecks && (warningsByEntry?.[e.id]?.length ?? 0) > 0 && (
+                        <span className="block text-[11px] leading-tight text-amber-700">
+                          {warningsByEntry![e.id].map((w, i) => (
+                            <span key={i} className="block">⚠ {w}</span>
+                          ))}
                         </span>
                       )}
                     </span>
