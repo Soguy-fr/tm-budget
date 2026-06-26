@@ -12,13 +12,13 @@ Nomenclature des entrées de menu (les routes techniques restent inchangées) :
 | Scénario         | `/budgets`     | Budgets    |
 | Suivi interne    | `/interne`     | Interne    |
 | Trésorerie       | `/tresorerie`  | *(nouveau, F7.7)* |
-| Financement      | `/bailleurs`   | Bailleurs (renommé) |
+| Financement      | `/financements`| Bailleurs (renommé, route renommée) |
 | Grand Livre      | `/grand-livre` | Grand Livre|
 | Dashboard        | `/suivi`       | Suivi      |
 | Configuration    | `/structure`   | Structure (déplacé en **dernier**) |
 
-> **Financement** : la route technique `/bailleurs` reste inchangée ; seul le libellé
-> change. Le menu liste les financements (fonds), groupés par bailleur (acteur).
+> **Financement** : route renommée `/bailleurs` → `/financements` (Lot 2). Le menu liste
+> les financements (fonds) ; un onglet « Bailleurs » liste les acteurs (F4.14).
 
 - **Scénario** : on y teste plusieurs budgets (créer / dupliquer / activer).
 - **Configuration** : structure budgétaire + futurs réglages. Toujours en bas du menu.

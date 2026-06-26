@@ -62,9 +62,9 @@ export default async function BailleursPage({
       {/* F4.13 — filtre statut (tri par date de début d'éligibilité) */}
       <div className="mt-4 flex items-center gap-1 text-xs">
         <span className="text-slate-500">Statut :</span>
-        <Link href="/bailleurs" className={filterLink(null)}>Tous</Link>
-        <Link href="/bailleurs?statut=actif" className={filterLink("actif")}>Actifs</Link>
-        <Link href="/bailleurs?statut=inactif" className={filterLink("inactif")}>Inactifs</Link>
+        <Link href="/financements" className={filterLink(null)}>Tous</Link>
+        <Link href="/financements?statut=actif" className={filterLink("actif")}>Actifs</Link>
+        <Link href="/financements?statut=inactif" className={filterLink("inactif")}>Inactifs</Link>
         <span className="ml-2 text-slate-400">triés par date de début</span>
       </div>
 
@@ -75,7 +75,7 @@ export default async function BailleursPage({
         {bailleurs.map(({ b, actif }) => (
           <Link
             key={b.id}
-            href={`/bailleurs/${b.id}`}
+            href={`/financements/${b.id}`}
             className="flex items-center justify-between rounded border border-slate-200 bg-white p-3 hover:border-brand-emerald"
           >
             <span className="flex items-center gap-2">

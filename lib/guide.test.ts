@@ -11,7 +11,7 @@ const REQUIRED_ANCHORS = [
   "la-structure-budgetaire",            // /structure
   "travailler-un-nouveau-budget",       // /budgets
   "saisir-le-previsionnel",             // /interne
-  "ajouter-un-financement",             // /bailleurs (menu « Financement »)
+  "ajouter-un-financement",             // /financements (menu « Financement »)
   "le-grand-livre-la-realite-entre-dans-l-appli", // /grand-livre
   "suivre-les-depenses",                // /suivi
   "la-tresorerie-eviter-la-panne-seche",// /interne (tréso)

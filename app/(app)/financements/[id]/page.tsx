@@ -20,7 +20,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
   if (!bailleur) {
     return (
       <div>
-        <Link href="/bailleurs" className="text-sm text-brand-emerald">
+        <Link href="/financements" className="text-sm text-brand-emerald">
           ← Financement
         </Link>
         <p className="mt-2 text-sm text-slate-500">Bailleur introuvable.</p>
@@ -84,7 +84,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
 
   return (
     <div>
-      <Link href="/bailleurs" className="text-sm text-brand-emerald">
+      <Link href="/financements" className="text-sm text-brand-emerald">
         ← Financement
       </Link>
       <BailleurDetail

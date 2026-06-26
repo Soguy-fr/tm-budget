@@ -15,7 +15,7 @@ export async function createFunder(name: string): Promise<ActionResult> {
   if (deny) return { ok: false, error: deny };
   const { error } = await supabase.from("funders").insert({ name: name.trim() });
   if (error) return { ok: false, error: error.message };
-  revalidatePath("/bailleurs");
+  revalidatePath("/financements");
   return { ok: true };
 }
 
@@ -42,7 +42,7 @@ export async function createBailleur(input: {
     regles: input.regles?.trim() || null,
   });
   if (error) return { ok: false, error: error.message };
-  revalidatePath("/bailleurs");
+  revalidatePath("/financements");
   return { ok: true };
 }
 
@@ -75,7 +75,7 @@ export async function updateFinancement(
   if (ref) patch.code = ref; // garde code = ID
   const { error } = await supabase.from("bailleurs").update(patch).eq("id", id);
   if (error) return { ok: false, error: error.message };
-  revalidatePath(`/bailleurs/${id}`);
+  revalidatePath(`/financements/${id}`);
   return { ok: true };
 }
 
@@ -89,7 +89,7 @@ export async function updateReglesFonds(id: string, regles: string): Promise<Act
     .update({ regles: regles.trim() || null })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
-  revalidatePath(`/bailleurs/${id}`);
+  revalidatePath(`/financements/${id}`);
   return { ok: true };
 }
 
@@ -177,7 +177,7 @@ export async function assignLinesToBudget(
     .upsert(payload, { onConflict: "budget_id,line_id,year,month" });
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/bailleurs/${bailleurId}`);
+  revalidatePath(`/financements/${bailleurId}`);
   revalidatePath("/interne");
   return { ok: true, applied: cells.length };
 }
@@ -207,7 +207,7 @@ export async function addBailleurLine(
     sort_order,
   });
   if (error) return { ok: false, error: error.message };
-  revalidatePath(`/bailleurs/${bailleurId}`);
+  revalidatePath(`/financements/${bailleurId}`);
   return { ok: true };
 }
 
@@ -220,7 +220,7 @@ export async function deleteBailleurLine(
   if (deny) return { ok: false, error: deny };
   const { error } = await supabase.from("bailleur_lines").delete().eq("id", lineId);
   if (error) return { ok: false, error: error.message };
-  revalidatePath(`/bailleurs/${bailleurId}`);
+  revalidatePath(`/financements/${bailleurId}`);
   return { ok: true };
 }
 
@@ -243,7 +243,7 @@ export async function setLineMapping(
       .insert(lineIds.map((line_id) => ({ bailleur_line_id: bailleurLineId, line_id })));
     if (error) return { ok: false, error: error.message };
   }
-  revalidatePath(`/bailleurs/${bailleurId}`);
+  revalidatePath(`/financements/${bailleurId}`);
   return { ok: true };
 }
 
@@ -261,6 +261,6 @@ export async function saveIncome(
     .from("bailleur_income_monthly")
     .upsert(payload, { onConflict: "bailleur_id,year,month" });
   if (error) return { ok: false, error: error.message };
-  revalidatePath(`/bailleurs/${bailleurId}`);
+  revalidatePath(`/financements/${bailleurId}`);
   return { ok: true };
 }

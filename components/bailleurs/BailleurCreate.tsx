@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createBailleur } from "@/app/(app)/bailleurs/actions";
+import { createBailleur } from "@/app/(app)/financements/actions";
 
 // F4.1/F4.10 — Créer un financement. Champs : Intitulé, ID, Description, Règles.
 // Le bailleur (acteur), le montant, la couleur et les dates se définissent ensuite

@@ -20,7 +20,7 @@ import {
   assignLinesToBudget,
   updateFinancement,
   updateReglesFonds,
-} from "@/app/(app)/bailleurs/actions";
+} from "@/app/(app)/financements/actions";
 
 type Plan = { line_id: string; amount: number; bailleur_id: string | null };
 export type GlLite = {

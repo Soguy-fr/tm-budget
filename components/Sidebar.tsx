@@ -7,7 +7,7 @@ const NAV = [
   { href: "/budgets", label: "Scénario" },
   { href: "/interne", label: "Suivi interne" },
   { href: "/tresorerie", label: "Trésorerie" },
-  { href: "/bailleurs", label: "Financement" },
+  { href: "/financements", label: "Financement" },
   { href: "/grand-livre", label: "Grand Livre" },
   { href: "/suivi", label: "Dashboard" },
   { href: "/cloture", label: "Clôture" },
