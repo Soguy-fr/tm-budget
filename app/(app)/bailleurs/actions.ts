@@ -19,33 +19,27 @@ export async function createFunder(name: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-// F4.1 / F4.10 — Créer un financement (fonds). convention_* = fenêtre d'éligibilité.
+// F4.1 / F4.10 — Créer un financement (fonds). « ID » = reference (sert à allouer) ;
+// le `code` physique reprend l'ID. Le reste (bailleur, montant, dates) se met sur la fiche.
 export async function createBailleur(input: {
-  code: string;
-  name: string;
-  color: string;
-  convention_start: string | null;
-  convention_end: string | null;
-  funder_id?: string | null;
-  reference?: string | null;
+  name: string; // intitulé
+  reference: string; // ID (JFN-001)
   description?: string | null;
-  montant_total?: number | null;
+  regles?: string | null;
 }): Promise<ActionResult> {
-  if (!input.code.trim() || !input.name.trim())
-    return { ok: false, error: "Code et nom requis." };
+  if (!input.reference.trim() || !input.name.trim())
+    return { ok: false, error: "Intitulé et ID requis." };
   const supabase = createClient();
   const deny = await denyUnless(supabase, "manage_bailleurs");
   if (deny) return { ok: false, error: deny };
+  const id = input.reference.trim();
   const { error } = await supabase.from("bailleurs").insert({
-    code: input.code.trim(),
+    code: id, // contrainte NOT NULL/unique : on reprend l'ID
+    reference: id,
     name: input.name.trim(),
-    color: input.color || "#64748b",
-    convention_start: input.convention_start || null,
-    convention_end: input.convention_end || null,
-    funder_id: input.funder_id || null,
-    reference: input.reference?.trim() || null,
+    color: "#a0b44e",
     description: input.description?.trim() || null,
-    montant_total: input.montant_total ?? null,
+    regles: input.regles?.trim() || null,
   });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/bailleurs");
@@ -56,6 +50,7 @@ export async function createBailleur(input: {
 export async function updateFinancement(
   id: string,
   fields: {
+    name?: string;
     funder_id: string | null;
     reference: string | null;
     description: string | null;
@@ -67,16 +62,31 @@ export async function updateFinancement(
   const supabase = createClient();
   const deny = await denyUnless(supabase, "manage_bailleurs");
   if (deny) return { ok: false, error: deny };
+  const ref = fields.reference?.trim() || null;
+  const patch: Record<string, unknown> = {
+    funder_id: fields.funder_id || null,
+    reference: ref,
+    description: fields.description?.trim() || null,
+    montant_total: fields.montant_total ?? null,
+    convention_start: fields.convention_start || null,
+    convention_end: fields.convention_end || null,
+  };
+  if (fields.name?.trim()) patch.name = fields.name.trim();
+  if (ref) patch.code = ref; // garde code = ID
+  const { error } = await supabase.from("bailleurs").update(patch).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/bailleurs/${id}`);
+  return { ok: true };
+}
+
+// F4.10 — Mettre à jour les « Règles du fonds » (page dédiée).
+export async function updateReglesFonds(id: string, regles: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("bailleurs")
-    .update({
-      funder_id: fields.funder_id || null,
-      reference: fields.reference?.trim() || null,
-      description: fields.description?.trim() || null,
-      montant_total: fields.montant_total ?? null,
-      convention_start: fields.convention_start || null,
-      convention_end: fields.convention_end || null,
-    })
+    .update({ regles: regles.trim() || null })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/bailleurs/${id}`);

@@ -432,10 +432,10 @@ export function GlTable({
             </option>
           ))}
         </Select>
-        <Select value={fBailleur} onChange={setFBailleur} label="Bailleur">
+        <Select value={fBailleur} onChange={setFBailleur} label="Financement">
           {bailleurs.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.code}
+              {b.reference || b.code}
             </option>
           ))}
         </Select>
@@ -559,7 +559,7 @@ export function GlTable({
                       <option value="">—</option>
                       {bailleurs.map((b) => (
                         <option key={b.id} value={b.id}>
-                          {b.code}
+                          {b.reference || b.code}
                         </option>
                       ))}
                     </select>

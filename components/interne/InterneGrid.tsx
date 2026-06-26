@@ -379,7 +379,7 @@ export function InterneGrid({
           {bailleurs.map((b) => (
             <span key={b.id} className="flex items-center gap-1">
               <span className="inline-block h-3 w-3 rounded-sm" style={{ background: b.color }} />
-              {b.code}
+              {b.reference || b.code}
             </span>
           ))}
           <span className="flex items-center gap-1">
@@ -746,7 +746,7 @@ function GridRow({
                   <option value="">—</option>
                   {bailleurs.map((opt) => (
                     <option key={opt.id} value={opt.id}>
-                      {opt.code}
+                      {opt.reference || opt.code}
                     </option>
                   ))}
                 </select>

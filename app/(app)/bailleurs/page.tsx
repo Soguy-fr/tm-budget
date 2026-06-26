@@ -39,7 +39,7 @@ export default async function BailleursPage() {
         mapping vers les LB internes, sa fenêtre d&apos;éligibilité et ses recettes prévues.
       </p>
 
-      <BailleurCreate funders={funders} />
+      <BailleurCreate />
 
       <div className="mt-4 space-y-2">
         {bailleurs.length === 0 && (

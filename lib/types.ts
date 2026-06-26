@@ -50,9 +50,10 @@ export type Bailleur = {
   convention_end: string | null;        // = date fin éligibilité
   montant_conventionne: number | null;  // C2/Q4 — plafond (déprécié, voir montant_total)
   funder_id: string | null;             // 0007 — l'acteur qui accorde le fonds
-  reference: string | null;             // 0007 — 'JFN-001'
+  reference: string | null;             // 0007 — 'JFN-001' (= ID affiché pour l'allocation)
   description: string | null;           // 0007 — description du fonds
   montant_total: number | null;         // 0007 — total accordé (BR-3.4)
+  regles: string | null;                // 0008 — règles du fonds (page dédiée)
   created_at: string;
 };
 

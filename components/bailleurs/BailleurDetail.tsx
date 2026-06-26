@@ -19,8 +19,8 @@ import {
   saveIncome,
   assignLinesToBudget,
   updateFinancement,
+  updateReglesFonds,
 } from "@/app/(app)/bailleurs/actions";
-import { getBailleurPack } from "@/app/(app)/bailleurs/pack-action";
 
 type Plan = { line_id: string; amount: number; bailleur_id: string | null };
 export type GlLite = {
@@ -144,17 +144,25 @@ export function BailleurDetail({
   // ── Ajout ligne bailleur ──────────────────────────────────────────────────
   const [newCode, setNewCode] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [showRegles, setShowRegles] = useState(false);
+
+  // Date ISO → format français JJ/MM/AAAA.
+  const frDate = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : null);
 
   return (
     <div className="mt-2 max-w-5xl">
       <h1 className="flex items-center gap-2 text-xl font-bold text-brand-night">
         <span className="inline-block h-4 w-4 rounded-sm" style={{ background: bailleur.color }} />
-        {bailleur.reference || bailleur.code} — {bailleur.name}
+        {bailleur.name}
       </h1>
       <div className="mb-1 text-sm text-slate-500">
-        {funderName && <>Bailleur : <span className="font-medium text-brand-night">{funderName}</span> · </>}
+        ID : <span className="font-mono font-medium text-brand-night">{bailleur.reference || bailleur.code}</span>
+        <span className="ml-1 text-xs text-slate-400">(référence d&apos;allocation)</span>
+        {funderName && <> · Bailleur : <span className="font-medium text-brand-night">{funderName}</span></>}
+      </div>
+      <div className="mb-1 text-sm text-slate-500">
         {bailleur.convention_start && bailleur.convention_end
-          ? `Éligibilité ${bailleur.convention_start} → ${bailleur.convention_end}`
+          ? `Éligibilité ${frDate(bailleur.convention_start)} → ${frDate(bailleur.convention_end)}`
           : "Éligibilité non renseignée"}
         {bailleur.montant_total != null &&
           ` · Montant total : ${formatEur(Number(bailleur.montant_total))}`}
@@ -174,39 +182,26 @@ export function BailleurDetail({
             Assigner les lignes dans le budget
           </button>
           <FinancementEdit bailleur={bailleur} funders={funders} pending={pending} run={run} />
+          <button
+            onClick={() => setShowRegles(true)}
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            Règles du fonds
+          </button>
         </div>
-        {/* C5 — pack audit bailleur en un clic (CSV multi-sections) */}
-        <button
-          disabled={pending}
-          onClick={() =>
-            startTransition(async () => {
-              const year = years.at(-1) ?? new Date().getFullYear();
-              const res = await getBailleurPack(bailleur.id, year);
-              if (!res.ok || !res.csv) {
-                setError(res.error ?? "Export échoué.");
-                return;
-              }
-              const blob = new Blob([res.csv], { type: "text/csv;charset=utf-8" });
-              const a = document.createElement("a");
-              a.href = URL.createObjectURL(blob);
-              a.download = res.filename ?? "pack-audit.csv";
-              a.click();
-              URL.revokeObjectURL(a.href);
-            })
-          }
-          className="shrink-0 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-        >
-          📦 Pack audit (CSV)
-        </button>
       </div>
+
+      {showRegles && (
+        <ReglesPanel bailleur={bailleur} pending={pending} run={run} onClose={() => setShowRegles(false)} />
+      )}
 
       {error && (
         <p className="mb-3 rounded border border-alert/30 bg-red-50 p-2 text-sm text-alert">{error}</p>
       )}
 
-      {/* ── BLOC DÉPENSES PRÉVUES (dérivées du plan interne, BR-3.1) ── */}
+      {/* ── BLOC BUDGET DÉPENSE BAILLEUR (dérivé du plan interne, BR-3.1) ── */}
       <h2 className="mb-2 font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
-        Dépenses prévues (dérivées du plan interne)
+        Budget dépense bailleur
       </h2>
       <div className="overflow-hidden rounded border border-slate-200 bg-white">
         <table className="w-full border-collapse text-sm">
@@ -418,6 +413,86 @@ export function BailleurDetail({
   );
 }
 
+// F4.10 — Page « Règles du fonds » : texte libre, affiché à la demande, éditable.
+function ReglesPanel({
+  bailleur,
+  pending,
+  run,
+  onClose,
+}: {
+  bailleur: Bailleur;
+  pending: boolean;
+  run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
+  onClose: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(bailleur.regles ?? "");
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-start justify-center bg-black/30 p-6" onClick={onClose}>
+      <div
+        className="mt-12 w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-4 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-heading text-base font-bold text-brand-night">
+            Règles du fonds — {bailleur.name}
+          </h3>
+          <button onClick={onClose} className="text-sm text-slate-400 hover:text-slate-600">
+            Fermer ✕
+          </button>
+        </div>
+        {editing ? (
+          <>
+            <textarea
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={12}
+              className="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            />
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => {
+                  run(() => updateReglesFonds(bailleur.id, text));
+                  setEditing(false);
+                }}
+                disabled={pending}
+                className="rounded bg-brand-emerald px-3 py-1 text-sm text-white"
+              >
+                Enregistrer
+              </button>
+              <button
+                onClick={() => {
+                  setText(bailleur.regles ?? "");
+                  setEditing(false);
+                }}
+                className="rounded border border-slate-300 px-3 py-1 text-sm text-slate-600"
+              >
+                Annuler
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {bailleur.regles ? (
+              <p className="whitespace-pre-wrap text-sm text-slate-700">{bailleur.regles}</p>
+            ) : (
+              <p className="text-sm italic text-slate-400">Aucune règle saisie.</p>
+            )}
+            <button
+              onClick={() => setEditing(true)}
+              className="mt-3 rounded border border-slate-300 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100"
+            >
+              Éditer
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // F4.10 — Éditer les champs d'un financement (acteur, référence, montant, éligibilité, description).
 function FinancementEdit({
   bailleur,
@@ -432,6 +507,7 @@ function FinancementEdit({
 }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
+    name: bailleur.name ?? "",
     funder_id: bailleur.funder_id ?? "",
     reference: bailleur.reference ?? "",
     montant_total: bailleur.montant_total != null ? String(bailleur.montant_total) : "",
@@ -454,9 +530,15 @@ function FinancementEdit({
 
   return (
     <div className="absolute z-10 mt-10 w-[28rem] space-y-2 rounded border border-slate-300 bg-white p-3 shadow">
+      <input
+        placeholder="Intitulé du fonds"
+        value={f.name}
+        onChange={(e) => setF({ ...f, name: e.target.value })}
+        className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+      />
       <div className="flex gap-2">
         <input
-          placeholder="Référence (JFN-001)"
+          placeholder="ID (JFN-001)"
           value={f.reference}
           onChange={(e) => setF({ ...f, reference: e.target.value })}
           className="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
@@ -507,6 +589,7 @@ function FinancementEdit({
           onClick={() => {
             run(() =>
               updateFinancement(bailleur.id, {
+                name: f.name || undefined,
                 funder_id: f.funder_id || null,
                 reference: f.reference || null,
                 description: f.description || null,
