@@ -60,6 +60,12 @@ export function planAssignment(opts: {
   return { cells, conflicts };
 }
 
+// F4.13 — un financement est « actif » si la date du jour est dans sa fenêtre
+// d'éligibilité [start, end]. Bornes ouvertes (null) = actif de ce côté.
+export function isActiveOn(start: string | null, end: string | null, isoToday: string): boolean {
+  return !isOutsideEligibility(isoToday, start, end);
+}
+
 // BR-4.6 — date d'une écriture hors de la fenêtre d'éligibilité du financement ?
 export function isOutsideEligibility(
   entryDate: string,

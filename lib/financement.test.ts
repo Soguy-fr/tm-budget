@@ -1,5 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { eligibleMonths, planAssignment, isOutsideEligibility } from "./financement";
+import { eligibleMonths, planAssignment, isOutsideEligibility, isActiveOn } from "./financement";
+
+describe("isActiveOn (F4.13)", () => {
+  it("actif si aujourd'hui dans la fenêtre", () => {
+    expect(isActiveOn("2026-01-01", "2026-12-31", "2026-06-26")).toBe(true);
+  });
+  it("inactif si avant ou après", () => {
+    expect(isActiveOn("2027-01-01", "2027-12-31", "2026-06-26")).toBe(false);
+    expect(isActiveOn("2024-01-01", "2024-12-31", "2026-06-26")).toBe(false);
+  });
+  it("bornes ouvertes = actif", () => {
+    expect(isActiveOn(null, null, "2026-06-26")).toBe(true);
+  });
+});
 
 describe("eligibleMonths (BR-3.5 — fenêtre d'éligibilité)", () => {
   it("restreint aux mois dans [start, end] et aux années du budget", () => {

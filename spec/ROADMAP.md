@@ -97,6 +97,39 @@
   ✅ **Livré** (2026-06-11), 155 tests verts.
 - Bascule Supabase Pro (backups, storage) si usage réel.
 
+## Jalon 15 — Itération UX « Lot 2 » (2026-06-26)
+
+Retours utilisateur post-démo. Specs MAJ avant chaque étape, commit par étape.
+
+**Déjà livré dans ce lot :**
+- Modèle financement : **ID = `reference`** (affiché à l'allocation au lieu du `code`),
+  « Intitulé » = `name`. Création financement = 4 champs (Intitulé/ID/Description/Règles).
+- **Règles du fonds** (`bailleurs.regles`, migration **0008**) : page dédiée éditable.
+- Fiche financement clarifiée (titre = intitulé, ID dessous, dates JJ/MM/AAAA, bloc
+  « Budget dépense bailleur »). Bouton « Pack audit CSV » retiré.
+- GL : bouton **« Vérification erreur »** (avertissements à la demande, texte complet) ;
+  parseur date tolérant + parenthèses négatives ; colonne « Code analytique » affichée.
+- Trésorerie : graphique du solde, accordéon années, couleur solde forcé distincte,
+  fix solde forcé daté avant la 1re colonne.
+- Dashboard : filtre année + ligne **Total**.
+
+**Reste (ordre : simple → Export en dernier) :**
+1. **Tri liste financements** : filtre actif/inactif (actif = date du jour ∈
+   `[convention_start, convention_end]`, bornes ouvertes = actif) + tri par date de
+   début d'éligibilité.
+2. **Renommage route** `/bailleurs` → `/financements` (cohérence du menu « Financement »).
+3. **Onglet « Bailleur »** dans le menu Financement : liste des acteurs (`funders`) avec
+   leurs financements liés (accordéon), filtres actif/année, bouton éditer (renommer) le
+   bailleur. Le menu devient à onglets : « Financements | Bailleurs ». Création d'un
+   bailleur (acteur) UNIQUEMENT ici.
+4. **Suivi interne** : accordéon de repli des mois + filtre année ; le clic sur le montant
+   **réalisé** (et non budgété) ouvre le Grand Livre filtré ; FIX : le clic sur une cellule
+   budgétée de **niveau 2** doit ouvrir le GL filtré sur la LB niv.2 + bloc d'analyse
+   (aujourd'hui : ouvre le GL sans filtre LB ni analyse).
+5. **Export** (menu sous Guide) : page avec multi-sélection (Scénarios / Financements /
+   Grand livre [date début–fin] / Dashboard [par année]) générant un **fichier XLSX
+   multi-onglets**. Remplace l'ancien « Pack audit CSV ».
+
 ## Phase 3 — industrialisation
 
 - Multi-utilisateurs + rôles + RLS (F10.2).

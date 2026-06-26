@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isActiveOn } from "@/lib/financement";
 import type { Bailleur, Funder } from "@/lib/types";
 import { BailleurCreate } from "@/components/bailleurs/BailleurCreate";
 import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
 
-export default async function BailleursPage() {
+export default async function BailleursPage({
+  searchParams,
+}: {
+  searchParams: { statut?: string };
+}) {
   if (!isSupabaseConfigured()) {
     return (
       <div>
@@ -24,9 +29,22 @@ export default async function BailleursPage() {
     supabase.from("bailleurs").select("*").order("code"),
     supabase.from("funders").select("*").order("name"),
   ]);
-  const bailleurs = (data ?? []) as Bailleur[];
   const funders = (fundersData ?? []) as Funder[];
   const funderName = new Map(funders.map((f) => [f.id, f.name]));
+
+  // F4.13 — statut actif/inactif (date du jour) + tri par date de début d'éligibilité.
+  const today = new Date().toISOString().slice(0, 10);
+  const statut = searchParams.statut === "actif" || searchParams.statut === "inactif"
+    ? searchParams.statut
+    : null;
+  const all = (data ?? []) as Bailleur[];
+  const withActive = all.map((b) => ({ b, actif: isActiveOn(b.convention_start, b.convention_end, today) }));
+  const bailleurs = withActive
+    .filter((x) => (statut === "actif" ? x.actif : statut === "inactif" ? !x.actif : true))
+    .sort((a, z) => (a.b.convention_start ?? "9999").localeCompare(z.b.convention_start ?? "9999"));
+
+  const filterLink = (s: string | null) =>
+    `border px-2 py-0.5 rounded ${statut === s ? "border-brand-olive bg-brand-lime/20 text-brand-brown" : "border-slate-200 text-slate-500"}`;
 
   return (
     <div className="max-w-2xl">
@@ -41,11 +59,20 @@ export default async function BailleursPage() {
 
       <BailleurCreate />
 
-      <div className="mt-4 space-y-2">
+      {/* F4.13 — filtre statut (tri par date de début d'éligibilité) */}
+      <div className="mt-4 flex items-center gap-1 text-xs">
+        <span className="text-slate-500">Statut :</span>
+        <Link href="/bailleurs" className={filterLink(null)}>Tous</Link>
+        <Link href="/bailleurs?statut=actif" className={filterLink("actif")}>Actifs</Link>
+        <Link href="/bailleurs?statut=inactif" className={filterLink("inactif")}>Inactifs</Link>
+        <span className="ml-2 text-slate-400">triés par date de début</span>
+      </div>
+
+      <div className="mt-2 space-y-2">
         {bailleurs.length === 0 && (
           <p className="text-sm text-slate-500">Aucun financement.</p>
         )}
-        {bailleurs.map((b) => (
+        {bailleurs.map(({ b, actif }) => (
           <Link
             key={b.id}
             href={`/bailleurs/${b.id}`}
@@ -58,10 +85,13 @@ export default async function BailleursPage() {
               {b.funder_id && (
                 <span className="text-xs text-slate-400">· {funderName.get(b.funder_id)}</span>
               )}
+              <span className={`rounded px-1.5 py-0.5 text-[10px] ${actif ? "bg-brand-lime/30 text-brand-brown" : "bg-slate-100 text-slate-400"}`}>
+                {actif ? "actif" : "inactif"}
+              </span>
             </span>
             <span className="text-xs text-slate-400">
               {b.convention_start && b.convention_end
-                ? `${b.convention_start} → ${b.convention_end}`
+                ? `${b.convention_start.split("-").reverse().join("/")} → ${b.convention_end.split("-").reverse().join("/")}`
                 : "—"}
             </span>
           </Link>
