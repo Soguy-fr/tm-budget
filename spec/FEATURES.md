@@ -52,6 +52,7 @@
 | F3.12 | Accordéon sur les LB : replier/déplier une catégorie ; boutons globaux « tout déplier », « catégories seules » (niv.1), « cat. + sous-cat. » (niv.1+2) | 🟢    | BR-8.3         |
 | F3.13 | Total annuel du budget affiché dans l'entête de chaque année (Σ de toutes les LB niv.3)                                                                | 🟢    | BR-8.4         |
 | F3.14 | Clic sur une cellule de la ligne **réalisé** (et non budgété) → ouvre le Grand Livre filtré ; pour une **catégorie** (niv.1/2), filtre sur **toutes ses feuilles** descendantes (le GL accepte une liste de LB) + bloc d'analyse agrégé | 🟢 | — |
+| F3.15 | Tableur interne : bouton **« Replier les mois »** (masque les 12 colonnes, ne garde que le Total) + **filtre année** (afficher une seule année) | 🟢 | BR-8.2, BR-8.3 |
 
 ## F4 — Financement (pages dédiées, même gabarit que l'interne)
 

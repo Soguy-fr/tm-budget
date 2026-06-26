@@ -76,6 +76,8 @@ export function InterneGrid({
   const [collapsedLines, setCollapsedLines] = useState<Set<string>>(new Set());
   // F1.6 — masquer les LB vides (somme nulle sur toutes les années).
   const [hideEmpty, setHideEmpty] = useState(false);
+  const [hideMonths, setHideMonths] = useState(false);
+  const [yearFilter, setYearFilter] = useState<number | null>(null);
 
   // P-BUG-1 — resynchroniser les copies de travail quand les props serveur
   // changent (router.refresh / revalidation). Sans ça, « Rafraîchir » n'a aucun
@@ -372,6 +374,33 @@ export function InterneGrid({
         >
           {hideEmpty ? "✓ " : ""}Masquer vides
         </button>
+        <button
+          onClick={() => setHideMonths((v) => !v)}
+          className={`rounded border px-3 py-1 font-medium ${
+            hideMonths
+              ? "border-brand-emerald bg-emerald-50 text-brand-night"
+              : "border-slate-300 text-slate-600 hover:bg-slate-100"
+          }`}
+          title="Replier les colonnes de mois (ne garder que le Total)"
+        >
+          {hideMonths ? "✓ " : ""}Replier les mois
+        </button>
+        {years.length > 1 && (
+          <>
+            <span className="mx-1 h-4 w-px bg-slate-200" />
+            <span className="text-slate-400">Année :</span>
+            <select
+              value={yearFilter ?? ""}
+              onChange={(e) => setYearFilter(e.target.value ? Number(e.target.value) : null)}
+              className="rounded border border-slate-300 px-2 py-1"
+            >
+              <option value="">Toutes</option>
+              {years.map((y) => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
+            </select>
+          </>
+        )}
       </div>
 
       {showBailleur && (
@@ -398,10 +427,11 @@ export function InterneGrid({
         <p className="text-sm text-slate-500">Aucune année. Ajoutez une année pour saisir.</p>
       )}
 
-      {years.map((year) => (
+      {(yearFilter ? years.filter((y) => y === yearFilter) : years).map((year) => (
         <YearBlock
           key={year}
           year={year}
+          hideMonths={hideMonths}
           rows={rows}
           work={work}
           workTotals={workTotals}
@@ -448,6 +478,7 @@ type RowHandlers = {
 
 function YearBlock({
   year,
+  hideMonths,
   rows,
   work,
   workTotals,
@@ -470,6 +501,7 @@ function YearBlock({
   ...handlers
 }: {
   year: number;
+  hideMonths: boolean;
   rows: FlatRow[];
   work: Record<string, number>;
   workTotals: Record<string, number>;
@@ -555,7 +587,7 @@ function YearBlock({
               <tr className="border-b border-slate-200 text-slate-500">
                 <th className="sticky left-0 bg-white px-2 py-1 text-left">Code · Ligne</th>
                 <th className="px-2 py-1 text-right">Total</th>
-                {MONTHS_FR.map((m) => (
+                {!hideMonths && MONTHS_FR.map((m) => (
                   <th key={m} className="px-2 py-1 text-right">{m}</th>
                 ))}
               </tr>
@@ -577,6 +609,7 @@ function YearBlock({
                   colorOf={colorOf}
                   collapsedLine={collapsedLines.has(row.id)}
                   onToggleLine={onToggleLine}
+                  hideMonths={hideMonths}
                   {...handlers}
                 />
               ))}
@@ -588,7 +621,7 @@ function YearBlock({
                     Solde trésorerie ({tresoMode === "budget" ? "Budgété" : "Réel"})
                   </td>
                   <td />
-                  {Array.from({ length: 12 }, (_, i) => {
+                  {!hideMonths && Array.from({ length: 12 }, (_, i) => {
                     const v = tresoCumul[i] ?? 0;
                     return (
                       <td
@@ -623,6 +656,7 @@ function GridRow({
   colorOf,
   collapsedLine,
   onToggleLine,
+  hideMonths,
   setCell,
   setTotal,
   setBailleur,
@@ -632,6 +666,7 @@ function GridRow({
 }: {
   row: FlatRow;
   year: number;
+  hideMonths: boolean;
   work: Record<string, number>;
   workTotals: Record<string, number>;
   workBailleur: Record<string, string | null>;
@@ -699,7 +734,7 @@ function GridRow({
           )}
         </td>
 
-        {months.map((val, i) => {
+        {!hideMonths && months.map((val, i) => {
           const k = cellKey(row.id, year, i + 1);
           const b = isLeaf ? workBailleur[k] ?? null : null;
           // F3.8 / BR-2.3 — code couleur par cellule quand la couche est active.
@@ -729,7 +764,7 @@ function GridRow({
             ↳ bailleur
           </td>
           <td />
-          {months.map((_, i) => {
+          {!hideMonths && months.map((_, i) => {
             const k = cellKey(row.id, year, i + 1);
             const b = workBailleur[k] ?? "";
             return (
@@ -769,7 +804,7 @@ function GridRow({
             <td className={`px-2 py-1 text-right text-[11px] ${realiseTotal > sumM ? "font-medium text-alert" : ""}`}>
               {formatEur(realiseTotal)}
             </td>
-            {realiseMonths.map((r, i) => {
+            {!hideMonths && realiseMonths.map((r, i) => {
               const over = r > (months[i] ?? 0); // BR-5.2 — dépassement en rouge
               return (
                 <td key={i} className={`px-2 py-1 text-right text-[11px] ${over ? "font-medium text-alert" : ""}`}>
