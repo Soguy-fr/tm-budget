@@ -19,6 +19,18 @@ export async function createFunder(name: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+// F4.14 — Renommer un bailleur (acteur).
+export async function updateFunder(id: string, name: string): Promise<ActionResult> {
+  if (!name.trim()) return { ok: false, error: "Nom du bailleur requis." };
+  const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
+  const { error } = await supabase.from("funders").update({ name: name.trim() }).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/financements");
+  return { ok: true };
+}
+
 // F4.1 / F4.10 — Créer un financement (fonds). « ID » = reference (sert à allouer) ;
 // le `code` physique reprend l'ID. Le reste (bailleur, montant, dates) se met sur la fiche.
 export async function createBailleur(input: {

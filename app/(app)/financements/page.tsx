@@ -4,6 +4,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { isActiveOn } from "@/lib/financement";
 import type { Bailleur, Funder } from "@/lib/types";
 import { BailleurCreate } from "@/components/bailleurs/BailleurCreate";
+import { FinancementTabs } from "@/components/financements/FinancementTabs";
+import { BailleurTab, type FinLite } from "@/components/financements/BailleurTab";
 import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function BailleursPage({
   searchParams,
 }: {
-  searchParams: { statut?: string };
+  searchParams: { statut?: string; tab?: string };
 }) {
   if (!isSupabaseConfigured()) {
     return (
@@ -46,12 +48,38 @@ export default async function BailleursPage({
   const filterLink = (s: string | null) =>
     `border px-2 py-0.5 rounded ${statut === s ? "border-brand-olive bg-brand-lime/20 text-brand-brown" : "border-slate-200 text-slate-500"}`;
 
+  const tab = searchParams.tab === "bailleurs" ? "bailleurs" : "financements";
+
+  if (tab === "bailleurs") {
+    const fins: FinLite[] = all.map((b) => ({
+      id: b.id,
+      reference: b.reference,
+      code: b.code,
+      name: b.name,
+      color: b.color,
+      funder_id: b.funder_id,
+      convention_start: b.convention_start,
+      convention_end: b.convention_end,
+    }));
+    return (
+      <div className="max-w-2xl">
+        <div className="mb-1 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-brand-night">Financement</h1>
+          <GuideLink anchor="ajouter-un-financement" />
+        </div>
+        <FinancementTabs active="bailleurs" />
+        <BailleurTab funders={funders} financements={fins} today={today} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl">
       <div className="mb-1 flex items-center gap-2">
         <h1 className="text-xl font-bold text-brand-night">Financement</h1>
         <GuideLink anchor="ajouter-un-financement" />
       </div>
+      <FinancementTabs active="financements" />
       <p className="mb-4 text-sm text-slate-500">
         Fonds accordés par les bailleurs. Chaque financement a sa nomenclature, son
         mapping vers les LB internes, sa fenêtre d&apos;éligibilité et ses recettes prévues.
