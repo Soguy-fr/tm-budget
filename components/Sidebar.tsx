@@ -15,6 +15,7 @@ const NAV = [
   { href: "/audit", label: "Audit" },
   { href: "/structure", label: "Configuration" },
   { href: "/guide", label: "📖 Guide" },
+  { href: "/export", label: "⬇ Export" },
 ];
 
 export function Sidebar() {
