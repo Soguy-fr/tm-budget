@@ -180,10 +180,11 @@ export function InterneGrid({
   }
 
   // F3.14 — ouvrir le Grand Livre filtré sur (LB × année × mois).
-  // lineId null (catégorie) → filtre seulement année + mois. `from=interne` pour le retour.
-  function openGl(lineId: string | null, year: number, monthIdx: number) {
+  // Clic cellule → GL filtré. Pour une catégorie (niv.1/2) : filtre sur TOUTES ses
+  // feuilles descendantes (les écritures sont allouées aux feuilles). `from=interne`.
+  function openGl(lineIds: string[] | null, year: number, monthIdx: number) {
     const p = new URLSearchParams({ year: String(year), month: String(monthIdx + 1), from: "interne" });
-    if (lineId) p.set("line", lineId);
+    if (lineIds && lineIds.length) p.set("line", lineIds.join(","));
     router.push(`/grand-livre?${p.toString()}`);
   }
 
@@ -442,7 +443,7 @@ type RowHandlers = {
   setBailleur: (lineId: string, year: number, monthIdx: number, b: string | null) => void;
   doRepartir: (lineId: string, year: number) => void;
   doMajTotal: (lineId: string, year: number) => void;
-  openGl: (lineId: string | null, year: number, monthIdx: number) => void;
+  openGl: (lineIds: string[] | null, year: number, monthIdx: number) => void;
 };
 
 function YearBlock({
@@ -711,14 +712,10 @@ function GridRow({
               {isLeaf && editing ? (
                 <input type="number" value={val} onChange={(e) => setCell(row.id, year, i, Number(e.target.value) || 0)} className="w-16 rounded border border-slate-300 px-1 py-0.5 text-right text-input" />
               ) : (
-                // F3.14 — clic → Grand Livre filtré (LB+période pour une LB, période seule pour une catégorie)
-                <button
-                  onClick={() => openGl(isLeaf ? row.id : null, year, i)}
-                  className="w-full cursor-pointer text-right hover:text-brand-emerald hover:underline"
-                  title="Voir les écritures dans le Grand Livre"
-                >
+                // Montant budgété (lecture). Le clic d'ouverture du GL est sur la ligne RÉALISÉ.
+                <span className="text-right">
                   {val !== 0 ? formatEur(val) : <span className="text-slate-300">·</span>}
-                </button>
+                </span>
               )}
             </td>
           );
@@ -776,7 +773,14 @@ function GridRow({
               const over = r > (months[i] ?? 0); // BR-5.2 — dépassement en rouge
               return (
                 <td key={i} className={`px-2 py-1 text-right text-[11px] ${over ? "font-medium text-alert" : ""}`}>
-                  {r !== 0 ? formatEur(r) : <span className="text-slate-300">·</span>}
+                  {/* F3.14 — clic sur le réalisé → Grand Livre filtré (LB/feuilles + mois) */}
+                  <button
+                    onClick={() => openGl(ids, year, i)}
+                    className="w-full cursor-pointer text-right hover:text-brand-emerald hover:underline"
+                    title="Voir les écritures dans le Grand Livre"
+                  >
+                    {r !== 0 ? formatEur(r) : <span className="text-slate-300">·</span>}
+                  </button>
                 </td>
               );
             })}

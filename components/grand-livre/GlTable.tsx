@@ -96,6 +96,10 @@ export function GlTable({
     setFStatut("");
   }
 
+  // fLine peut cibler UNE LB ('id') ou une catégorie (ses feuilles : 'id1,id2,...').
+  const fLineIds = fLine ? fLine.split(",").filter(Boolean) : [];
+  const fLineSet = new Set(fLineIds);
+
   const filtered = entries.filter((e) => {
     const statut = allocationStatus(e);
     const year = Number(e.entry_date.slice(0, 4));
@@ -103,16 +107,19 @@ export function GlTable({
     if (fType && e.entry_type !== fType) return false;
     if (fYear && year !== Number(fYear)) return false;
     if (fMonth && month !== Number(fMonth)) return false;
-    if (fLine && e.line_id !== fLine) return false;
+    if (fLineSet.size > 0 && !(e.line_id && fLineSet.has(e.line_id))) return false;
     if (fBailleur && e.bailleur_id !== fBailleur) return false;
     if (fStatut && statut !== fStatut) return false;
     return true;
   });
 
-  // F5.11 — récap réalisé vs planifié quand on cible une maille (LB+année+mois).
-  const showSummary = Boolean(fLine && fYear && fMonth);
+  // F5.11 — récap réalisé vs planifié quand on cible une LB ou une catégorie (+année+mois).
+  const showSummary = Boolean(fLineIds.length && fYear && fMonth);
   const realiseDep = filtered.reduce((s, e) => (e.entry_type === "Dépense" ? s + Number(e.amount) : s), 0);
-  const planifie = planAmountByCell?.[`${fLine}:${fYear}:${fMonth}`] ?? 0;
+  const planifie = fLineIds.reduce((s, id) => s + (planAmountByCell?.[`${id}:${fYear}:${fMonth}`] ?? 0), 0);
+  const summaryLabel =
+    fLineIds.length === 1 ? lineLabel.get(fLineIds[0]) ?? fLineIds[0] : `Catégorie (${fLineIds.length} lignes)`;
+  const summaryComment = fLineIds.length === 1 ? commentByLine?.[fLineIds[0]] : undefined;
 
   async function onFile(file: File) {
     setError(null);
@@ -258,7 +265,7 @@ export function GlTable({
             <button
               onClick={() =>
                 initialFilters.line
-                  ? router.push(`/interne#lb-${initialFilters.line}`)
+                  ? router.push(`/interne#lb-${initialFilters.line.split(",")[0]}`)
                   : router.back()
               }
               className="inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
@@ -366,13 +373,13 @@ export function GlTable({
       {showSummary && (
         <div className="mb-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-base font-bold text-brand-night">
-            {lineLabel.get(fLine) ?? fLine}
+            {summaryLabel}
             <span className="ml-2 text-xs font-normal text-slate-400">
               {fYear}/{String(Number(fMonth)).padStart(2, "0")}
             </span>
           </div>
-          {commentByLine?.[fLine] && (
-            <p className="mt-1 text-sm italic text-slate-500">{commentByLine[fLine]}</p>
+          {summaryComment && (
+            <p className="mt-1 text-sm italic text-slate-500">{summaryComment}</p>
           )}
           <div className="mt-3 flex flex-wrap gap-6 text-sm">
             <div>
