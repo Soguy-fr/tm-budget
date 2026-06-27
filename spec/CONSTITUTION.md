@@ -12,7 +12,8 @@
 ONG par une application web, en gérant nativement la complexité du financement
 multi-bailleurs (une dépense interne financée par différents bailleurs selon les mois).
 
-**Utilisateur cible (MVP)** : un gestionnaire financier unique (mono-utilisateur).
+**Utilisateurs cibles** : une équipe avec rôles différenciés (voir P10). L'administration
+des comptes (attribution des rôles) se fait **depuis l'application**, pas depuis Supabase.
 
 **Stack** : Next.js (hébergé Vercel) + Supabase (Postgres). React Query / SWR pour le cache client.
 
@@ -54,11 +55,21 @@ pas à la date d'engagement ni d'échéance.
 Toute l'application travaille en **euros (€)**. Pas de multi-devises (le GL peut contenir
 des colonnes devise mais seules les colonnes en euros sont exploitées).
 
-### P7 — Édition par lot, pas cellule par cellule
+### P7 — Édition ligne par ligne (LB niveau 3)
 
-L'édition se fait via un **mode édition** explicite (bouton bascule). Les modifications
-sont accumulées côté client puis **envoyées en un seul lot** à la validation.
-Objectif : minimiser les appels base de données et garantir la cohérence des totaux.
+L'édition du prévisionnel interne (tableur de **Suivi interne** et de l'**onglet Édition de
+scénario**) se fait **une ligne budgétaire (niveau 3) à la fois**. *(Les pages Financement —
+dépenses/recettes prévues bailleur — gardent leur propre mode d'édition, hors périmètre de
+cette règle.)* Chaque LB niv.3 porte son propre bouton **Éditer** : il ouvre les 12 mois de
+la ligne en saisie (bleu).
+**Enregistrer** envoie cette ligne (upsert) immédiatement ; **une seule ligne est ouverte à
+la fois**. Objectif : éviter les erreurs quand trop de lignes seraient modifiables ensemble.
+
+**Cohérence des totaux (invariant) :** l'enregistrement d'une ligne est **refusé** tant que
+`Σ(12 mois) ≠ total planifié` de la ligne. Tant que l'écart subsiste, un **avertissement ⚠
+en tête de ligne** le signale. Le **total planifié** d'une LB n'est modifiable que dans un
+**scénario brouillon** ; sur le **scénario actif** il est en lecture seule (sécurité des
+données : pour le changer, dupliquer le scénario, modifier, réactiver — voir BR-1.4).
 
 ### P8 — Intégrité référentielle protégée
 
@@ -71,6 +82,32 @@ budget ou qu'une écriture du GL lui est assignée. Le renommage est autorisé m
 L'unité de temps est l'**année civile** (janvier → décembre). Un projet pluriannuel est
 une succession d'années civiles. Un bailleur dont la convention est décalée
 (ex : avril 2026 → mars 2028) est géré en laissant vides les mois non financés.
+
+### P10 — Rôles applicatifs (gouvernance)
+
+Quatre rôles, du plus large au plus restreint. Le rôle est attribué **depuis l'application**
+(écran de gestion des comptes), jamais en éditant Supabase directement.
+
+| Rôle               | Rôle métier                          |
+| ------------------ | ------------------------------------ |
+| `admin_systeme`    | Administrateur technique (tous droits) |
+| `directrice`       | Direction (gouvernance + activation)  |
+| `respo_financiere` | Responsable financière (production)   |
+| `observateur`      | Lecture seule                         |
+
+Droits décisifs (matrice complète en `FEATURES.md` F12.1) :
+
+- **Activer un scénario** (rendre actif le budget sur lequel portent tous les calculs et
+  le Suivi interne) : `admin_systeme` + `directrice` **uniquement**. La respo financière
+  peut créer/dupliquer/éditer des scénarios mais **pas** décider lequel est actif.
+- **Gérer les comptes/rôles** et la **Configuration** (structure budgétaire) :
+  `admin_systeme` + `directrice`.
+- **Clore le mois**, éditer les montants, gérer le GL et les financements :
+  `admin_systeme` + `directrice` + `respo_financiere`.
+- `observateur` : voit tout, ne modifie rien.
+
+Pas de double-validation des allocations (« quatre yeux ») : la respo financière alloue
+seule, sans confirmation de la direction.
 
 ## 3. Périmètre
 

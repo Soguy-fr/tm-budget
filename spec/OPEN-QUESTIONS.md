@@ -53,14 +53,17 @@ Probablement même logique que les LB (P8) : interdit tant que référencé, sin
 
 ## Décisions déjà verrouillées (rappel)
 
-- Devise unique (€), mono-utilisateur, année civile.
+- Devise unique (€), année civile.
+- **4 rôles** `admin_systeme/directrice/respo_financiere/observateur` (P10) ; gérés
+  depuis l'app ; **activer un scénario** = droit direction ; pas de double-validation.
 - Un seul bailleur par (LB × mois) ; cofinancement = partage des mois.
 - Source de vérité unique = budget interne ; bailleurs et réalisé en découlent.
 - Code = label libre, pas de renumérotation ; nouvelle ligne = numéro suivant.
 - Répartir : arrondi euro, reste sur le dernier mois, avertissement avant écrasement.
 - Suppression LB interdite si montant/écriture liés ; renommage propagé avec avertissement.
 - Réalisé = caisse (date de paiement).
-- Édition par lot (bouton Éditer) + Rafraîchir.
+- Édition **ligne par ligne** (un bouton Éditer par LB niv.3, save immédiat refusé si
+  Σ≠total) + Rafraîchir (P7, BR-9). Total verrouillé sur le scénario actif (BR-1.4).
 - Trésorerie : prévision glissante, option A ; solde initial saisi au 1er janv. 1re année.
 - Bailleurs = pages séparées même gabarit ; sur page interne, bailleur visible via code couleur,
   édition fine via ligne « ↳ bailleur » en mode édition.

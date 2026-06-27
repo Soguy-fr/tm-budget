@@ -66,6 +66,24 @@ Un conteneur de prévisionnel, nommé librement par l'utilisateur.
 - Tous les budgets internes partagent la même structure de LB (P2).
 - Dupliquer un budget copie l'intégralité de ses montants et assignations.
 - Un seul budget actif ; sélectionner un nouveau désactive le précédent.
+- `coverage_baseline` : base de **couverture** du scénario (financements déjà acquis,
+  repliés). Sert uniquement à la pseudo-trésorerie de couverture (2.2b, BR-12) ; n'alimente
+  PAS la trésorerie réelle.
+- Activer (`est_actif`) est un droit réservé direction (P10), distinct de créer/dupliquer.
+
+### 2.2b Financement prévisionnel & couverture de scénario
+
+Outil de **simulation** propre à un scénario : « mes financements couvrent-ils mes charges
+dans le temps ? », sans flécher chaque LB à un bailleur.
+
+- **Financement prévisionnel** : une recette simulée (`nom` libre ex « GIZ », `montant_total`)
+  avec sa **répartition mensuelle** multi-années. Indépendant des bailleurs réels.
+- **Pseudo-trésorerie de couverture** (BR-12.1) : cumul chaîné
+  `coverage_baseline + Σ recettes simulées − Σ dépenses`, mensuel et annuel. Négatif = trou.
+- **Couvert / restant à couvrir** par année (BR-12.2) : présenté dans la liste et l'édition
+  des scénarios.
+- **Conversion** (BR-12.3) : à l'activation, une ligne prévisionnelle peut devenir un
+  **financement réel** (2.5b) + ses recettes simulées deviennent des recettes prévues (2.7).
 
 ### 2.3 Période (année)
 
@@ -85,8 +103,10 @@ La maille atomique du prévisionnel de dépense.
 **Règles**
 
 - Un seul bailleur par maille (P4).
-- Le **total annuel saisi** d'une LB peut différer de la somme de ses 12 mois :
-  l'écart est affiché (rouge) et réconciliable via les boutons « Répartir » / « Mettre à jour le total » (voir BUSINESS-RULES).
+- Le **total planifié** d'une LB et la somme de ses 12 mois doivent être **égaux pour
+  enregistrer** : l'écart est affiché (rouge + ⚠) mais **jamais persisté** ; on le résout via
+  « Répartir » (ou, en brouillon, « Mettre à jour le total »). Le total est **modifiable
+  uniquement en scénario brouillon**, verrouillé sur le scénario actif (BR-1.1, BR-1.4).
 
 ### 2.5 Bailleur (acteur)
 

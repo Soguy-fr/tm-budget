@@ -30,9 +30,13 @@
 | ---- | -------------------------------------------------------------- | ----- | ------ |
 | F2.1 | Créer un budget nommé librement                                | 🟢    | —      |
 | F2.2 | Sélectionner le budget actif (un seul à la fois)               | 🟢    | —      |
-| F2.3 | Dupliquer le budget actif (copie montants + assignations)      | 🟢    | —      |
+| F2.3 | Dupliquer le scénario **sélectionné** (souvent l'actif) — copie montants + assignations + financements prévisionnels | 🟢 | —      |
 | F2.4 | Archiver un budget                                             | 🟡    | —      |
 | F2.5 | Saisir le solde initial de trésorerie (1er janvier, 1re année) | 🟢    | BR-7.1 |
+| F2.6 | **Onglet « Édition du scénario »** (dans /budgets) : tableur du scénario **sélectionné** (pas forcément l'actif). Réutilise édition ligne-par-ligne, afficher bailleur, +année, replier les mois, filtre année. **Sans** solde tréso ni suivi des dépenses | 🟢 | P7, P10 |
+| F2.7 | **Financements prévisionnels** (bloc sous le budget dépenses de l'onglet édition) : lignes (nom + montant) avec **répartition mensuelle** multi-années ; **solde initial de couverture** (`coverage_baseline`, ≠ initial_cash) ; **pseudo-trésorerie de couverture** (cumul mensuel/annuel) ; par année **charges / couvert / restant à couvrir** | 🟢 | BR-12.1, BR-12.2 |
+| F2.8 | **Conversion à l'activation** : proposer **ligne par ligne** de créer le financement réel (formulaire champs manquants) + copier la répartition en recettes prévues ; marquer la ligne convertie | 🟢 | BR-12.3 |
+| F2.9 | **Présentation d'un scénario** (carte/liste) : montant total **par année** + **couvert / restant à couvrir** | 🟢 | BR-12.2 |
 
 ## F3 — Prévisionnel interne (page tableur principale)
 
@@ -43,8 +47,8 @@
 | F3.3  | Ajouter / retirer une année (boutons)                                                                                                                  | 🟢    | BR-8.1         |
 | F3.4  | Total annuel + écart vs Σ mois (rouge si ≠)                                                                                                            | 🟢    | BR-1.1         |
 | F3.5  | Bouton « Répartir » (total → 12 mois, arrondi euro, reste sur dernier mois)                                                                            | 🟢    | BR-1.2         |
-| F3.6  | Bouton « Mettre à jour le total » (total = Σ mois)                                                                                                     | 🟢    | BR-1.3         |
-| F3.7  | Mode édition par lot (bouton Éditer) + Rafraîchir + garde-fou non-enregistré                                                                           | 🟢    | BR-9.1, BR-9.2 |
+| F3.6  | Bouton « Mettre à jour le total » (total = Σ mois) — **brouillon uniquement**                                                                          | 🟢    | BR-1.3         |
+| F3.7  | Édition **ligne par ligne** : bouton Éditer **par LB niv.3** (ouvre ses 12 mois, une seule ligne à la fois, Enregistrer = save immédiat, refusé si Σ≠total) + Rafraîchir + garde-fou non-enregistré | 🟢 | P7, BR-9.1, BR-9.2 |
 | F3.8  | Bouton « Afficher bailleur » → code couleur par cellule + légende                                                                                      | 🟢    | BR-2.3         |
 | F3.9  | Éditer l'assignation bailleur d'un (LB × mois)                                                                                                         | 🟢    | BR-2.1, BR-2.2 |
 | F3.10 | Bouton « Suivi des dépenses » → ligne réalisé sous la ligne prévue                                                                                     | 🟢    | BR-5.3         |
@@ -53,6 +57,7 @@
 | F3.13 | Total annuel du budget affiché dans l'entête de chaque année (Σ de toutes les LB niv.3)                                                                | 🟢    | BR-8.4         |
 | F3.14 | Clic sur une cellule de la ligne **réalisé** (et non budgété) → ouvre le Grand Livre filtré ; pour une **catégorie** (niv.1/2), filtre sur **toutes ses feuilles** descendantes (le GL accepte une liste de LB) + bloc d'analyse agrégé | 🟢 | — |
 | F3.15 | Tableur interne : bouton **« Replier les mois »** (masque les 12 colonnes, ne garde que le Total) + **filtre année** (afficher une seule année) | 🟢 | BR-8.2, BR-8.3 |
+| F3.16 | LB niv.3 en édition : boutons **Solde** (écart total−Σmois, cliquable pour copier la valeur à coller) + **Effacer** (vide les 12 mois) ; **avertissement ⚠ en tête de ligne** tant que Σ≠total ; total **verrouillé** sur le scénario actif | 🟢 | BR-1.4, BR-1.5, BR-1.6 |
 
 ## F4 — Financement (pages dédiées, même gabarit que l'interne)
 
@@ -145,8 +150,8 @@
 
 | #     | Fonctionnalité                                   | Phase | Règles |
 | ----- | ------------------------------------------------ | ----- | ------ |
-| F10.1 | Authentification (mono-utilisateur au départ)    | 🟢    | —      |
-| F10.2 | Multi-utilisateurs + rôles (admin/lecteur) + RLS | 🔵    | —      |
+| F10.1 | Authentification (email/lien Supabase Auth)      | 🟢    | —      |
+| F10.2 | Multi-utilisateurs + 4 rôles + RLS (voir F12.1)  | 🟢    | P10    |
 | F10.3 | Real-time (édition concurrente)                  | 🔵    | —      |
 
 ## F11 — Clôture mensuelle
@@ -161,13 +166,41 @@
 
 | #     | Fonctionnalité                                                                                                               | Phase | Règles  |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------- | ----- | ------- |
-| F12.1 | Rôles admin / gestionnaire / lecteur : matrice de permissions + RLS + gardes server actions                                  | 🟢    | —       |
-| F12.2 | Piste d'audit (triggers DB sur 8 tables) + page /audit admin-only, diff des champs                                           | 🟢    | —       |
+| F12.1 | Rôles `admin_systeme` / `directrice` / `respo_financiere` / `observateur` : matrice de permissions (ci-dessous) + RLS + gardes server actions ; l'**activation** d'un scénario est un droit séparé (admin_systeme + directrice) | 🟢 | P10 |
+| F12.2 | Piste d'audit (triggers DB sur 8 tables) + page /audit (`admin_systeme` + `directrice`), diff des champs                      | 🟢    | P10     |
 | F12.3 | Détection de doublons à l'import GL (même date + montant + libellé similaire) ; import sans doublons ou forcé                | 🟢    | —       |
 | F12.4 | Contrôles d'éligibilité bailleur : hors convention, LB non mappée, plafond conventionné (`montant_conventionne`, Q4)         | 🟢    | —       |
 | F12.5 | Détection d'anomalies GL : montant inhabituel (> 2σ vs historique LB), paiement week-end, montant rond répété — non bloquant | 🟢    | —       |
-| F12.6 | Double validation des allocations : allocation par non-admin = « À confirmer », confirmation admin                           | 🟢    | —       |
+| F12.6 | ~~Double validation des allocations~~ — **supprimée** : la respo financière alloue seule, sans confirmation. Le flux « À confirmer » et la colonne `confirmed` sont retirés. | ⛔ | P10 |
+| F12.8 | **Gestion des comptes depuis l'app** (admin_systeme + directrice) : écran listant les utilisateurs Auth existants + attribution du rôle (`directrice`/`respo_financiere`/`observateur` ; `admin_systeme` réservé). Création/suppression des comptes restent côté Supabase Auth. | 🟢 | P10 |
 | F12.7 | Pack audit bailleur : export CSV multi-sections (convention, synthèse, mapping, recettes, écritures)                         | 🟢    | BR-10.1 |
+
+### Matrice de permissions (F12.1, P10)
+
+| Action                                   | admin_systeme | directrice | respo_financiere | observateur |
+| ---------------------------------------- | :-----------: | :--------: | :--------------: | :---------: |
+| Gérer les comptes / rôles (F12.8)        |       ✓       |     ✓      |        ✗         |      ✗      |
+| Configuration — structure budgétaire     |       ✓       |     ✓      |        ✗         |      ✗      |
+| Créer / dupliquer un scénario            |       ✓       |     ✓      |        ✓         |      ✗      |
+| **Activer** un scénario                  |       ✓       |     ✓      |        ✗         |      ✗      |
+| Éditer les montants (Suivi interne)      |       ✓       |     ✓      |        ✓         |      ✗      |
+| Éditer un scénario brouillon             |       ✓       |     ✓      |        ✓         |      ✗      |
+| Gérer financements / bailleurs / mapping |       ✓       |     ✓      |        ✓         |      ✗      |
+| GL : import / allocation                 |       ✓       |     ✓      |        ✓         |      ✗      |
+| Clore / réouvrir un mois                 |       ✓       |     ✓      |        ✓         |      ✗      |
+| Purge annuelle                           |       ✓       |     ✓      |        ✗         |      ✗      |
+| Consulter l'audit                        |       ✓       |     ✓      |        ✗         |      ✗      |
+| Tout voir (lecture)                      |       ✓       |     ✓      |        ✓         |      ✓      |
+
+> **Activation = droit séparé.** La respo financière produit les scénarios (création,
+> duplication, édition, recettes prévisionnelles) ; seule la direction décide lequel
+> devient **actif**. L'activation ne peut donc PAS être protégée par la seule RLS de la
+> table `budgets` (qui autorise aussi la création par la respo) : le passage `is_active`
+> est gardé par un **trigger** + une **server action dédiée** (`current_app_role()`).
+>
+> **Idem pour la purge (F9.2) et la gestion des rôles (F12.8)** : les writes sous-jacents
+> sont permis par la RLS opérationnelle, mais ces actions « direction seule » sont gardées
+> au niveau **server action** (contrôle `current_app_role() in (admin_systeme,directrice)`).
 
 ## F13 — IA (OpenRouter)
 

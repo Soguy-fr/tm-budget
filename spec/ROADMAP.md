@@ -7,7 +7,8 @@
 
 - **Frontend** : Next.js (App Router) sur Vercel.
 - **Base** : Supabase (Postgres) — free tier pour le MVP, upgrade Pro si le client valide.
-- **Cache client** : React Query (ou SWR) — clé de la stratégie « édition par lot » (P7).
+- **Cache client** : React Query (ou SWR) — sert l'édition **ligne par ligne** (P7, refondue
+  au Lot 3 : save immédiat par LB niv.3).
 - **Tableur** : composant maison ou librairie grille (à arbitrer : AG Grid Community / TanStack Table).
 - **Graphiques** (Phase 2) : Recharts.
 
@@ -31,8 +32,12 @@
 
 - Tableur multi-années (accordéon), saisie mensuelle.
 - Totaux + écarts rouges (BR-1.1), Répartir (BR-1.2), Mettre à jour total (BR-1.3).
-- Mode édition par lot + Rafraîchir + garde-fou non-enregistré (BR-9).
+- Mode édition + Rafraîchir + garde-fou non-enregistré (BR-9).
 - **C'est le cœur technique.** Tester l'arrondi de répartition (reste sur dernier mois).
+
+> ⚠️ **Refondu au Lot 3 (Jalon 16, Chantier 2)** : l'« édition par lot » de ce jalon est
+> remplacée par l'**édition ligne par ligne** (save immédiat par LB niv.3, Σ=total bloquant,
+> total verrouillé sur l'actif). Voir P7, BR-1.1/1.4, BR-9.
 
 ## Jalon 4 — Assignation bailleur (1,5 jour) → F3.8, F3.9
 
@@ -130,9 +135,29 @@ Retours utilisateur post-démo. Specs MAJ avant chaque étape, commit par étape
    Grand livre [date début–fin] / Dashboard [par année]) générant un **fichier XLSX
    multi-onglets**. Remplace l'ancien « Pack audit CSV ».
 
+## Jalon 16 — Lot 3 « Gouvernance & scénarios » (2026-06-26)
+
+Retours utilisateur. **Specs MAJ avant implémentation** (fait), commit par chantier.
+Migrations **0009** (rôles) et **0010** (scénario : financements prévisionnels + couverture).
+
+1. **Chantier 1 — Rôles & comptes** (P10, F12.1, F12.8) : 4 rôles
+   `admin_systeme / directrice / respo_financiere / observateur`. Migration 0009 (mapping
+   anciens→nouveaux, RLS par niveau, `confirmed` déprécié). Réécrire `lib/roles.ts` +
+   `getRole`. Écran **gestion des comptes** dans Configuration (lister users Auth, attribuer
+   rôle ; admin_systeme verrouillé). **Activation de scénario** = server action gardée
+   (admin_systeme/directrice). Retrait du flux « quatre yeux » (F12.6).
+2. **Chantier 2 — Édition ligne-par-ligne** (P7, BR-1.1/1.3/1.4/1.5/1.6, BR-9, F3.7/F3.16) :
+   un bouton Éditer **par LB niv.3**, une ligne à la fois, save immédiat **refusé si Σ≠total**,
+   ⚠ en tête de ligne, boutons **Solde**/**Effacer**. Total **verrouillé** sur l'actif.
+3. **Chantier 3 — Onglet Édition de scénario** (F2.6) : tableur du scénario sélectionné
+   (réutilise §3), sans tréso ni suivi dépenses.
+4. **Chantier 4 — Financements prévisionnels & couverture** (F2.7/F2.8/F2.9, BR-12,
+   tables 0010) : bloc recettes simulées + pseudo-trésorerie + couvert/restant par année ;
+   **conversion** à l'activation. **Zone danger déplacée** /budgets → Configuration.
+
 ## Phase 3 — industrialisation
 
-- Multi-utilisateurs + rôles + RLS (F10.2).
+- ~~Multi-utilisateurs + rôles + RLS (F10.2)~~ → **avancé au Lot 3** (Chantier 1).
 - Real-time édition concurrente (F10.3).
 - Sauvegardes/restauration (F9.3), dashboard complet (F8.4).
 
@@ -142,7 +167,7 @@ Retours utilisateur post-démo. Specs MAJ avant chaque étape, commit par étape
 
 - **MVP (Jalons 0–8)** : ~16 jours-homme. Réaliste sur ~4 semaines en solo, plus court avec Nathan.
 - Risque principal : le **tableur interactif** (Jalons 3–4). Tout le reste est standard.
-  → arbitrer tôt le choix de la grille (TanStack Table recommandé pour le contrôle fin de l'édition par lot).
+  → arbitrer tôt le choix de la grille (TanStack Table recommandé pour le contrôle fin de l'édition ligne par ligne).
 
 ## Définition de « terminé » (par jalon)
 

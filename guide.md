@@ -16,13 +16,14 @@ Ouvre l'appli dans ton navigateur et connecte-toi avec ton email. C'est tout. Pa
 
 ### Les rôles : qui peut faire quoi
 
-Chaque membre de l'équipe a un rôle :
+Chaque membre de l'équipe a un rôle (attribué directement dans l'appli, page **Configuration**) :
 
-- **Admin** — la cheffe d'orchestre (souvent la coordinatrice ou la responsable financière). Elle peut tout faire : modifier la structure, créer des budgets, clore les mois, gérer les rôles.
-- **Gestionnaire** — saisit les montants, importe la compta, alloue les dépenses. Par exemple, la chargée de suivi à Yaoundé ou la consultante finance à Bruxelles.
-- **Lecteur** — regarde mais ne touche pas. Parfait pour le conseil d'administration ou un bailleur curieux.
+- **Admin système** — l'administrateur technique. Tous les droits, y compris la gestion des comptes. C'est le rôle de la personne qui a installé l'outil.
+- **Directrice** — la gouvernance. Elle gère les comptes, la structure budgétaire, et surtout : **c'est elle qui décide quel scénario est actif** — celui que toute l'appli affiche et sur lequel reposent tous les calculs.
+- **Responsable financière** — la production au quotidien. Elle crée et bidouille autant de scénarios qu'elle veut, saisit les montants, importe la compta, alloue les dépenses, clôt les mois. Une seule chose lui échappe : **activer** un scénario (ça, c'est la directrice).
+- **Observateur** — regarde mais ne touche à rien. Parfait pour le conseil d'administration ou un bailleur curieux.
 
-> ⚠️ **Attention** : quand une gestionnaire alloue une dépense, l'allocation est marquée « À confirmer » jusqu'à validation par l'admin. C'est le principe des quatre yeux : deux personnes valent mieux qu'une, surtout à 6 000 km de distance.
+> 💡 **Bon à savoir** : la responsable financière alloue les dépenses **seule**, sans validation. La piste d'audit garde la trace de qui a fait quoi — la confiance, mais tracée.
 
 ### La règle d'or des couleurs
 
@@ -66,12 +67,28 @@ Chaque ligne a aussi une **Description** (colonne visible directement dans Confi
 
 *Page : Scénario*
 
-Un « budget » ici, c'est un scénario complet de prévisionnel. Tu peux en avoir plusieurs (« Budget 2026 v1 », « Budget 2026 révisé juin »), mais **un seul est actif** à la fois — c'est lui que toute l'appli affiche.
+Un « budget » ici, c'est un scénario complet de prévisionnel. Tu peux en avoir plusieurs (« Budget 2026 v1 », « Budget 2026 révisé juin »), mais **un seul est actif** à la fois — c'est lui que toute l'appli affiche et sur lequel reposent tous les calculs. La page a deux onglets : **Liste** (créer / dupliquer / activer) et **Édition** (peaufiner un scénario).
 
 ### Créer ou dupliquer
 
 - **Créer** : nouveau budget vide, nomme-le clairement (« Budget 2026 — version AG »).
-- **Dupliquer** : copie intégrale du budget actif, montants et bailleurs compris. C'est LE bon réflexe avant une grosse révision : tu dupliques, tu bidouilles la copie, et si l'assemblée générale valide, tu actives la nouvelle version.
+- **Dupliquer** : copie intégrale du scénario sélectionné (souvent l'actif) — montants, bailleurs et financements prévisionnels compris. C'est LE bon réflexe avant une grosse révision : tu dupliques, tu bidouilles la copie, et si l'assemblée générale valide, tu actives la nouvelle version.
+
+> 🔑 **Qui active ?** Créer et bidouiller des scénarios : tout le monde (sauf observateur). Mais **rendre un scénario actif**, c'est réservé à la **directrice** (et à l'admin système). C'est la décision qui engage : on choisit posément.
+
+### L'onglet Édition : peaufiner un scénario
+
+Tu sélectionnes un scénario (même non actif) et tu l'édites comme le Suivi interne : édition ligne par ligne, couleur bailleur, ajout d'année, replier les mois, filtrer une année. Ici, contrairement au Suivi interne, tu peux **modifier les totaux** des lignes — c'est l'atelier où l'on prépare. (Pas de trésorerie ni de suivi des dépenses dans cet onglet : ça, c'est pour observer l'actif.)
+
+### Les financements prévisionnels : « ai-je de quoi payer tout ça ? »
+
+Sous le budget de dépenses, un bloc te laisse **simuler tes recettes**. Le principe : tu pars d'un **solde initial de couverture** (tous les financements déjà acquis à ce jour, repliés en un seul chiffre — inutile d'en détailler le passé), puis tu ajoutes des **lignes de financement prévisionnel** : « GIZ, 50 000 € », réparties mois par mois sur les années.
+
+L'appli calcule alors une **pseudo-trésorerie de couverture** : solde initial + recettes simulées − dépenses, cumulé dans le temps. Sa magie : elle gère les financements qui **démarrent en cours d'année, glissent sur plusieurs années ou se chevauchent**, sans que tu aies à flécher chaque ligne budgétaire à un bailleur. Là où le cumul plonge dans le **rouge**, c'est un trou de financement à cette date précise.
+
+Concrètement, tu lis pour chaque année : **le total des charges**, **le pourcentage couvert** et **ce qu'il reste à trouver**. Exemple : « avec GIZ tu couvres 81 % de 2026, il manque 11 200 € ; et 27 000 € pour boucler 2027 ». Tu ajoutes une ligne, tu vois tout de suite l'effet. C'est ton bac à sable pour aller chercher les bons bailleurs.
+
+> 💡 **Et quand le financement tombe pour de vrai ?** Le jour où tu obtiens GIZ et que tu actives le scénario, l'appli te demande, ligne par ligne : « Créer le financement GIZ de 50 000 ? ». Si oui, elle te fait compléter les infos manquantes (référence, bailleur, couleur, dates d'éligibilité) et crée le vrai financement — avec ses recettes prévues déjà remplies. Ta simulation devient réalité sans ressaisie.
 
 ### Le solde initial de trésorerie
 
@@ -87,17 +104,21 @@ Un « budget » ici, c'est un scénario complet de prévisionnel. Tu peux en avo
 
 C'est le grand tableur : tes lignes budgétaires en lignes, les 12 mois en colonnes, une section par année (repliable).
 
-### Le mode édition
+### Le mode édition : une ligne à la fois
 
-Clique sur **Éditer** : les cases passent en bleu, tu saisis. Tes modifications s'accumulent sans toucher la base. Clique sur **Enregistrer** : tout part d'un coup. Un garde-fou te retient si tu essaies de quitter la page avec des modifications non enregistrées.
+Fini le grand mode édition qui ouvre tout le tableau d'un coup (trop d'erreurs quand il y a 50 lignes modifiables en même temps). Désormais **chaque ligne budgétaire (niveau 3) a son propre bouton Éditer**. Tu cliques : seules les 12 cases de **cette** ligne passent en bleu. Tu saisis, tu cliques **Enregistrer** : cette ligne part toute seule. Tu ne peux ouvrir qu'**une ligne à la fois** — un garde-fou te retient si tu essaies d'en ouvrir une autre (ou de quitter la page) sans avoir enregistré.
+
+> ⚠️ **La règle d'équilibre** : tu ne peux pas enregistrer une ligne tant que la **somme de ses 12 mois ≠ son total**. Un gros ⚠ s'affiche tout à gauche de la ligne tant que ça ne tombe pas juste. Deux outils t'aident : **Effacer** (remet les 12 mois à zéro pour repartir propre) et **Solde** (affiche ce qu'il reste à placer — clique pour copier le chiffre et colle-le dans le mois de ton choix). Exemple : total 10 000, tu mets 4 000 en janvier et 4 000 en juillet → Solde affiche 2 000 → tu copies, tu colles en décembre → c'est équilibré, tu peux enregistrer.
+
+> 🔒 **Le total est verrouillé sur le scénario actif.** Sur le budget actif, tu ne peux **plus changer le total** d'une ligne (sécurité : on ne bricole pas les chiffres de référence par accident). Tu n'ajustes que la répartition mensuelle. Besoin de changer un total ? **Duplique** le scénario, modifie la copie, et **active**-la (voir la page Scénario).
 
 ### Total annuel et bouton « Répartir »
 
 Tu connais souvent le total annuel avant le détail mensuel. Exemple : l'atelier leadership de Kribi coûtera 6 000 € dans l'année.
 
-1. Saisis 6 000 dans la colonne Total.
+1. Saisis 6 000 dans la colonne Total (possible uniquement dans un **scénario brouillon** ; sur l'actif le total est verrouillé).
 2. Si la somme des mois ne colle pas, la cellule passe en **rouge** avec l'écart affiché.
-3. Deux issues : **Répartir** (l'appli étale 500 €/mois — le dernier mois absorbe l'arrondi) ou **Mettre à jour le total** (le total devient la somme des mois).
+3. Deux issues : **Répartir** (l'appli étale 500 €/mois — le dernier mois absorbe l'arrondi) ou, **en brouillon seulement**, **Mettre à jour le total** (le total devient la somme des mois). Sur le scénario actif, seul **Répartir** (et la saisie des mois) reste disponible.
 
 Pour des dépenses ponctuelles (la mission fluviale, c'est en mars et avril, pas en janvier), saisis directement dans les bons mois.
 
@@ -280,7 +301,7 @@ L'assistant **lit tes vraies données** via des outils fermés — il n'invente 
 
 ## Qui a fait quoi : l'audit
 
-*Page : Audit (admin uniquement)*
+*Page : Audit (admin système et directrice)*
 
 Chaque modification — un montant changé, une allocation déplacée, une écriture supprimée — est enregistrée automatiquement : quoi, quand, qui, ancienne valeur → nouvelle valeur.
 
@@ -290,7 +311,7 @@ Chaque modification — un montant changé, une allocation déplacée, une écri
 
 ## La fin d'année : archiver et repartir
 
-*Page : Scénario, zone de purge*
+*Page : Configuration, zone de purge (en bas)*
 
 Une fois l'exercice bouclé, exporté et rapporté :
 

@@ -5,16 +5,21 @@
 
 ## 1. Réconciliation total annuel ↔ somme des mois (LB niveau 3)
 
-### BR-1.1 — Affichage de l'écart
+### BR-1.1 — Écart total ↔ mois : affiché ET bloquant à l'enregistrement
 Pour une LB sur une année :
 ```
-écart = total_annuel_saisi − Σ(montants des 12 mois)
+écart = total_planifié − Σ(montants des 12 mois)
 ```
 - Si `écart == 0` : la cellule « Total » s'affiche en couleur normale.
 - Si `écart ≠ 0` : la cellule « Total » passe en **rouge** et l'écart est affiché
-  **dans la même cellule** (ex : « 30 000 (+250) »).
-- Pas de colonnes dédiées « Σ mois » ni « Écart » dans le tableur (jugées inutiles) :
-  l'information d'écart vit dans la cellule Total.
+  **dans la même cellule** (ex : « 30 000 (+250) ») ; **un avertissement ⚠ apparaît tout
+  à gauche de la ligne**.
+- **Enregistrement bloqué (nouveau)** : on ne peut PAS enregistrer une ligne dont
+  `écart ≠ 0`. L'écart n'est donc jamais persisté — c'est un état transitoire d'édition
+  à résoudre avant de sauver (via Répartir, saisie manuelle, ou — en brouillon seulement —
+  « Mettre à jour le total »). En cas de save multi-lignes refusé, **lister les LB fautives**.
+- Pas de colonnes dédiées « Σ mois » ni « Écart » dans le tableur : l'info vit dans la
+  cellule Total + l'avertissement de ligne.
 
 ### BR-1.2 — Bouton « Répartir »
 Répartit le `total_annuel_saisi` également sur les 12 mois (ou sur les mois actifs du bailleur si filtré).
@@ -25,8 +30,30 @@ montant_mois = arrondi_euro(total / n_mois)
   Ex : 100 000 / 12 = 8 333 ; mois 1..11 = 8 333 ; mois 12 = 8 337 (100 000 − 11×8 333).
 - **Écrasement** : si des montants existent déjà, afficher un **avertissement de confirmation** avant d'écraser.
 
-### BR-1.3 — Bouton « Mettre à jour le total »
-Recalcule `total_annuel_saisi = Σ(12 mois)`. Remet l'écart à 0 et la cellule en couleur normale.
+### BR-1.3 — Bouton « Mettre à jour le total » (brouillon uniquement)
+Recalcule `total_planifié = Σ(12 mois)`. Remet l'écart à 0 et la cellule en couleur normale.
+**Disponible uniquement dans l'édition d'un scénario brouillon** (où le total est modifiable).
+**Absent en Suivi interne** sur le scénario actif, où le total est verrouillé (BR-1.4) :
+il ne reste que « Répartir » et la saisie des mois pour atteindre `écart = 0`.
+
+### BR-1.4 — Total planifié verrouillé sur le scénario actif
+Le **total planifié** d'une LB (`budget_line_totals.total_input`, ou Σ mois si absent) n'est
+modifiable que tant que le scénario est un **brouillon** (non actif). Dès qu'un scénario
+devient **actif**, ses totaux planifiés passent en **lecture seule** partout (Suivi interne).
+Pour modifier un total sur l'actif : **dupliquer** le scénario, modifier le total dans la
+copie, puis **réactiver** la copie. Objectif : protéger les données de référence d'une
+modification accidentelle. Sur l'actif, seule la **répartition mensuelle** reste éditable
+(la respo financière ajuste les mois ; `Σ mois` doit retomber sur le total verrouillé, BR-1.1).
+
+### BR-1.5 — Bouton « Solde » (par ligne, en édition)
+Sur une LB niv.3 en édition, le bouton **Solde** affiche `solde = total_planifié − Σ(12 mois)`
+(le « reste à placer »). La valeur est **cliquable pour la copier** : l'utilisateur la colle
+dans le mois de son choix pour équilibrer sans erreur de calcul. Exemple : total 10 000,
+janvier 4 000 + juillet 4 000 → Solde = 2 000, copié puis collé en décembre → écart = 0.
+
+### BR-1.6 — Bouton « Effacer » (par ligne, en édition)
+Sur une LB niv.3 en édition, **Effacer** remet ses **12 mois à 0** (le `total_planifié` est
+conservé). Sert à repartir d'une feuille mensuelle vierge pour ressaisir la répartition.
 
 ## 2. Assignation bailleur (LB × mois)
 
@@ -322,16 +349,23 @@ Recalculé en direct en mode édition. Quand la couche « Suivi des dépenses »
 active, l'entête affiche aussi le **réalisé annuel** à côté du budget annuel,
 en **rouge** si réalisé > budget (dépassement).
 
-## 9. Édition par lot (P7)
+## 9. Édition ligne par ligne (P7)
 
-### BR-9.1 — Cycle d'édition
-1. Clic « Éditer » → tous les champs saisissables passent en écriture (bleu).
-2. L'utilisateur modifie ; les changements sont accumulés **côté client**.
-3. Clic « Éditer » (re-bascule) ou « Enregistrer » → envoi **groupé** (upsert) + recalcul des totaux.
-4. Bouton « Rafraîchir » → re-fetch depuis la base (résout tout doute de désynchronisation).
+### BR-9.1 — Cycle d'édition (par LB niveau 3)
+1. Chaque LB niv.3 porte son bouton **Éditer**. Clic → les **12 mois de cette ligne**
+   passent en saisie (bleu). **Une seule ligne ouverte à la fois** (ouvrir une autre ligne
+   demande de fermer/enregistrer la courante).
+2. L'utilisateur saisit les mois (et, en **brouillon** seulement, le total). Outils de la
+   ligne en édition : **Répartir** (BR-1.2), **Solde** (BR-1.5), **Effacer** (BR-1.6),
+   et — brouillon uniquement — **Mettre à jour le total** (BR-1.3).
+3. Clic **Enregistrer** → upsert **immédiat** de cette ligne + recalcul des totaux.
+   **Refusé si `écart ≠ 0`** (BR-1.1) : la ligne reste ouverte, l'avertissement ⚠ persiste.
+   **Annuler** ferme sans sauver.
+4. Bouton **Rafraîchir** → re-fetch depuis la base (résout tout doute de désynchronisation).
 
 ### BR-9.2 — Garde-fou
-Indicateur « modifications non enregistrées » + confirmation avant de quitter la page si des changements sont en attente.
+Indicateur « ligne non enregistrée » sur la ligne ouverte + confirmation avant de quitter
+la page (ou d'ouvrir une autre ligne) si la ligne courante a des changements en attente.
 
 ## 10. Export & purge
 
@@ -370,3 +404,46 @@ Sur un mois clos :
 - toute modification exige une **réouverture** explicite du mois (action tracée,
   avec confirmation), puis une re-clôture.
 Objectif : ce qui a été reporté (bailleur, CA) ne peut plus bouger silencieusement.
+
+## 12. Couverture de scénario (pseudo-trésorerie de simulation)
+
+> Outil de **simulation** propre à un scénario (brouillon ou actif), distinct de la
+> trésorerie réelle (section 7) et de la page Trésorerie (BR-7.7). But : vérifier si les
+> **financements couvrent les charges dans le temps**, sans flécher chaque LB à un bailleur.
+> Gère naturellement les financements **glissants / décalés / multi-annuels**.
+
+### BR-12.1 — Cumul de couverture
+Entrées : `coverage_baseline` (financements déjà acquis, repliés) + les lignes
+`scenario_financing` (recettes simulées, réparties par mois) − les dépenses du budget
+(`Σ budget_monthly.amount` toutes LB du mois). Dans l'ordre chronologique (toutes années) :
+```
+recettes_mois = Σ scenario_financing_monthly.amount du mois
+dépenses_mois = Σ budget_monthly.amount du mois (toutes LB)
+cumul_mois    = cumul_mois_précédent + recettes_mois − dépenses_mois
+                (cumul du tout 1er mois = coverage_baseline + recettes − dépenses)
+```
+Un **solde de couverture mensuel ET annuel** est affiché. `cumul_mois < 0` → **rouge**
+(les financements ne couvrent pas les charges à cette date = trou de financement).
+
+### BR-12.2 — Couvert / Restant à couvrir (par année)
+Pour présenter un scénario (liste ET onglet édition), par année N :
+```
+charges(N)          = Σ dépenses de l'année N
+restant_à_couvrir(N) = max(0, − min(cumul_mois) sur les mois jusqu'à fin N)
+                       (l'ampleur du point le plus bas atteint par le cumul d'ici fin N)
+couvert(N) %         = 100 × (1 − restant_à_couvrir(N) / charges_cumulées(N))   (clampé 0..100)
+```
+Lecture : *« avec le financement X tu couvres 80 % de 2027, il manque 27 000 € pour finir
+l'année »*. Si le cumul ne passe jamais sous 0, `restant_à_couvrir = 0` → couverture complète.
+
+### BR-12.3 — Conversion à l'activation
+Quand on **active** un scénario portant des lignes `scenario_financing` **non converties**
+(`converted_bailleur_id is null`), l'app **propose, ligne par ligne** : « Créer le financement
+\<nom\> de \<montant\> ? ». Si oui :
+1. formulaire pour **compléter les champs manquants** du financement réel (référence,
+   bailleur/acteur, couleur, dates d'éligibilité, description) ;
+2. création d'un `bailleurs` (financement réel) + **copie** de la répartition mensuelle
+   (`scenario_financing_monthly`) en **recettes prévues** (`bailleur_income_monthly`) ;
+3. la ligne `scenario_financing` est marquée **convertie** (`converted_bailleur_id` posé) —
+   elle n'est plus reproposée. Refuser une ligne la laisse en simulation.
+L'activation elle-même (passage `is_active`) reste réservée `admin_systeme`/`directrice` (P10).

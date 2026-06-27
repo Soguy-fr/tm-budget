@@ -50,6 +50,10 @@ Ces points ne sont pas des « améliorations » mais des trous à boucher avant 
 > rapprochement bancaire, page /cloture), C5 (pack audit CSV), C6 (double
 > validation des allocations), I1 (catégorisation IA OpenRouter), I2 (chatbot
 > outils typés, page /chat + /api/chat).
+>
+> 🔄 **Refondu au Lot 3 (2026-06-26)** : U1 — modèle de rôles remplacé par les **4 rôles**
+> `admin_systeme/directrice/respo_financiere/observateur` (P10, migration 0009), gérés
+> depuis l'app (F12.8). C6 — **double-validation supprimée** (la respo alloue seule).
 
 ## 3. Multi-utilisateurs & collaboration (10 personnes)
 

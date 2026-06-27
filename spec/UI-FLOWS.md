@@ -20,7 +20,8 @@ Nomenclature des entrées de menu (les routes techniques restent inchangées) :
 > **Financement** : route renommée `/bailleurs` → `/financements` (Lot 2). Le menu liste
 > les financements (fonds) ; un onglet « Bailleurs » liste les acteurs (F4.14).
 
-- **Scénario** : on y teste plusieurs budgets (créer / dupliquer / activer).
+- **Scénario** : onglets **Liste** (créer / dupliquer / activer, avec couverture par année)
+  et **Édition** (éditer le scénario sélectionné + financements prévisionnels). Voir §3b.
 - **Configuration** : structure budgétaire + futurs réglages. Toujours en bas du menu.
 
 ```
@@ -62,10 +63,28 @@ Code     Intitulé              Description (comment, tronqué…)   [+ Ligne] [
   uniquement** (échange `sort_order`). Le **code n'est jamais renuméroté** (P3) :
   seul l'ordre d'affichage change.
 
-> **Purge annuelle (F9.2)** — bouton en zone danger de la page **Scénario**.
-> Remet à zéro les données transactionnelles (mailles, totaux saisis, écritures GL,
-> recettes/dépenses bailleur). La **structure des LB et les bailleurs sont conservés**
-> (P2). Irréversible → **double confirmation** (saisir le mot « PURGER »). Exporter
+### 2b. Gestion des comptes (F12.8) — dans Configuration
+
+Onglet/section de **Configuration**, visible uniquement par `admin_systeme` et `directrice`.
+
+```
+Comptes utilisateurs
+  Email                          Rôle
+  guillaume@shauri.cc            Admin système      (verrouillé)
+  mireille@terramucho.org        Directrice         [▼]
+  diane@terramucho.org           Respo financière   [▼]
+  …                              Observateur        [▼]
+```
+- Liste les utilisateurs **Auth existants** (lecture via server action admin).
+- Le menu déroulant attribue `directrice` / `respo_financiere` / `observateur`.
+  `admin_systeme` n'est pas attribuable depuis l'UI (réservé, verrouillé).
+- **Création/suppression** d'un compte = côté Supabase Auth (hors app).
+
+> **Zone danger → déplacée dans Configuration** (Lot scénarios). La page **Scénario**
+> n'a plus de zone danger. La **purge annuelle (F9.2)** vit désormais en bas de
+> **Configuration** : remet à zéro les données transactionnelles (mailles, totaux saisis,
+> écritures GL, recettes/dépenses bailleur). La **structure des LB et les bailleurs sont
+> conservés** (P2). Irréversible → **double confirmation** (saisir « PURGER »). Exporter
 > avant (F9.1).
 
 ## 3. Page « Budget interne » — le tableur principal (F3, F7)
@@ -77,16 +96,18 @@ Sous le titre du budget : boutons d'accordéon des lignes (BR-8.3) —
 catégorie. L'entête de chaque année affiche le **total annuel du budget** (BR-8.4).
 
 ```
-[Éditer] [Répartir] [Afficher bailleur] [Suivi des dépenses] [Solde tréso ▼ Budgété|Réel]
+[Afficher bailleur] [Suivi des dépenses] [Solde tréso ▼ Budgété|Réel] [Replier mois] [Année ▼]
 Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
 
 ▼ 2026   Total 52 800 · réalisé 41 200        [retirer année]
   Code   Ligne              Total            Jan  Fev  ... Déc
   1      Operating Costs    52 800
    1.1   Core Team          69 600
-    1.1.1 Director           30 000 (+250)*   2500 2500 ... 2500
+    1.1.1 Director           30 000 (+250)*   2500 2500 ... 2500   [Éditer]
+   ⚠1.1.2 Programme Manager  21 600 (+300)*   …                    [Éditer]   ← ⚠ si Σ≠total
           ↳ réalisé**         28 900           938  ...        ← si "Suivi" activé
-    1.1.2 Programme Manager  21 600           [cellules colorées par bailleur si activé]
+   (en édition d'une ligne :) [Répartir] [Solde: 2000⧉] [Effacer] [Enregistrer] [Annuler]
+                              (brouillon : + [Mettre à jour le total])
   ...
   ─────────────────────────────────────────────────
   Solde trésorerie (Budgété)†                  -11200 37600 ...    ← si activé, masquable
@@ -108,15 +129,64 @@ Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
   2026. Recalcul en direct quand on édite une valeur.
 
 ### Cellule « Total » d'une LB
-- Normale si total = Σ mois ; **rouge + écart affiché** sinon (BR-1.1).
-- Bouton « Répartir » (répartit le total) et « Mettre à jour le total » (total = Σ mois).
+- Normale si total = Σ mois ; **rouge + écart affiché + ⚠ en tête de ligne** sinon (BR-1.1) ;
+  l'enregistrement de la ligne est **bloqué** tant que l'écart subsiste.
+- Bouton « Répartir » (répartit le total). « Mettre à jour le total » (total = Σ mois)
+  **uniquement en brouillon** (BR-1.3) ; sur le scénario actif le total est verrouillé (BR-1.4).
 
-### Mode édition (BR-9.1)
+### Mode édition ligne par ligne (BR-9.1, P7)
 - Hors édition : tout en lecture (noir), couches consultables.
-- Clic « Éditer » : champs saisissables en bleu. Modifs locales.
+- **Un bouton « Éditer » par LB niv.3** ; clic → les 12 mois de **cette** ligne passent en
+  bleu. **Une seule ligne ouverte à la fois.**
 - Saisie des montants = **frappe directe du nombre**, sans incrémenteurs +1/−1
   (pas de boutons stepper sur les champs numériques).
-- Re-clic / « Enregistrer » : envoi groupé + recalcul. Indicateur ● si non enregistré.
+- Outils de la ligne en édition : **Répartir**, **Solde** (valeur copiable), **Effacer** ;
+  en **brouillon** seulement : **Mettre à jour le total** et saisie du **total**. Sur le
+  **scénario actif**, le total est **lecture seule** (BR-1.4).
+- **Enregistrer** : upsert immédiat de la ligne. **Refusé tant que Σ mois ≠ total** (BR-1.1) ;
+  un **⚠ en tête de ligne** signale l'écart. **Annuler** ferme sans sauver. Indicateur ●
+  « ligne non enregistrée » + garde-fou avant de quitter/ouvrir une autre ligne (BR-9.2).
+
+## 3b. Page « Scénario » (/budgets) — onglets (F2)
+
+Deux onglets. Plus de zone danger ici (déplacée en Configuration).
+
+### Onglet « Liste » — choisir / créer / activer
+```
+[+ Créer] [Dupliquer le scénario sélectionné]
+ ● Budget 2026 v1   (ACTIF)        2026: 52 800 · couvert 100 %
+   Budget 2026 +GIZ (brouillon)    2026: 58 800 · couvert 81 % · reste 11 200 à couvrir
+                                   2027: 60 000 · couvert 55 % · reste 27 000 à couvrir   [Activer]
+```
+- Chaque scénario affiche, **par année**, le montant total + **couvert / restant à couvrir**
+  (F2.9, BR-12.2).
+- **Activer** (admin_systeme/directrice seulement, P10) : si le scénario porte des
+  financements prévisionnels non convertis → assistant de **conversion** (BR-12.3).
+
+### Onglet « Édition » — éditer le scénario sélectionné (F2.6)
+Réutilise le **tableur** de Suivi interne (§3) sur le scénario **sélectionné** (pas
+forcément l'actif), avec : édition **ligne-par-ligne** (P7), **Afficher bailleur**,
+**+ année**, **Replier les mois**, **filtre année**. **Pas** de « Solde tréso » ni « Suivi
+des dépenses » (réservés au suivi de l'actif). Le **total** des LB y est **modifiable**
+(brouillon) — c'est ici qu'on prépare les scénarios.
+
+**Bloc « Financements prévisionnels »** (sous le budget dépenses, F2.7, BR-12) :
+```
+Solde initial de couverture : [ 40 000 ]  ⓘ reliquat + financements déjà acquis (repliés)
+
+Financements prévisionnels             Total      Jan ... Déc  | 2027 ...
+  GIZ                                  50 000      …            [Éditer] [Convertir si actif]
+  [+ ligne]
+─────────────────────────────────────────────────────────────
+Charges (Σ dépenses)         /an       58 800
+Couvert / Restant à couvrir  /an       couvert 81 % · reste 11 200
+Solde de couverture (cumul)            …  …  …   ← rouge si < 0 (trou de financement)
+```
+- Lignes = **nom + montant + répartition mensuelle** multi-années (recettes simulées,
+  **pas** de mapping LB).
+- **Solde initial de couverture** = `coverage_baseline`, **distinct** de `initial_cash`
+  et de la trésorerie réelle ; bulle ⓘ explicative.
+- **Pseudo-trésorerie** : cumul chaîné mensuel/annuel (BR-12.1), rouge si négatif.
 
 ## 4. Pages « Financement » (F4) — même gabarit
 

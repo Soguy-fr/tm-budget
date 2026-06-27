@@ -52,6 +52,48 @@ create table budgets (
 create unique index one_active_budget on budgets(is_active) where is_active = true;
 ```
 
+### scenario_financing (financement prévisionnel) + scenario_financing_monthly
+
+Lignes de **recettes simulées** propres à un scénario (budget), pour la **couverture**
+(F2.7, BR-12). Indépendantes des financements réels (`bailleurs`) : la simulation compare
+des **flux globaux**, sans mapping vers les LB. À l'activation, une ligne peut être
+**convertie** en financement réel (BR-12.3).
+
+```sql
+-- migration 0010
+create table scenario_financing (
+  id            uuid primary key default gen_random_uuid(),
+  budget_id     uuid not null references budgets(id) on delete cascade,
+  name          text not null,                 -- 'GIZ' (libre)
+  amount_total  numeric(14,2) not null default 0,  -- montant simulé (ex 50 000)
+  sort_order    int not null default 0,
+  converted_bailleur_id uuid references bailleurs(id),  -- non null = convertie en financement réel
+  created_at    timestamptz not null default now()
+);
+create index on scenario_financing(budget_id);
+
+create table scenario_financing_monthly (
+  id                     uuid primary key default gen_random_uuid(),
+  scenario_financing_id  uuid not null references scenario_financing(id) on delete cascade,
+  year                   int not null,
+  month                  smallint not null check (month between 1 and 12),
+  amount                 numeric(14,2) not null default 0,  -- recette simulée du mois
+  unique (scenario_financing_id, year, month)
+);
+```
+> Migration 0010 active la **RLS** sur ces deux tables au **tier opérationnel** (écriture
+> `admin_systeme`/`directrice`/`respo_financiere`, lecture authentifiée), comme le reste des
+> données de production. Audit trigger optionnel (données de simulation).
+
+```sql
+-- migration 0010 — base de couverture du scénario (≠ initial_cash de la trésorerie réelle)
+alter table budgets add column coverage_baseline numeric(14,2) not null default 0;
+--   coverage_baseline = financements DÉJÀ acquis à date, repliés en un seul montant
+--   (reliquat années précédentes + financements antérieurs dont on ne veut pas le détail).
+--   Sert UNIQUEMENT à la pseudo-trésorerie de couverture (BR-12). N'alimente PAS la
+--   trésorerie réelle (BR-7.*) ni la page Trésorerie (calc_date/forced_balance).
+```
+
 ### budget_years
 
 ```sql
@@ -257,18 +299,44 @@ create table month_closures (
 > `budget_monthly` (année, mois clos) et toute modification d'écriture GL
 > (`entry_date` dans un mois clos) tant que `reopened_at` est null.
 
-### user_roles (F12.1)
+### user_roles (F12.1, P10)
 
-Rôle applicatif par utilisateur. Absent = lecteur. RLS : transactionnel = gestionnaire+,
-référentiel/clôture = admin (helper SQL `current_app_role()`, security definer).
+Rôle applicatif par utilisateur. Absent = `observateur`. Helper SQL `current_app_role()`
+(security definer) — **migration 0009 met son défaut à `'observateur'`** (était `'lecteur'`).
+**Migration 0009** fait aussi évoluer les 3 anciens rôles vers les 4 nouveaux :
+`admin → admin_systeme`, `gestionnaire → respo_financiere`, `lecteur → observateur`
+(la `directrice` est attribuée manuellement depuis l'écran de gestion des comptes), met à
+jour le `check` de la colonne `role`, et **recrée les policies RLS** avec les nouveaux noms.
 
 ```sql
 create table user_roles (
   user_id    uuid primary key references auth.users(id) on delete cascade,
-  role       text not null check (role in ('admin','gestionnaire','lecteur')),
+  role       text not null check (role in
+               ('admin_systeme','directrice','respo_financiere','observateur')),
   created_at timestamptz not null default now()
 );
 ```
+
+**RLS par niveau (migration 0009 remplace 0006)** :
+
+| Tables                                                                                   | Écriture autorisée |
+| ---------------------------------------------------------------------------------------- | ------------------ |
+| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `scenario_financing`, `scenario_financing_monthly` | `admin_systeme`, `directrice`, `respo_financiere` |
+| **Budgets** (`budgets`, `budget_years`) — création/duplication/édition                   | `admin_systeme`, `directrice`, `respo_financiere` ; **activation `is_active` trigger-gated** (admin_systeme/directrice, voir ci-dessous) |
+| **Référence + gouvernance** — `structure_lines`, `user_roles`                            | `admin_systeme`, `directrice` |
+| **Audit** — `audit_log`                                                                  | lecture `admin_systeme` + `directrice` ; écriture trigger uniquement |
+
+> Cohérent avec la matrice F12.1 : la respo financière produit (budgets, financements, GL,
+> clôtures) mais **n'active pas** un scénario et **ne touche pas** la structure ni les rôles.
+
+> *`budgets` : la **création/duplication** est autorisée aussi à `respo_financiere` (donc
+> RLS write élargie à respo pour INSERT/UPDATE). Mais le passage **`is_active = true`**
+> (activation) est réservé `admin_systeme`/`directrice`. La RLS seule ne distingue pas
+> création et activation → **trigger `BEFORE UPDATE` sur `budgets`** (migration 0009) :
+> rejette toute transition `is_active` false→true si
+> `current_app_role() not in ('admin_systeme','directrice')`. La server action d'activation
+> applique la même garde côté serveur (défense en profondeur). L'index unique
+> `one_active_budget` garantit qu'un seul budget reste actif.
 
 ### audit_log (F12.2)
 
@@ -302,8 +370,9 @@ solde de Suivi interne (mode Budgété, BR-7.2). Deux réglages persistés par b
 
 - `bailleurs.montant_conventionne numeric(14,2)` — plafond contractuel (Q4, F12.4).
   **Déprécié en 0007** au profit de `bailleurs.montant_total` (même rôle).
-- `gl_entries.confirmed boolean default true` — double validation (F12.6) :
-  allocation par non-admin → `false`, confirmation admin → `true`.
+- `gl_entries.confirmed boolean default true` — **déprécié (migration 0009)** : la
+  double-validation (F12.6) est supprimée. La colonne reste pour compatibilité mais n'est
+  plus lue ni écrite ; toute allocation est directement effective.
 - `gl_entries.archived boolean default false` — purge soft-delete (BR-10.2).
 
 ### bank_reconciliations
@@ -400,5 +469,6 @@ group by 1;
 
 - Charger un budget = 1 requête sur `budget_monthly` (filtre budget+année) + 1 sur la structure.
 - Les vues `v_suivi_*` servent les pages de suivi en une requête.
-- L'écriture en mode édition par lot (P7) = un `upsert` groupé sur `budget_monthly`.
+- L'écriture en **édition ligne par ligne** (P7) = un `upsert` des 12 mailles d'**une** LB
+  niv.3 sur `budget_monthly` (+ `budget_line_totals` si total planifié), refusé si Σ≠total.
 - Conserver `raw jsonb` du GL permet de ne rien perdre des colonnes comptables d'origine.
