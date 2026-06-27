@@ -35,3 +35,19 @@ export function ecart(totalInput: number, months: number[]): number {
 export function sumMonths(months: number[]): number {
   return months.reduce((a, b) => a + (b || 0), 0);
 }
+
+// BR-1.1 / BR-1.4 — bilan d'une LB niv.3 pour l'enregistrement ligne par ligne.
+// `totalInput` null = pas de total planifié explicite → total = Σ mois (toujours
+// équilibré). `balanced` est la condition d'enregistrement : on refuse si false.
+export type LineBalance = {
+  sum: number;
+  total: number;
+  ecart: number;
+  balanced: boolean;
+};
+export function lineBalance(months: number[], totalInput: number | null): LineBalance {
+  const sum = sumMonths(months);
+  const total = totalInput ?? sum;
+  const e = total - sum;
+  return { sum, total, ecart: e, balanced: e === 0 };
+}

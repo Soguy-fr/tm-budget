@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { repartir, ecart, sumMonths } from "./budget-calc";
+import { repartir, ecart, sumMonths, lineBalance } from "./budget-calc";
 
 describe("repartir (BR-1.2)", () => {
   it("arrondit à l'euro, le dernier mois absorbe le reste", () => {
@@ -35,5 +35,27 @@ describe("ecart (BR-1.1)", () => {
     expect(ecart(1200, months)).toBe(0);
     expect(ecart(1450, months)).toBe(250);
     expect(ecart(950, months)).toBe(-250);
+  });
+});
+
+describe("lineBalance (BR-1.1 / BR-1.4 — gate d'enregistrement)", () => {
+  it("total null → équilibré (total = Σ mois)", () => {
+    const b = lineBalance([100, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], null);
+    expect(b.sum).toBe(300);
+    expect(b.total).toBe(300);
+    expect(b.ecart).toBe(0);
+    expect(b.balanced).toBe(true);
+  });
+
+  it("total = Σ mois → équilibré", () => {
+    const months = [4000, 0, 0, 0, 0, 0, 4000, 0, 0, 0, 0, 2000]; // Σ=10000
+    expect(lineBalance(months, 10000).balanced).toBe(true);
+  });
+
+  it("Σ mois ≠ total → déséquilibré (save refusé), écart = reste à placer", () => {
+    const months = [4000, 0, 0, 0, 0, 0, 4000, 0, 0, 0, 0, 0]; // Σ=8000
+    const b = lineBalance(months, 10000);
+    expect(b.ecart).toBe(2000); // solde copiable
+    expect(b.balanced).toBe(false);
   });
 });

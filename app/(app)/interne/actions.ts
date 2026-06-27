@@ -4,47 +4,40 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { denyUnless } from "@/lib/auth/role";
 import { lockedViolations, type ClosureRow } from "@/lib/closure";
+import { lineBalance } from "@/lib/budget-calc";
+import { formatEur } from "@/lib/format";
 
 type ActionResult = { ok: boolean; error?: string };
 
-export type MonthlyChange = {
-  line_id: string;
+// BR-9.1 / P7 — Enregistrement d'UNE LB niveau 3 pour une année (édition ligne
+// par ligne). Save immédiat des 12 mois + assignations bailleur + total planifié.
+// Refusé si Σ mois ≠ total (BR-1.1). Total verrouillé si le scénario est actif (BR-1.4).
+export type LinePayload = {
+  budgetId: string;
+  lineId: string;
+  lineCode?: string;        // pour un message d'erreur lisible
   year: number;
-  month: number;
-  amount: number;
-};
-export type TotalChange = {
-  line_id: string;
-  year: number;
-  total_input: number | null;
-};
-export type BailleurChange = {
-  line_id: string;
-  year: number;
-  month: number;
-  bailleur_id: string | null;
+  months: number[];          // 12 montants
+  totalInput: number | null; // total planifié saisi (null = total = Σ mois)
+  bailleurs: (string | null)[]; // 12 bailleur_id (un seul par maille, P4)
 };
 
-// BR-9.1 — Envoi groupé (upsert) des modifications du mode édition par lot.
-// Montants et assignations bailleur sont upsertés séparément : chaque upsert
-// ne touche que ses colonnes, l'autre est préservée sur conflit.
-export async function saveGrid(
-  budgetId: string,
-  monthly: MonthlyChange[],
-  totals: TotalChange[],
-  bailleurs: BailleurChange[] = [],
-): Promise<ActionResult> {
+export async function saveLine(p: LinePayload): Promise<ActionResult> {
   const supabase = createClient();
   const deny = await denyUnless(supabase, "edit_budget");
   if (deny) return { ok: false, error: deny };
 
-  // BR-11.2 — pas de modification des montants d'un mois clos.
+  if (p.months.length !== 12 || p.bailleurs.length !== 12) {
+    return { ok: false, error: "Données de ligne invalides (12 mois attendus)." };
+  }
+
+  // BR-11.2 — refuser si un mois de l'année est clos.
   const { data: closureRows } = await supabase
     .from("month_closures")
     .select("year, month, reopened_at");
   const violations = lockedViolations(
     (closureRows ?? []) as ClosureRow[],
-    [...monthly, ...bailleurs].map((c) => ({ year: c.year, month: c.month })),
+    Array.from({ length: 12 }, (_, i) => ({ year: p.year, month: i + 1 })),
   );
   if (violations.length > 0) {
     const v = violations[0];
@@ -54,32 +47,63 @@ export async function saveGrid(
     };
   }
 
-  if (monthly.length > 0) {
-    const rows = monthly.map((m) => ({ budget_id: budgetId, ...m }));
-    const { error } = await supabase
-      .from("budget_monthly")
-      .upsert(rows, { onConflict: "budget_id,line_id,year,month" });
-    if (error) return { ok: false, error: error.message };
-  }
-
-  // F3.9 — assignation bailleur par (LB × mois), un seul bailleur (P4).
-  if (bailleurs.length > 0) {
-    const rows = bailleurs.map((b) => ({ budget_id: budgetId, ...b }));
-    const { error } = await supabase
-      .from("budget_monthly")
-      .upsert(rows, { onConflict: "budget_id,line_id,year,month" });
-    if (error) return { ok: false, error: error.message };
-  }
-
-  if (totals.length > 0) {
-    const rows = totals.map((t) => ({ budget_id: budgetId, ...t }));
-    const { error } = await supabase
+  // BR-1.4 — total verrouillé sur le scénario actif : on impose le total_input existant.
+  const { data: budget } = await supabase
+    .from("budgets")
+    .select("is_active")
+    .eq("id", p.budgetId)
+    .maybeSingle();
+  let effectiveTotal = p.totalInput;
+  if (budget?.is_active) {
+    const { data: existing } = await supabase
       .from("budget_line_totals")
-      .upsert(rows, { onConflict: "budget_id,line_id,year" });
-    if (error) return { ok: false, error: error.message };
+      .select("total_input")
+      .eq("budget_id", p.budgetId)
+      .eq("line_id", p.lineId)
+      .eq("year", p.year)
+      .maybeSingle();
+    const locked = (existing?.total_input ?? null) as number | null;
+    if (p.totalInput !== null && locked !== null && p.totalInput !== locked) {
+      return { ok: false, error: "Total verrouillé sur le scénario actif (dupliquer pour modifier)." };
+    }
+    effectiveTotal = locked;
   }
+
+  // BR-1.1 — refuser tant que Σ mois ≠ total planifié.
+  const bal = lineBalance(p.months, effectiveTotal);
+  if (!bal.balanced) {
+    const lbl = p.lineCode ? `Ligne ${p.lineCode} : ` : "";
+    return {
+      ok: false,
+      error: `${lbl}Σ mois (${formatEur(bal.sum)}) ≠ total (${formatEur(bal.total)}). Solde restant ${formatEur(bal.ecart)} à placer.`,
+    };
+  }
+
+  // Upsert des 12 mailles (montant + bailleur ensemble).
+  const rows = Array.from({ length: 12 }, (_, i) => ({
+    budget_id: p.budgetId,
+    line_id: p.lineId,
+    year: p.year,
+    month: i + 1,
+    amount: p.months[i] ?? 0,
+    bailleur_id: p.bailleurs[i] ?? null,
+  }));
+  const { error: mErr } = await supabase
+    .from("budget_monthly")
+    .upsert(rows, { onConflict: "budget_id,line_id,year,month" });
+  if (mErr) return { ok: false, error: mErr.message };
+
+  // Total planifié (BR-1.1). Conservé tel quel (effectiveTotal).
+  const { error: tErr } = await supabase
+    .from("budget_line_totals")
+    .upsert(
+      { budget_id: p.budgetId, line_id: p.lineId, year: p.year, total_input: effectiveTotal },
+      { onConflict: "budget_id,line_id,year" },
+    );
+  if (tErr) return { ok: false, error: tErr.message };
 
   revalidatePath("/interne");
+  revalidatePath("/budgets");
   return { ok: true };
 }
 

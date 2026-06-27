@@ -7,6 +7,8 @@ import type { ClosureRow } from "@/lib/closure";
 import type { StructureLine, Budget, Bailleur, GlEntry } from "@/lib/types";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 import { GuideLink } from "@/components/GuideLink";
+import { getRole } from "@/lib/auth/role";
+import { can } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +98,10 @@ export default async function InternePage() {
   // non : la caisse reflète la banque, pas le suivi analytique.
   const { rec: recReel, dep: depReel } = realFlowsByMonth(allGl);
 
+  // P10 — droit d'édition. Le scénario actif a son total verrouillé (BR-1.4, isDraft=false).
+  const role = await getRole(supabase);
+  const canEdit = can(role, "edit_budget");
+
   return (
     <div>
       <div className="mb-2 flex justify-end gap-2">
@@ -117,6 +123,8 @@ export default async function InternePage() {
       recReel={recReel}
       depReel={depReel}
       closures={(closureRows ?? []) as ClosureRow[]}
+      isDraft={false}
+      canEdit={canEdit}
       />
     </div>
   );
