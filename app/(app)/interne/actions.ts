@@ -63,10 +63,22 @@ export async function saveLine(p: LinePayload): Promise<ActionResult> {
       .eq("year", p.year)
       .maybeSingle();
     const locked = (existing?.total_input ?? null) as number | null;
-    if (p.totalInput !== null && locked !== null && p.totalInput !== locked) {
-      return { ok: false, error: "Total verrouillé sur le scénario actif (dupliquer pour modifier)." };
+    if (locked !== null) {
+      if (p.totalInput !== null && p.totalInput !== locked) {
+        return { ok: false, error: "Total verrouillé sur le scénario actif (dupliquer pour modifier)." };
+      }
+      effectiveTotal = locked;
+    } else {
+      // BR-1.4 — pas de total explicite : le total figé = Σ des mois actuels en
+      // base (pré-édition). On ne peut que redistribuer, pas changer le total.
+      const { data: cur } = await supabase
+        .from("budget_monthly")
+        .select("amount")
+        .eq("budget_id", p.budgetId)
+        .eq("line_id", p.lineId)
+        .eq("year", p.year);
+      effectiveTotal = (cur ?? []).reduce((s, r) => s + Number(r.amount), 0);
     }
-    effectiveTotal = locked;
   }
 
   // BR-1.1 — refuser tant que Σ mois ≠ total planifié.

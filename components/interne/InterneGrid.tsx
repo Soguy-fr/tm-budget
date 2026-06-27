@@ -211,6 +211,14 @@ export function InterneGrid({
   function openLine(lineId: string, year: number) {
     if (editingKey) return; // une seule ligne à la fois
     setError(null);
+    // BR-1.4 — figer le total à sa valeur courante (si pas de total explicite,
+    // on capture Σ mois actuelle) : il ne doit plus bouger pendant l'édition ;
+    // le solde = total figé − Σ mois.
+    setWorkTotals((t) => {
+      const k = totalKey(lineId, year);
+      if (t[k] !== undefined) return t;
+      return { ...t, [k]: sumMonths(lineMonthsOf(lineId, year)) };
+    });
     setEditingKey(editKey(lineId, year));
     setDirty(false);
   }
