@@ -1,7 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getRole } from "@/lib/auth/role";
-import { can } from "@/lib/roles";
 import { checkEntryEligibility, checkPlanMismatch } from "@/lib/eligibility";
 import { scoreAnomalies } from "@/lib/anomalies";
 import type { StructureLine, Bailleur, GlEntry } from "@/lib/types";
@@ -33,8 +31,6 @@ export default async function GrandLivrePage({
     .select("id")
     .eq("is_active", true)
     .maybeSingle();
-
-  const role = await getRole(supabase);
 
   const [{ data: entries }, { data: lines }, { data: bailleurs }, planRes, { data: mappingRows }] = await Promise.all([
     // Perf : limiter l'affichage aux 2000 écritures les plus récentes (hors archivées, BR-10.2).
@@ -159,7 +155,6 @@ export default async function GrandLivrePage({
         planAmountByCell={planAmountByCell}
         commentByLine={commentByLine}
         warningsByEntry={warningsByEntry}
-        canConfirm={can(role, "confirm_allocation")}
         initialFilters={{
           line: searchParams.line,
           year: searchParams.year,

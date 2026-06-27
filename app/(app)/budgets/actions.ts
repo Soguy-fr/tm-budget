@@ -26,7 +26,8 @@ export async function createBudget(name: string): Promise<ActionResult> {
 // Désactiver d'abord l'actif courant pour respecter l'index unique partiel.
 export async function setActiveBudget(id: string): Promise<ActionResult> {
   const supabase = createClient();
-  const deny = await denyUnless(supabase, "manage_budgets");
+  // P10 — activer un scénario est un droit séparé (direction uniquement).
+  const deny = await denyUnless(supabase, "activate_budget");
   if (deny) return { ok: false, error: deny };
   const { error: unsetErr } = await supabase
     .from("budgets")

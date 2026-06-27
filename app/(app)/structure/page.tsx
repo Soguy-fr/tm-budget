@@ -3,7 +3,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { buildTree } from "@/lib/structure";
 import type { StructureLine } from "@/lib/types";
 import { StructureTree } from "@/components/structure/StructureTree";
+import { UserRolesPanel } from "@/components/structure/UserRolesPanel";
 import { GuideLink } from "@/components/GuideLink";
+import { getRole } from "@/lib/auth/role";
+import { can } from "@/lib/roles";
+import { listUsersWithRoles } from "./users-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +33,11 @@ export default async function StructurePage() {
 
   const tree = buildTree((data ?? []) as StructureLine[]);
 
+  // F12.8 — panneau de gestion des comptes (direction uniquement).
+  const role = await getRole(supabase);
+  const canManageUsers = can(role, "manage_roles");
+  const usersRes = canManageUsers ? await listUsersWithRoles() : null;
+
   return (
     <div>
       <div className="mb-1 flex items-center gap-2">
@@ -40,6 +49,12 @@ export default async function StructurePage() {
         niveau 3 porte des montants.
       </p>
       <StructureTree tree={tree} />
+      {canManageUsers && (
+        <UserRolesPanel
+          users={usersRes?.ok ? usersRes.users : []}
+          loadError={usersRes && !usersRes.ok ? usersRes.error : undefined}
+        />
+      )}
     </div>
   );
 }

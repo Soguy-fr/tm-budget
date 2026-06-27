@@ -115,8 +115,12 @@ export type GlEntry = {
   created_at: string;
 };
 
-// U1 — rôles applicatifs
-export type Role = "admin" | "gestionnaire" | "lecteur";
+// U1 / P10 — rôles applicatifs (4 rôles, migration 0009)
+export type Role =
+  | "admin_systeme"
+  | "directrice"
+  | "respo_financiere"
+  | "observateur";
 
 // U2 — piste d'audit
 export type AuditLogEntry = {

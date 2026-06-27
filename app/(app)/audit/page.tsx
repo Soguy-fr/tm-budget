@@ -22,7 +22,7 @@ export default async function AuditPage({
   if (!can(role, "view_audit")) {
     return (
       <Notice>
-        Accès réservé à l&apos;admin (votre rôle : {ROLE_LABELS[role]}).
+        Accès réservé à la direction (votre rôle : {ROLE_LABELS[role]}).
       </Notice>
     );
   }

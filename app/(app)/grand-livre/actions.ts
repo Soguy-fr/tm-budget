@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { MappedEntry } from "@/lib/gl";
-import { getRole, denyUnless } from "@/lib/auth/role";
-import { allocationConfirmedByDefault } from "@/lib/roles";
+import { denyUnless } from "@/lib/auth/role";
 import { findDuplicates } from "@/lib/duplicates";
 import { isClosed, type ClosureRow } from "@/lib/closure";
 import {
@@ -113,7 +112,6 @@ export async function updateAllocation(
   bailleur_id: string | null,
 ): Promise<ActionResult> {
   const supabase = createClient();
-  const role = await getRole(supabase);
   const deny = await denyUnless(supabase, "allocate_gl");
   if (deny) return { ok: false, error: deny };
 
@@ -132,21 +130,11 @@ export async function updateAllocation(
     }
   }
 
+  // F12.6 supprimée : toute allocation est directement effective (confirmed=true).
   const { error } = await supabase
     .from("gl_entries")
-    .update({ line_id, bailleur_id, confirmed: allocationConfirmedByDefault(role) })
+    .update({ line_id, bailleur_id, confirmed: true })
     .eq("id", id);
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/grand-livre");
-  return { ok: true };
-}
-
-// C6 — Confirmer une allocation en attente (admin).
-export async function confirmAllocation(id: string): Promise<ActionResult> {
-  const supabase = createClient();
-  const deny = await denyUnless(supabase, "confirm_allocation");
-  if (deny) return { ok: false, error: deny };
-  const { error } = await supabase.from("gl_entries").update({ confirmed: true }).eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/grand-livre");
   return { ok: true };

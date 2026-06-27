@@ -7,7 +7,7 @@ import { formatEur } from "@/lib/format";
 import { parseCsv } from "@/lib/csv";
 import { allocationStatus, findColumn, mapCsvRow, leavesUnderAnalytic, type MappedEntry } from "@/lib/gl";
 import {
-  importGl, updateAllocation, confirmAllocation, suggestAllocations,
+  importGl, updateAllocation, suggestAllocations,
   type SuggestResult,
 } from "@/app/(app)/grand-livre/actions";
 
@@ -32,7 +32,6 @@ export function GlTable({
   commentByLine,
   initialFilters,
   warningsByEntry,
-  canConfirm,
 }: {
   entries: GlEntry[];
   lines: StructureLine[];
@@ -46,8 +45,6 @@ export function GlTable({
   initialFilters?: { line?: string; year?: string; month?: string; fromInterne?: boolean };
   // C2/C3 — avertissements (éligibilité bailleur, anomalies) par écriture.
   warningsByEntry?: Record<string, string[]>;
-  // C6 — l'utilisateur peut-il confirmer les allocations en attente ?
-  canConfirm?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -593,29 +590,6 @@ export function GlTable({
                       >
                         {statut}
                       </span>
-                      {/* C6 — allocation en attente de confirmation */}
-                      {!unallocated && e.confirmed === false && (
-                        <>
-                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] text-sky-700">
-                            À confirmer
-                          </span>
-                          {canConfirm && (
-                            <button
-                              disabled={pending}
-                              onClick={() =>
-                                startTransition(async () => {
-                                  const res = await confirmAllocation(e.id);
-                                  if (!res.ok) setError(res.error ?? "Erreur.");
-                                  else router.refresh();
-                                })
-                              }
-                              className="rounded border border-sky-300 px-1 py-0.5 text-[10px] text-sky-700 hover:bg-sky-50 disabled:opacity-40"
-                            >
-                              ✓
-                            </button>
-                          )}
-                        </>
-                      )}
                       {/* C2/C3 — avertissements éligibilité + anomalies, à la demande */}
                       {showChecks && (warningsByEntry?.[e.id]?.length ?? 0) > 0 && (
                         <span className="block text-[11px] leading-tight text-amber-700">

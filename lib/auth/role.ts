@@ -3,21 +3,21 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Role } from "@/lib/types";
 import { can, isRole, type AppAction } from "@/lib/roles";
 
-// Rôle de l'utilisateur connecté. 'lecteur' si aucun rôle attribué.
-// Back-compat : si la table user_roles n'existe pas encore (migration 0006
-// non appliquée), on retourne 'admin' (comportement mono-utilisateur historique).
+// Rôle de l'utilisateur connecté. 'observateur' si aucun rôle attribué.
+// Back-compat : si la table user_roles n'existe pas encore, on retourne
+// 'admin_systeme' (comportement mono-utilisateur historique).
 export async function getRole(supabase: SupabaseClient): Promise<Role> {
   const { data: auth } = await supabase.auth.getUser();
   const uid = auth?.user?.id;
-  if (!uid) return "lecteur";
+  if (!uid) return "observateur";
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", uid)
     .maybeSingle();
-  if (error) return "admin"; // table absente (pré-0006) → mono-user historique
+  if (error) return "admin_systeme"; // table absente → mono-user historique
   const role = data?.role;
-  return isRole(role) ? role : "lecteur";
+  return isRole(role) ? role : "observateur";
 }
 
 // Garde d'action serveur : retourne null si autorisé, message d'erreur sinon.

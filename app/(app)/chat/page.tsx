@@ -15,7 +15,7 @@ export default async function ChatPage() {
   const supabase = createClient();
   const role = await getRole(supabase);
   if (!can(role, "use_ai")) {
-    return <Notice>Accès IA réservé aux rôles admin et gestionnaire (votre rôle : {ROLE_LABELS[role]}).</Notice>;
+    return <Notice>Accès IA réservé aux rôles éditeurs (votre rôle : {ROLE_LABELS[role]}).</Notice>;
   }
   return (
     <div>

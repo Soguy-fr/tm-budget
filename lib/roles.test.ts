@@ -1,52 +1,59 @@
 import { describe, it, expect } from "vitest";
-import { can, isRole, allocationConfirmedByDefault, type AppAction } from "./roles";
+import { can, isRole, ASSIGNABLE_ROLES, type AppAction } from "./roles";
 
-describe("can (U1 — matrice de permissions)", () => {
-  it("admin : tout", () => {
-    const all: AppAction[] = [
-      "edit_budget", "import_gl", "allocate_gl", "confirm_allocation",
-      "reconcile", "close_month", "manage_structure", "manage_bailleurs",
-      "manage_budgets", "purge", "view_audit", "manage_roles", "use_ai",
-    ];
-    for (const a of all) expect(can("admin", a)).toBe(true);
+const ALL: AppAction[] = [
+  "edit_budget", "import_gl", "allocate_gl", "reconcile", "close_month",
+  "manage_structure", "manage_bailleurs", "manage_budgets", "activate_budget",
+  "purge", "view_audit", "manage_roles", "use_ai",
+];
+
+describe("can (P10 — matrice de permissions)", () => {
+  it("admin_systeme : tout", () => {
+    for (const a of ALL) expect(can("admin_systeme", a)).toBe(true);
   });
 
-  it("gestionnaire : transactionnel oui, référentiel/clôture/audit non", () => {
-    expect(can("gestionnaire", "edit_budget")).toBe(true);
-    expect(can("gestionnaire", "import_gl")).toBe(true);
-    expect(can("gestionnaire", "allocate_gl")).toBe(true);
-    expect(can("gestionnaire", "reconcile")).toBe(true);
-    expect(can("gestionnaire", "use_ai")).toBe(true);
-    expect(can("gestionnaire", "confirm_allocation")).toBe(false); // C6
-    expect(can("gestionnaire", "close_month")).toBe(false);
-    expect(can("gestionnaire", "manage_structure")).toBe(false);
-    expect(can("gestionnaire", "manage_budgets")).toBe(false);
-    expect(can("gestionnaire", "purge")).toBe(false);
-    expect(can("gestionnaire", "view_audit")).toBe(false);
-    expect(can("gestionnaire", "manage_roles")).toBe(false);
+  it("directrice : tout (gouvernance + activation)", () => {
+    for (const a of ALL) expect(can("directrice", a)).toBe(true);
   });
 
-  it("lecteur : rien", () => {
-    expect(can("lecteur", "edit_budget")).toBe(false);
-    expect(can("lecteur", "allocate_gl")).toBe(false);
-    expect(can("lecteur", "use_ai")).toBe(false);
+  it("respo_financiere : production, mais pas activation/structure/purge/audit/rôles", () => {
+    expect(can("respo_financiere", "edit_budget")).toBe(true);
+    expect(can("respo_financiere", "manage_budgets")).toBe(true);
+    expect(can("respo_financiere", "manage_bailleurs")).toBe(true);
+    expect(can("respo_financiere", "import_gl")).toBe(true);
+    expect(can("respo_financiere", "allocate_gl")).toBe(true);
+    expect(can("respo_financiere", "close_month")).toBe(true);
+    expect(can("respo_financiere", "use_ai")).toBe(true);
+    // refusés
+    expect(can("respo_financiere", "activate_budget")).toBe(false);
+    expect(can("respo_financiere", "manage_structure")).toBe(false);
+    expect(can("respo_financiere", "purge")).toBe(false);
+    expect(can("respo_financiere", "view_audit")).toBe(false);
+    expect(can("respo_financiere", "manage_roles")).toBe(false);
   });
-});
 
-describe("allocationConfirmedByDefault (C6)", () => {
-  it("admin auto-confirmé, gestionnaire à confirmer", () => {
-    expect(allocationConfirmedByDefault("admin")).toBe(true);
-    expect(allocationConfirmedByDefault("gestionnaire")).toBe(false);
-    expect(allocationConfirmedByDefault("lecteur")).toBe(false);
+  it("observateur : rien", () => {
+    for (const a of ALL) expect(can("observateur", a)).toBe(false);
   });
 });
 
 describe("isRole", () => {
-  it("valide les rôles connus", () => {
-    expect(isRole("admin")).toBe(true);
-    expect(isRole("gestionnaire")).toBe(true);
-    expect(isRole("lecteur")).toBe(true);
-    expect(isRole("superadmin")).toBe(false);
+  it("valide les 4 rôles, rejette le reste", () => {
+    expect(isRole("admin_systeme")).toBe(true);
+    expect(isRole("directrice")).toBe(true);
+    expect(isRole("respo_financiere")).toBe(true);
+    expect(isRole("observateur")).toBe(true);
+    expect(isRole("admin")).toBe(false);
+    expect(isRole("gestionnaire")).toBe(false);
     expect(isRole(null)).toBe(false);
+  });
+});
+
+describe("ASSIGNABLE_ROLES (F12.8)", () => {
+  it("n'inclut pas admin_systeme (réservé)", () => {
+    expect(ASSIGNABLE_ROLES).not.toContain("admin_systeme");
+    expect(ASSIGNABLE_ROLES).toContain("directrice");
+    expect(ASSIGNABLE_ROLES).toContain("respo_financiere");
+    expect(ASSIGNABLE_ROLES).toContain("observateur");
   });
 });
