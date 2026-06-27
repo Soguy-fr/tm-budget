@@ -19,6 +19,7 @@ export type Budget = {
   type: "interne";
   is_active: boolean;
   initial_cash: number;
+  coverage_baseline: number;      // BR-12 — base de couverture (≠ initial_cash)
   archived: boolean;
   calc_date: string | null;       // F7.7 — date du jour du calcul (grise le passé)
   forced_balance: number | null;  // F7.7 — solde forcé à calc_date (null = aucun)
@@ -55,6 +56,24 @@ export type Bailleur = {
   montant_total: number | null;         // 0007 — total accordé (BR-3.4)
   regles: string | null;                // 0008 — règles du fonds (page dédiée)
   created_at: string;
+};
+
+// BR-12 — financement prévisionnel (recette simulée propre à un scénario).
+export type ScenarioFinancing = {
+  id: string;
+  budget_id: string;
+  name: string;
+  amount_total: number;
+  sort_order: number;
+  converted_bailleur_id: string | null;
+  created_at: string;
+};
+export type ScenarioFinancingMonthly = {
+  id: string;
+  scenario_financing_id: string;
+  year: number;
+  month: number;
+  amount: number;
 };
 
 export type BudgetMonthly = {

@@ -84,6 +84,7 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
       type: source.type,
       is_active: false,
       initial_cash: source.initial_cash,
+      coverage_baseline: source.coverage_baseline,
     })
     .select("id")
     .single();
@@ -123,6 +124,35 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
     await supabase
       .from("budget_line_totals")
       .insert(totals.map((t) => ({ budget_id: newId, ...t })));
+  }
+
+  // BR-12 — financements prévisionnels + leur répartition mensuelle.
+  const { data: fins } = await supabase
+    .from("scenario_financing")
+    .select("id, name, amount_total, sort_order, converted_bailleur_id")
+    .eq("budget_id", id);
+  for (const f of fins ?? []) {
+    const { data: nf } = await supabase
+      .from("scenario_financing")
+      .insert({
+        budget_id: newId,
+        name: f.name,
+        amount_total: f.amount_total,
+        sort_order: f.sort_order,
+        converted_bailleur_id: f.converted_bailleur_id,
+      })
+      .select("id")
+      .single();
+    if (!nf) continue;
+    const { data: fm } = await supabase
+      .from("scenario_financing_monthly")
+      .select("year, month, amount")
+      .eq("scenario_financing_id", f.id);
+    if (fm && fm.length > 0) {
+      await supabase
+        .from("scenario_financing_monthly")
+        .insert(fm.map((r) => ({ scenario_financing_id: nf.id as string, ...r })));
+    }
   }
 
   revalidatePath("/budgets");

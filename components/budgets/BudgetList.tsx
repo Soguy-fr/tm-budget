@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Budget } from "@/lib/types";
 import { formatEur } from "@/lib/format";
+import type { CoverageYearSummary } from "@/lib/coverage";
 import {
   createBudget,
   setActiveBudget,
@@ -14,9 +16,11 @@ import {
 export function BudgetList({
   budgets,
   yearsByBudget,
+  coverageByBudget = {},
 }: {
   budgets: Budget[];
   yearsByBudget: Record<string, number[]>;
+  coverageByBudget?: Record<string, CoverageYearSummary[]>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -74,6 +78,7 @@ export function BudgetList({
             key={b.id}
             budget={b}
             years={yearsByBudget[b.id] ?? []}
+            coverage={coverageByBudget[b.id] ?? []}
             pending={pending}
             run={run}
           />
@@ -86,11 +91,13 @@ export function BudgetList({
 function BudgetRow({
   budget,
   years,
+  coverage,
   pending,
   run,
 }: {
   budget: Budget;
   years: number[];
+  coverage: CoverageYearSummary[];
   pending: boolean;
   run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
 }) {
@@ -118,6 +125,12 @@ function BudgetRow({
           </div>
         </div>
         <div className="flex gap-2 text-xs">
+          <Link
+            href={`/budgets?tab=edition&budget=${budget.id}`}
+            className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50"
+          >
+            Éditer
+          </Link>
           {!budget.is_active && (
             <button
               onClick={() => run(() => setActiveBudget(budget.id))}
@@ -136,6 +149,21 @@ function BudgetRow({
           </button>
         </div>
       </div>
+
+      {/* F2.9 — montant total par année + couvert / restant à couvrir */}
+      {coverage.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          {coverage.map((c) => (
+            <span key={c.year} className="text-slate-500">
+              <span className="font-medium text-brand-night">{c.year}</span> :{" "}
+              {formatEur(c.charges)} · couvert {c.couvertPct}%
+              {c.restantACouvrir > 0 && (
+                <span className="font-bold text-alert"> · reste {formatEur(c.restantACouvrir)}</span>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-2 flex items-center gap-2 text-sm">
         <label className="text-slate-500">Solde initial tréso (1er janv.)</label>

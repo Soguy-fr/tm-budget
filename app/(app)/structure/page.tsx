@@ -4,6 +4,7 @@ import { buildTree } from "@/lib/structure";
 import type { StructureLine } from "@/lib/types";
 import { StructureTree } from "@/components/structure/StructureTree";
 import { UserRolesPanel } from "@/components/structure/UserRolesPanel";
+import { PurgeZone } from "@/components/budgets/PurgeZone";
 import { GuideLink } from "@/components/GuideLink";
 import { getRole } from "@/lib/auth/role";
 import { can } from "@/lib/roles";
@@ -36,6 +37,7 @@ export default async function StructurePage() {
   // F12.8 — panneau de gestion des comptes (direction uniquement).
   const role = await getRole(supabase);
   const canManageUsers = can(role, "manage_roles");
+  const canPurge = can(role, "purge");
   const usersRes = canManageUsers ? await listUsersWithRoles() : null;
 
   return (
@@ -55,6 +57,7 @@ export default async function StructurePage() {
           loadError={usersRes && !usersRes.ok ? usersRes.error : undefined}
         />
       )}
+      {canPurge && <PurgeZone />}
     </div>
   );
 }
