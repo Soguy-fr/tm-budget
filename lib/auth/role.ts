@@ -17,7 +17,16 @@ export async function getRole(supabase: SupabaseClient): Promise<Role> {
     .maybeSingle();
   if (error) return "admin_systeme"; // table absente → mono-user historique
   const role = data?.role;
-  return isRole(role) ? role : "observateur";
+  if (isRole(role)) return role;
+  // Résilience : tolérer les anciennes valeurs si la migration 0009 (mapping
+  // des données) n'a pas encore tourné. admin→admin_systeme, etc.
+  const legacy: Record<string, Role> = {
+    admin: "admin_systeme",
+    gestionnaire: "respo_financiere",
+    lecteur: "observateur",
+  };
+  if (typeof role === "string" && legacy[role]) return legacy[role];
+  return "observateur";
 }
 
 // Garde d'action serveur : retourne null si autorisé, message d'erreur sinon.
