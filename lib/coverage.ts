@@ -9,8 +9,9 @@ function ym(year: number, month: number): string {
 export type CoverageYearSummary = {
   year: number;
   charges: number;          // Σ dépenses de l'année
-  restantACouvrir: number;  // BR-12.2 : ampleur du creux négatif d'ici fin N
-  couvertPct: number;       // 0..100
+  recettes: number;         // Σ recettes simulées de l'année
+  restantACouvrir: number;  // BR-12.2 : max(0, −solde_fin)
+  couvertPct: number;       // 0..100, dérivé du solde de fin d'année
   soldeFin: number;         // cumul à fin décembre N
 };
 
@@ -45,30 +46,28 @@ export function computeCoverage(
     byYear[y] = months.slice(idx * 12, idx * 12 + 12);
   });
 
-  const summary: CoverageYearSummary[] = sorted.map((y, idx) => {
-    const endIdx = idx * 12 + 12; // exclusif
-    const minToEnd = months.slice(0, endIdx).reduce((m, v) => Math.min(m, v), Infinity);
-    const restant = Math.max(0, -minToEnd);
-    // charges cumulées (toutes années jusqu'à N inclus).
-    let chargesCum = 0;
-    for (let j = 0; j <= idx; j++) {
-      const yy = sorted[j];
-      for (let m = 1; m <= 12; m++) chargesCum += depByYM[ym(yy, m)] ?? 0;
-    }
-    // charges de l'année N seule (affichage).
+  const summary: CoverageYearSummary[] = sorted.map((y) => {
+    // BR-12.2 — couverture dérivée du SOLDE DE FIN D'ANNÉE (cumul à décembre N).
+    const soldeFin = byYear[y][11] ?? baseline;
     let chargesN = 0;
-    for (let m = 1; m <= 12; m++) chargesN += depByYM[ym(y, m)] ?? 0;
-
+    let recettesN = 0;
+    for (let m = 1; m <= 12; m++) {
+      chargesN += depByYM[ym(y, m)] ?? 0;
+      recettesN += recByYM[ym(y, m)] ?? 0;
+    }
+    const restant = Math.max(0, -soldeFin);
+    // solde positif → 100 % ; sinon (charges + solde)/charges ; charges 0 → 100 %.
     const couvertPct =
-      chargesCum > 0
-        ? Math.max(0, Math.min(100, Math.round(100 * (1 - restant / chargesCum))))
-        : 100;
+      soldeFin >= 0 || chargesN === 0
+        ? 100
+        : Math.max(0, Math.min(100, Math.round((100 * (chargesN + soldeFin)) / chargesN)));
     return {
       year: y,
       charges: chargesN,
+      recettes: recettesN,
       restantACouvrir: restant,
       couvertPct,
-      soldeFin: byYear[y][11] ?? baseline,
+      soldeFin,
     };
   });
 

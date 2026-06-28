@@ -41,6 +41,7 @@ create index on structure_lines(sort_order);
 create table budgets (
   id             uuid primary key default gen_random_uuid(),
   name           text not null,                -- libre, nommé par l'utilisateur
+  description    text,                          -- F2.11 (migration 0011) : description du scénario
   type           text not null default 'interne' check (type in ('interne')),
   is_active      boolean not null default false,
   initial_cash   numeric(14,2) not null default 0,  -- solde tréso au 1er janv. de la 1re année
@@ -65,7 +66,7 @@ create table scenario_financing (
   id            uuid primary key default gen_random_uuid(),
   budget_id     uuid not null references budgets(id) on delete cascade,
   name          text not null,                 -- 'GIZ' (libre)
-  amount_total  numeric(14,2) not null default 0,  -- montant simulé (ex 50 000)
+  amount_total  numeric(14,2) not null default 0,  -- DÉRIVÉ (Σ des mois), non saisi (F2.7)
   sort_order    int not null default 0,
   converted_bailleur_id uuid references bailleurs(id),  -- non null = convertie en financement réel
   created_at    timestamptz not null default now()

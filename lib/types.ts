@@ -16,6 +16,7 @@ export type StructureLine = {
 export type Budget = {
   id: string;
   name: string;
+  description: string | null;     // F2.11 — description du scénario
   type: "interne";
   is_active: boolean;
   initial_cash: number;

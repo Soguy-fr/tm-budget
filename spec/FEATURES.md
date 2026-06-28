@@ -33,10 +33,12 @@
 | F2.3 | Dupliquer le scénario **sélectionné** (souvent l'actif) — copie montants + assignations + financements prévisionnels | 🟢 | —      |
 | F2.4 | Archiver un budget                                             | 🟡    | —      |
 | F2.5 | Saisir le solde initial de trésorerie (1er janvier, 1re année) | 🟢    | BR-7.1 |
-| F2.6 | **Onglet « Édition du scénario »** (dans /budgets) : tableur du scénario **sélectionné** (pas forcément l'actif). Réutilise édition ligne-par-ligne, afficher bailleur, +année, replier les mois, filtre année. **Sans** solde tréso ni suivi des dépenses | 🟢 | P7, P10 |
-| F2.7 | **Financements prévisionnels** (bloc sous le budget dépenses de l'onglet édition) : lignes (nom + montant) avec **répartition mensuelle** multi-années ; **solde initial de couverture** (`coverage_baseline`, ≠ initial_cash) ; **pseudo-trésorerie de couverture** (cumul mensuel/annuel) ; par année **charges / couvert / restant à couvrir** | 🟢 | BR-12.1, BR-12.2 |
-| F2.8 | **Conversion à l'activation** : proposer **ligne par ligne** de créer le financement réel (formulaire champs manquants) + copier la répartition en recettes prévues ; marquer la ligne convertie | 🟢 | BR-12.3 |
-| F2.9 | **Présentation d'un scénario** (carte/liste) : montant total **par année** + **couvert / restant à couvrir** | 🟢 | BR-12.2 |
+| F2.6 | **Onglet « Édition du scénario »** (dans /budgets) : tableur du scénario **sélectionné**. Réutilise édition ligne-par-ligne, afficher bailleur, +année, replier les mois, filtre année. **Sans** solde tréso ni suivi. On peut **modifier le titre (nom) et la description** du scénario | 🟢 | P7, P10 |
+| F2.7 | **Financements prévisionnels** (bloc de l'onglet édition) : on crée une ligne avec **le nom seul** ; son **montant est calculé** (Σ des mois) ; **répartition mensuelle** par année éditée via un **stylo par (financement × année)**. **Solde initial de couverture** (`coverage_baseline`, ≠ initial_cash) ; **pseudo-trésorerie de couverture** ; tableau **couverture par année** + tableau **liste des financements** (avec montant total = Σ années) | 🟢 | BR-12.1, BR-12.2 |
+| F2.8 | **Conversion à l'activation** : proposer **ligne par ligne** de créer le financement réel (formulaire champs manquants, montant = Σ mois) + copier la répartition en recettes prévues ; marquer la ligne convertie | 🟢 | BR-12.3 |
+| F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras), **total reçu**, **solde fin d'année**, **% couvert** (BR-12.2). `coverage_baseline` n'est **pas** affiché ici. Indicateur **« ? »** (survol + lien guide) rappelant la logique d'approximation par pseudo-trésorerie | 🟢 | BR-12.2 |
+| F2.10 | **Supprimer un scénario** : bouton + confirmation « Êtes-vous sûr ? ». **Interdit sur le scénario actif** | 🟢 | — |
+| F2.11 | **Description de scénario** (`budgets.description`) : éditable dans l'onglet Édition (avec le titre) ; aperçu (premières lignes) dans la liste | 🟢 | — |
 
 ## F3 — Prévisionnel interne (page tableur principale)
 

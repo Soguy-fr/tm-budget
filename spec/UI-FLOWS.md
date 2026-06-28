@@ -37,9 +37,12 @@ Nomenclature des entrées de menu (les routes techniques restent inchangées) :
 └────────────┴─────────────────────────────────┘
 ```
 
-## 2. Page « Structure » (F1)
+## 2. Page « Configuration » (F1) — onglets
 
-Arbre hiérarchique éditable.
+Deux onglets : **Structure** (arbre des LB) et **Utilisateurs** (gestion des comptes,
+F12.8, direction uniquement). La **zone danger / purge** vit dans l'onglet Structure (bas).
+
+Arbre hiérarchique éditable (onglet Structure).
 ```
 Code     Intitulé              Description (comment, tronqué…)   [+ Ligne] [Masquer vides]
 1        Operating Costs       Coûts de fonctionnement…
@@ -63,9 +66,9 @@ Code     Intitulé              Description (comment, tronqué…)   [+ Ligne] [
   uniquement** (échange `sort_order`). Le **code n'est jamais renuméroté** (P3) :
   seul l'ordre d'affichage change.
 
-### 2b. Gestion des comptes (F12.8) — dans Configuration
+### 2b. Gestion des comptes (F12.8) — onglet « Utilisateurs » de Configuration
 
-Onglet/section de **Configuration**, visible uniquement par `admin_systeme` et `directrice`.
+Onglet **Utilisateurs** de Configuration, visible uniquement par `admin_systeme` et `directrice`.
 
 ```
 Comptes utilisateurs
@@ -151,42 +154,50 @@ Légende bailleurs : ■FPC ■SW ■JFN  ■non assigné
 
 Deux onglets. Plus de zone danger ici (déplacée en Configuration).
 
-### Onglet « Liste » — choisir / créer / activer
+### Onglet « Liste » — choisir / créer / activer (accordéon, F2.9)
 ```
-[+ Créer] [Dupliquer le scénario sélectionné]
- ● Budget 2026 v1   (ACTIF)        2026: 52 800 · couvert 100 %
-   Budget 2026 +GIZ (brouillon)    2026: 58 800 · couvert 81 % · reste 11 200 à couvrir
-                                   2027: 60 000 · couvert 55 % · reste 27 000 à couvrir   [Activer]
+[+ Créer]        Couverture : approximation par pseudo-trésorerie  (?)
+▸ Budget 2026 v1   (ACTIF)     « Version votée en AG… »            [Éditer][Dupliquer]
+▾ Budget 2026 +GIZ             « Test d'un financement GIZ… »      [Éditer][Dupliquer][Activer][Supprimer]
+     Année   Total dépense   Total reçu   Solde fin    Couvert
+     2026      58 800         47 600       −11 200       81 %
+     2027      60 000         33 000       −38 200       36 %
 ```
-- Chaque scénario affiche, **par année**, le montant total + **couvert / restant à couvrir**
-  (F2.9, BR-12.2).
-- **Activer** (admin_systeme/directrice seulement, P10) : si le scénario porte des
-  financements prévisionnels non convertis → assistant de **conversion** (BR-12.3).
+- **Accordéon** : replié = **nom + début de la description**. Déplié = **une ligne par année**
+  (total dépense en **gras**, total reçu, solde fin d'année, % couvert — BR-12.2).
+- `coverage_baseline` n'est **pas** affiché ici (concept de couverture, visible en édition).
+- Indicateur **« ? »** : survol expliquant l'approximation par pseudo-trésorerie + **lien guide**.
+- **Activer** (admin_systeme/directrice seulement, P10) : si financements prévisionnels non
+  convertis → **conversion** (BR-12.3). **Supprimer** (F2.10) : confirmation, **interdit sur l'actif**.
 
 ### Onglet « Édition » — éditer le scénario sélectionné (F2.6)
 Réutilise le **tableur** de Suivi interne (§3) sur le scénario **sélectionné** (pas
 forcément l'actif), avec : édition **ligne-par-ligne** (P7), **Afficher bailleur**,
 **+ année**, **Replier les mois**, **filtre année**. **Pas** de « Solde tréso » ni « Suivi
 des dépenses » (réservés au suivi de l'actif). Le **total** des LB y est **modifiable**
-(brouillon) — c'est ici qu'on prépare les scénarios.
+(brouillon). En-tête éditable : **titre (nom)** + **description** du scénario (F2.11).
 
 **Bloc « Financements prévisionnels »** (sous le budget dépenses, F2.7, BR-12) :
 ```
-Solde initial de couverture : [ 40 000 ]  ⓘ reliquat + financements déjà acquis (repliés)
+Solde initial de couverture : [ 40 000 ]  (?) caisse + financements antérieurs garantis (repliés)
 
-Financements prévisionnels             Total      Jan ... Déc  | 2027 ...
-  GIZ                                  50 000      …            [Éditer] [Convertir si actif]
-  [+ ligne]
-─────────────────────────────────────────────────────────────
-Charges (Σ dépenses)         /an       58 800
-Couvert / Restant à couvrir  /an       couvert 81 % · reste 11 200
-Solde de couverture (cumul)            …  …  …   ← rouge si < 0 (trou de financement)
+┌ Couverture par année ───────────────┐   ┌ Financements ───────────┐
+│ Année  Charges  Couvert  Restant  Solde fin │   │ Nom    Montant (Σ ans) │
+│ 2026   58 800    81 %    11 200   −11 200    │   │ GIZ        50 000      │
+│ 2027   60 000    36 %    38 200   −38 200    │   │ (total)    50 000      │
+└──────────────────────────────────────┘   └─────────────────────────┘
+
+GIZ                                       [✏ par année]
+  2026   Jan … Déc   (✏ ouvre les 12 mois)        Σ 40 000
+  2027   Jan … Déc                                 Σ 10 000
+[+ ligne de financement]   (nom seul ; le montant = Σ des mois)
 ```
-- Lignes = **nom + montant + répartition mensuelle** multi-années (recettes simulées,
-  **pas** de mapping LB).
-- **Solde initial de couverture** = `coverage_baseline`, **distinct** de `initial_cash`
-  et de la trésorerie réelle ; bulle ⓘ explicative.
-- **Pseudo-trésorerie** : cumul chaîné mensuel/annuel (BR-12.1), rouge si négatif.
+- Créer une ligne = **nom seul** ; le **montant** est `Σ scenario_financing_monthly` (dérivé).
+- Saisie mensuelle via un **stylo ✏ par (financement × année)** : ouvre les 12 mois.
+- **Solde initial de couverture** = `coverage_baseline`, distinct d'`initial_cash` ; **(?)**
+  survol + lien guide.
+- Deux tableaux : **Couverture par année** (charges, couvert %, restant, solde fin — BR-12.2)
+  et **Liste des financements** (montant total = Σ années).
 
 ## 4. Pages « Financement » (F4) — même gabarit
 

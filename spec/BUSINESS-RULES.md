@@ -425,21 +425,36 @@ cumul_mois    = cumul_mois_précédent + recettes_mois − dépenses_mois
 Un **solde de couverture mensuel ET annuel** est affiché. `cumul_mois < 0` → **rouge**
 (les financements ne couvrent pas les charges à cette date = trou de financement).
 
-### BR-12.2 — Couvert / Restant à couvrir (par année)
-Pour présenter un scénario (liste ET onglet édition), par année N :
+### BR-12.2 — Couvert / Restant à couvrir (par année), depuis le solde de fin d'année
+Pour présenter un scénario (liste ET onglet édition), **une ligne par année** N, calculée
+à partir du **solde de couverture de fin d'année** (cumul à décembre N, BR-12.1) :
 ```
-charges(N)          = Σ dépenses de l'année N
-restant_à_couvrir(N) = max(0, − min(cumul_mois) sur les mois jusqu'à fin N)
-                       (l'ampleur du point le plus bas atteint par le cumul d'ici fin N)
-couvert(N) %         = 100 × (1 − restant_à_couvrir(N) / charges_cumulées(N))   (clampé 0..100)
+charges(N)   = Σ dépenses de l'année N (budget_monthly)
+recettes(N)  = Σ recettes simulées de l'année N (scenario_financing_monthly)
+solde_fin(N) = cumul_décembre(N)   (chaîné depuis coverage_baseline, BR-12.1)
+
+restant_à_couvrir(N) = max(0, − solde_fin(N))
+couvert(N) %         = solde_fin(N) >= 0
+                       ? 100
+                       : clamp( 100 × (charges(N) + solde_fin(N)) / charges(N), 0, 100 )
+                       (si charges(N) = 0 → 100 %)
 ```
-Lecture : *« avec le financement X tu couvres 80 % de 2027, il manque 27 000 € pour finir
-l'année »*. Si le cumul ne passe jamais sous 0, `restant_à_couvrir = 0` → couverture complète.
+Lecture : le **solde de fin d'année** approxime la couverture. **Positif → 100 %** (les
+financements couvrent les charges, report inclus). **Négatif → il manque ce montant** :
+ex. charges 100, solde fin −20 → couvert 80 %, reste 20 à trouver.
+- Le `coverage_baseline` (solde initial) sert de point de départ : il représente la caisse
+  **et surtout les financements antérieurs garantis**, repliés (on ne veut pas leur détail ici).
+- C'est une **approximation** assumée via la pseudo-trésorerie : elle gère les financements
+  glissants/décalés sans flécher les LB.
 
 ### BR-12.3 — Conversion à l'activation
+> **Montant dérivé** : `scenario_financing.amount_total` n'est **pas saisi** ; il vaut
+> `Σ scenario_financing_monthly.amount` (toutes années). À la création d'une ligne, on ne
+> saisit que le **nom** ; le montant se construit en saisissant la répartition mensuelle.
+
 Quand on **active** un scénario portant des lignes `scenario_financing` **non converties**
 (`converted_bailleur_id is null`), l'app **propose, ligne par ligne** : « Créer le financement
-\<nom\> de \<montant\> ? ». Si oui :
+\<nom\> de \<Σ mois\> ? ». Si oui :
 1. formulaire pour **compléter les champs manquants** du financement réel (référence,
    bailleur/acteur, couleur, dates d'éligibilité, description) ;
 2. création d'un `bailleurs` (financement réel) + **copie** de la répartition mensuelle

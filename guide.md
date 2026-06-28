@@ -82,11 +82,17 @@ Tu sélectionnes un scénario (même non actif) et tu l'édites comme le Suivi i
 
 ### Les financements prévisionnels : « ai-je de quoi payer tout ça ? »
 
-Sous le budget de dépenses, un bloc te laisse **simuler tes recettes**. Le principe : tu pars d'un **solde initial de couverture** (tous les financements déjà acquis à ce jour, repliés en un seul chiffre — inutile d'en détailler le passé), puis tu ajoutes des **lignes de financement prévisionnel** : « GIZ, 50 000 € », réparties mois par mois sur les années.
+Sous le budget de dépenses, un bloc te laisse **simuler tes recettes**. Tu pars d'un **solde initial de couverture** : ce n'est pas seulement l'argent en caisse, c'est surtout **la somme des financements déjà acquis et garantis** des années précédentes — repliée en un seul chiffre, inutile d'en détailler le passé. Puis tu ajoutes des **lignes de financement prévisionnel** : tu crées une ligne « GIZ » (juste le nom), et son montant **se construit tout seul** au fur et à mesure que tu saisis les recettes mois par mois sur chaque année.
 
-L'appli calcule alors une **pseudo-trésorerie de couverture** : solde initial + recettes simulées − dépenses, cumulé dans le temps. Sa magie : elle gère les financements qui **démarrent en cours d'année, glissent sur plusieurs années ou se chevauchent**, sans que tu aies à flécher chaque ligne budgétaire à un bailleur. Là où le cumul plonge dans le **rouge**, c'est un trou de financement à cette date précise.
+L'appli calcule alors une **pseudo-trésorerie de couverture** : solde initial + recettes simulées − dépenses, cumulé dans le temps. C'est une **approximation assumée** : elle te dit si tes financements couvrent tes charges **sans que tu aies à flécher chaque ligne budgétaire à un bailleur**, et elle gère naturellement les financements qui **démarrent en cours d'année, glissent sur plusieurs années ou se chevauchent**.
 
-Concrètement, tu lis pour chaque année : **le total des charges**, **le pourcentage couvert** et **ce qu'il reste à trouver**. Exemple : « avec GIZ tu couvres 81 % de 2026, il manque 11 200 € ; et 27 000 € pour boucler 2027 ». Tu ajoutes une ligne, tu vois tout de suite l'effet. C'est ton bac à sable pour aller chercher les bons bailleurs.
+> 🎯 **Comment lire la couverture ?** Pour chaque année, regarde le **solde de fin d'année** :
+> - **Solde positif → couverture 100 %** : tes financements (report inclus) couvrent tout.
+> - **Solde négatif → il manque ce montant.** Exemple : charges 100, solde fin −20 → **couvert 80 %**, reste 20 à trouver.
+>
+> Le **solde de début d'année** (ton solde initial de couverture) n'est là que pour dire « voici ce qui est déjà garanti » — c'est le socle sur lequel s'empile la simulation. C'est volontairement simple : on se sert de la trésorerie prévisionnelle comme d'une **jauge** pour savoir combien de financement il reste à décrocher.
+
+Concrètement, dans l'onglet Édition tu vois deux tableaux : **la couverture par année** (charges, % couvert, reste à trouver, solde fin) et **la liste de tes financements** avec leur montant total. Tu ajoutes une ligne, tu vois tout de suite l'effet. Dans la **liste des scénarios**, chaque scénario se déplie en une ligne par année : total dépense, total reçu, solde de fin d'année et % couvert. C'est ton bac à sable pour aller chercher les bons bailleurs.
 
 > 💡 **Et quand le financement tombe pour de vrai ?** Le jour où tu obtiens GIZ et que tu actives le scénario, l'appli te demande, ligne par ligne : « Créer le financement GIZ de 50 000 ? ». Si oui, elle te fait compléter les infos manquantes (référence, bailleur, couleur, dates d'éligibilité) et crée le vrai financement — avec ses recettes prévues déjà remplies. Ta simulation devient réalité sans ressaisie.
 
