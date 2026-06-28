@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatEur, MONTHS_FR } from "@/lib/format";
 import { computeCoverage } from "@/lib/coverage";
 import {
   updateCoverageBaseline,
   addScenarioFinancing,
+  renameScenarioFinancing,
   deleteScenarioFinancing,
   saveScenarioFinancingMonths,
   convertScenarioFinancing,
@@ -15,7 +17,6 @@ import {
 export type CoverageFinancing = {
   id: string;
   name: string;
-  amount_total: number;
   converted: boolean;
   months: Record<string, number>; // `${year}:${month}` → montant
 };
@@ -42,6 +43,16 @@ export function CoveragePanel({
   const [error, setError] = useState<string | null>(null);
   const [baseStr, setBaseStr] = useState(String(baseline));
   const [work, setWork] = useState<CoverageFinancing[]>(financings);
+  // édition mensuelle d'un (financement × année) : une à la fois.
+  const [editKey, setEditKey] = useState<string | null>(null);
+
+  // Resync depuis le serveur quand rien n'est en cours d'édition (corrige les ids
+  // périmés → évite l'erreur FK à l'enregistrement).
+  useEffect(() => {
+    if (editKey) return;
+    setWork(financings);
+    setBaseStr(String(baseline));
+  }, [financings, baseline, editKey]);
 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
@@ -52,7 +63,6 @@ export function CoveragePanel({
     });
   }
 
-  // BR-12.1 — recettes simulées agrégées par mois (toutes lignes).
   const recByYM = useMemo(() => {
     const m: Record<string, number> = {};
     for (const f of work) {
@@ -67,6 +77,16 @@ export function CoveragePanel({
     [baseNum, years, recByYM, depByYM],
   );
 
+  function monthsArray(f: CoverageFinancing, year: number): number[] {
+    return Array.from({ length: 12 }, (_, i) => f.months[`${year}:${i + 1}`] ?? 0);
+  }
+  function finTotal(f: CoverageFinancing): number {
+    return Object.values(f.months).reduce((s, v) => s + (v || 0), 0);
+  }
+  function yearTotal(f: CoverageFinancing, year: number): number {
+    return monthsArray(f, year).reduce((a, b) => a + b, 0);
+  }
+
   function setMonth(finId: string, year: number, monthIdx: number, value: number) {
     setWork((w) =>
       w.map((f) =>
@@ -77,27 +97,37 @@ export function CoveragePanel({
     );
   }
 
-  function monthsArray(f: CoverageFinancing, year: number): number[] {
-    return Array.from({ length: 12 }, (_, i) => f.months[`${year}:${i + 1}`] ?? 0);
+  function saveYear(finId: string, year: number) {
+    const f = work.find((x) => x.id === finId);
+    if (!f) return;
+    const arr = monthsArray(f, year);
+    setError(null);
+    startTransition(async () => {
+      const res = await saveScenarioFinancingMonths(finId, year, arr);
+      if (!res.ok) {
+        setError(res.error ?? "Erreur.");
+        return;
+      }
+      setEditKey(null);
+      router.refresh();
+    });
   }
 
   return (
     <section className="mt-8 rounded border border-slate-200 bg-white p-4">
       <h2 className="mb-1 text-lg font-bold text-brand-night">Financements prévisionnels & couverture</h2>
       <p className="mb-3 text-sm text-slate-500">
-        Simulez vos recettes pour vérifier qu&apos;elles couvrent les charges dans le temps
-        (BR-12). Distinct de la trésorerie réelle.
+        Simulez vos recettes pour vérifier qu&apos;elles couvrent les charges (BR-12).
       </p>
 
       {error && (
         <p className="mb-3 rounded border border-alert/30 bg-red-50 p-2 text-sm text-alert">{error}</p>
       )}
 
-      {/* Solde initial de couverture */}
+      {/* Solde initial de couverture + aide */}
       <div className="mb-4 flex items-center gap-2 text-sm">
-        <label className="text-slate-500" title="Reliquat + financements déjà acquis, repliés">
-          Solde initial de couverture ⓘ
-        </label>
+        <label className="text-slate-500">Solde initial de couverture</label>
+        <HelpDot />
         <input
           type="number"
           value={baseStr}
@@ -116,145 +146,185 @@ export function CoveragePanel({
         )}
       </div>
 
-      {/* Résumé couverture par année (F2.9) */}
-      <div className="mb-4 overflow-x-auto">
-        <table className="text-xs">
-          <thead>
-            <tr className="text-slate-500">
-              <th className="px-2 py-1 text-left">Année</th>
-              <th className="px-2 py-1 text-right">Charges</th>
-              <th className="px-2 py-1 text-right">Couvert</th>
-              <th className="px-2 py-1 text-right">Restant à couvrir</th>
-              <th className="px-2 py-1 text-right">Solde fin</th>
-            </tr>
-          </thead>
-          <tbody>
-            {coverage.summary.map((s) => (
-              <tr key={s.year} className="border-t border-slate-100">
-                <td className="px-2 py-1 font-medium">{s.year}</td>
-                <td className="px-2 py-1 text-right">{formatEur(s.charges)}</td>
-                <td className="px-2 py-1 text-right">{s.couvertPct}%</td>
-                <td className={`px-2 py-1 text-right ${s.restantACouvrir > 0 ? "font-bold text-alert" : "text-slate-400"}`}>
-                  {s.restantACouvrir > 0 ? formatEur(s.restantACouvrir) : "—"}
-                </td>
-                <td className={`px-2 py-1 text-right ${s.soldeFin < 0 ? "font-bold text-alert" : ""}`}>
-                  {formatEur(s.soldeFin)}
-                </td>
+      {/* Deux tableaux : couverture par année + liste des financements */}
+      <div className="mb-5 flex flex-wrap gap-6">
+        <div>
+          <h3 className="mb-1 text-xs font-medium uppercase text-slate-400">Couverture par année</h3>
+          <table className="text-xs">
+            <thead>
+              <tr className="text-slate-500">
+                <th className="px-2 py-1 text-left">Année</th>
+                <th className="px-2 py-1 text-right">Total dépense</th>
+                <th className="px-2 py-1 text-right">Total reçu</th>
+                <th className="px-2 py-1 text-right">Solde fin</th>
+                <th className="px-2 py-1 text-right">Couvert</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {coverage.summary.map((s) => (
+                <tr key={s.year} className="border-t border-slate-100">
+                  <td className="px-2 py-1 font-medium">{s.year}</td>
+                  <td className="px-2 py-1 text-right font-bold text-brand-night">{formatEur(s.charges)}</td>
+                  <td className="px-2 py-1 text-right">{formatEur(s.recettes)}</td>
+                  <td className={`px-2 py-1 text-right ${s.soldeFin < 0 ? "font-bold text-alert" : ""}`}>
+                    {formatEur(s.soldeFin)}
+                  </td>
+                  <td className={`px-2 py-1 text-right ${s.couvertPct < 100 ? "text-alert" : "text-brand-emerald"}`}>
+                    {s.couvertPct}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h3 className="mb-1 text-xs font-medium uppercase text-slate-400">Financements</h3>
+          <table className="text-xs">
+            <thead>
+              <tr className="text-slate-500">
+                <th className="px-2 py-1 text-left">Nom</th>
+                <th className="px-2 py-1 text-right">Montant total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {work.map((f) => (
+                <tr key={f.id} className="border-t border-slate-100">
+                  <td className="px-2 py-1">{f.name}{f.converted && <span className="ml-1 text-[10px] text-brand-emerald">✓</span>}</td>
+                  <td className="px-2 py-1 text-right">{formatEur(finTotal(f))}</td>
+                </tr>
+              ))}
+              <tr className="border-t border-slate-300 font-medium">
+                <td className="px-2 py-1">Total</td>
+                <td className="px-2 py-1 text-right">{formatEur(work.reduce((s, f) => s + finTotal(f), 0))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Lignes de financement prévisionnel + répartition mensuelle par année */}
+      {/* Saisie mensuelle par financement et par année (stylo ✏) */}
       {years.length === 0 ? (
         <p className="text-sm text-slate-500">Ajoutez une année au scénario pour saisir les recettes.</p>
       ) : (
-        years.map((year) => (
-          <div key={year} className="mb-4 overflow-x-auto rounded border border-slate-100">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
-                  <th className="px-2 py-1 text-left">{year} — Financement</th>
-                  {MONTHS_FR.map((m) => (
-                    <th key={m} className="px-1 py-1 text-right">{m}</th>
-                  ))}
-                  <th className="px-2 py-1" />
-                </tr>
-              </thead>
-              <tbody>
-                {work.map((f) => {
-                  const arr = monthsArray(f, year);
-                  return (
-                    <tr key={f.id} className="border-b border-slate-50">
-                      <td className="px-2 py-1 text-left font-medium text-brand-night">
-                        {f.name}
-                        {f.converted && <span className="ml-1 text-[10px] text-brand-emerald" title="Converti en financement réel">✓ converti</span>}
-                      </td>
-                      {arr.map((v, i) => (
-                        <td key={i} className="px-1 py-1">
-                          <input
-                            type="number"
-                            value={v}
-                            disabled={!canEdit}
-                            onChange={(e) => setMonth(f.id, year, i, Number(e.target.value) || 0)}
-                            className="w-14 rounded border border-slate-300 px-1 py-0.5 text-right text-input"
-                          />
-                        </td>
-                      ))}
-                      <td className="px-2 py-1 text-right">
-                        {canEdit && (
-                          <button
-                            onClick={() => run(() => saveScenarioFinancingMonths(f.id, year, monthsArray(f, year)))}
-                            disabled={pending}
-                            className="rounded bg-brand-emerald px-1.5 py-0.5 text-[10px] text-white"
-                          >
-                            Enreg.
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-
-                {/* Charges (Σ dépenses du scénario) */}
-                <tr className="border-t border-slate-200 text-slate-500">
-                  <td className="px-2 py-1 text-left">Charges (Σ dépenses)</td>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <td key={i} className="px-1 py-1 text-right">
-                      {formatEur(depByYM[`${year}:${i + 1}`] ?? 0)}
-                    </td>
-                  ))}
-                  <td />
-                </tr>
-
-                {/* Solde de couverture (cumul) — rouge si négatif */}
-                <tr className="border-t-2 border-slate-300 bg-slate-50 font-medium">
-                  <td className="px-2 py-1 text-left">Solde de couverture (cumul)</td>
-                  {(coverage.byYear[year] ?? []).map((v, i) => (
-                    <td key={i} className={`px-1 py-1 text-right ${v < 0 ? "font-bold text-alert" : ""}`}>
-                      {formatEur(v)}
-                    </td>
-                  ))}
-                  <td />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        ))
-      )}
-
-      {/* Gestion des lignes */}
-      {canEdit && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <AddFinancing budgetId={budgetId} onError={setError} />
+        <div className="space-y-3">
           {work.map((f) => (
-            <span key={f.id} className="flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs">
-              {f.name}
-              {!f.converted && (
-                <ConvertButton financing={f} />
-              )}
-              <button
-                onClick={() => run(() => deleteScenarioFinancing(f.id))}
-                disabled={pending}
-                className="text-alert hover:underline"
-                title="Supprimer"
-              >
-                ✕
-              </button>
-            </span>
+            <div key={f.id} className="rounded border border-slate-100 p-2">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="font-medium text-brand-night">{f.name}</span>
+                <span className="text-xs text-slate-400">{formatEur(finTotal(f))}</span>
+                {canEdit && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const n = window.prompt("Renommer le financement", f.name);
+                        if (n && n.trim()) run(() => renameScenarioFinancing(f.id, n));
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-brand-night"
+                      title="Renommer"
+                    >
+                      ✎
+                    </button>
+                    {!f.converted && <ConvertButton financing={f} total={finTotal(f)} />}
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Supprimer le financement « ${f.name} » ?`))
+                          run(() => deleteScenarioFinancing(f.id));
+                      }}
+                      className="text-[11px] text-alert hover:underline"
+                      title="Supprimer"
+                    >
+                      ✕
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400">
+                      <th className="px-1 py-0.5 text-left">Année</th>
+                      {MONTHS_FR.map((m) => (
+                        <th key={m} className="px-1 py-0.5 text-right">{m}</th>
+                      ))}
+                      <th className="px-1 py-0.5 text-right">Σ</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {years.map((year) => {
+                      const editing = editKey === `${f.id}@${year}`;
+                      const arr = monthsArray(f, year);
+                      return (
+                        <tr key={year} className="border-b border-slate-50">
+                          <td className="px-1 py-0.5 font-medium">{year}</td>
+                          {arr.map((v, i) => (
+                            <td key={i} className="px-0.5 py-0.5 text-right">
+                              {editing ? (
+                                <input
+                                  type="number"
+                                  value={v}
+                                  onChange={(e) => setMonth(f.id, year, i, Number(e.target.value) || 0)}
+                                  className="w-12 rounded border border-slate-300 px-0.5 py-0.5 text-right text-input"
+                                />
+                              ) : v !== 0 ? (
+                                formatEur(v)
+                              ) : (
+                                <span className="text-slate-300">·</span>
+                              )}
+                            </td>
+                          ))}
+                          <td className="px-1 py-0.5 text-right text-slate-500">{formatEur(yearTotal(f, year))}</td>
+                          <td className="px-1 py-0.5 text-right">
+                            {canEdit && (editing ? (
+                              <span className="flex gap-1">
+                                <button onClick={() => saveYear(f.id, year)} disabled={pending} className="rounded bg-brand-emerald px-1 py-0.5 text-[10px] text-white">✓</button>
+                                <button onClick={() => { setEditKey(null); setWork(financings); }} className="text-[10px] text-slate-500">✕</button>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setEditKey(`${f.id}@${year}`)}
+                                disabled={editKey !== null}
+                                className="text-slate-400 hover:text-brand-night disabled:opacity-30"
+                                title="Éditer les mois de cette année"
+                              >
+                                ✏
+                              </button>
+                            ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ))}
+          {canEdit && <AddFinancing budgetId={budgetId} onError={setError} />}
         </div>
       )}
 
       {isActive && work.some((f) => !f.converted) && (
         <p className="mt-3 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
-          ⚠ Ce scénario est actif et contient des financements prévisionnels non convertis.
-          Convertissez-les en financements réels (bouton « Convertir ») pour les retrouver
-          dans la page Financement.
+          ⚠ Scénario actif avec des financements prévisionnels non convertis. Utilisez
+          « Convertir » pour créer les financements réels.
         </p>
       )}
     </section>
+  );
+}
+
+function HelpDot() {
+  return (
+    <span className="group relative inline-flex">
+      <Link
+        href="/guide#travailler-un-nouveau-budget"
+        className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] text-slate-500 hover:bg-slate-100"
+        title="Le solde initial = caisse + financements antérieurs garantis (repliés). La couverture est une approximation par pseudo-trésorerie : solde de fin d'année positif = 100 % couvert, négatif = il manque ce montant. Cliquez pour le guide."
+      >
+        ?
+      </Link>
+    </span>
   );
 }
 
@@ -269,7 +339,6 @@ function AddFinancing({
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [amount, setAmount] = useState("0");
 
   if (!open) {
     return (
@@ -280,20 +349,14 @@ function AddFinancing({
   }
   return (
     <span className="flex items-center gap-1">
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom (ex GIZ)" className="w-28 rounded border border-slate-300 px-2 py-1 text-xs" />
-      <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Montant" className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-xs" />
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom (ex GIZ)" className="w-32 rounded border border-slate-300 px-2 py-1 text-xs" />
       <button
         onClick={() => {
           onError(null);
           startTransition(async () => {
-            const res = await addScenarioFinancing(budgetId, name, Number(amount) || 0);
+            const res = await addScenarioFinancing(budgetId, name);
             if (!res.ok) onError(res.error ?? "Erreur.");
-            else {
-              setOpen(false);
-              setName("");
-              setAmount("0");
-              router.refresh();
-            }
+            else { setOpen(false); setName(""); router.refresh(); }
           });
         }}
         disabled={pending}
@@ -302,12 +365,13 @@ function AddFinancing({
         Ajouter
       </button>
       <button onClick={() => setOpen(false)} className="text-xs text-slate-500">Annuler</button>
+      <span className="text-[11px] text-slate-400">(le montant se calcule à partir des mois)</span>
     </span>
   );
 }
 
-// F2.8 / BR-12.3 — convertir une ligne en financement réel (formulaire champs manquants).
-function ConvertButton({ financing }: { financing: CoverageFinancing }) {
+// F2.8 / BR-12.3 — convertir une ligne en financement réel.
+function ConvertButton({ financing, total }: { financing: CoverageFinancing; total: number }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
@@ -328,10 +392,10 @@ function ConvertButton({ financing }: { financing: CoverageFinancing }) {
   }
   return (
     <span className="flex flex-col gap-1 rounded border border-brand-emerald bg-emerald-50 p-2">
-      <span className="text-[11px] font-medium">Convertir « {financing.name} » en financement réel</span>
+      <span className="text-[11px] font-medium">Convertir « {financing.name} » ({formatEur(total)}) en financement réel</span>
       {err && <span className="text-[10px] text-alert">{err}</span>}
       <span className="flex flex-wrap gap-1">
-        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code court (ex GIZ)" className="w-24 rounded border border-slate-300 px-1 py-0.5 text-[10px]" />
+        <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code court (GIZ)" className="w-24 rounded border border-slate-300 px-1 py-0.5 text-[10px]" />
         <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Référence (GIZ-001)" className="w-28 rounded border border-slate-300 px-1 py-0.5 text-[10px]" />
         <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-6 w-8 rounded border border-slate-300" />
         <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="rounded border border-slate-300 px-1 py-0.5 text-[10px]" title="Début d'éligibilité" />
@@ -352,7 +416,7 @@ function ConvertButton({ financing }: { financing: CoverageFinancing }) {
                 conventionStart: start || null,
                 conventionEnd: end || null,
                 description: desc || null,
-                montantTotal: financing.amount_total,
+                montantTotal: total,
               });
               if (!res.ok) setErr(res.error ?? "Erreur.");
               else { setOpen(false); router.refresh(); }

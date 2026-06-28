@@ -10,6 +10,7 @@ import {
   createBudget,
   setActiveBudget,
   duplicateBudget,
+  deleteBudget,
   updateInitialCash,
 } from "@/app/(app)/budgets/actions";
 
@@ -43,6 +44,17 @@ export function BudgetList({
           {error}
         </p>
       )}
+
+      <div className="mb-3 flex items-center gap-1 text-xs text-slate-500">
+        <span>Couverture = approximation par trésorerie prévisionnelle.</span>
+        <Link
+          href="/guide#travailler-un-nouveau-budget"
+          title="La couverture est approximée par une pseudo-trésorerie : solde de fin d'année positif = 100 % couvert, négatif = il manque ce montant. Le solde initial de couverture = caisse + financements antérieurs garantis. Cliquez pour le guide."
+          className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] hover:bg-slate-100"
+        >
+          ?
+        </Link>
+      </div>
 
       <form
         onSubmit={(e) => {
@@ -101,30 +113,32 @@ function BudgetRow({
   pending: boolean;
   run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [cash, setCash] = useState(String(budget.initial_cash));
   const dirty = Number(cash) !== budget.initial_cash;
+  const descPreview = (budget.description ?? "").split("\n").slice(0, 2).join(" ");
 
   return (
     <div
-      className={`rounded border bg-white p-3 ${
+      className={`rounded border bg-white ${
         budget.is_active ? "border-brand-emerald" : "border-slate-200"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="font-medium text-brand-night">{budget.name}</span>
-          {budget.is_active && (
-            <span className="ml-2 rounded bg-brand-emerald px-2 py-0.5 text-xs text-white">
-              Actif
-            </span>
-          )}
-          <div className="text-xs text-slate-400">
-            {years.length > 0
-              ? `Années : ${years.sort().join(", ")}`
-              : "Aucune année"}
-          </div>
-        </div>
-        <div className="flex gap-2 text-xs">
+      {/* Entête repliée : chevron + nom + début de description + actions */}
+      <div className="flex items-center justify-between gap-2 p-3">
+        <button onClick={() => setOpen((v) => !v)} className="flex min-w-0 flex-1 items-start gap-2 text-left">
+          <span className="mt-0.5 text-xs text-slate-400">{open ? "▼" : "▶"}</span>
+          <span className="min-w-0">
+            <span className="font-medium text-brand-night">{budget.name}</span>
+            {budget.is_active && (
+              <span className="ml-2 rounded bg-brand-emerald px-2 py-0.5 text-xs text-white">Actif</span>
+            )}
+            {descPreview && (
+              <span className="block truncate text-xs text-slate-400">{descPreview}</span>
+            )}
+          </span>
+        </button>
+        <div className="flex shrink-0 gap-2 text-xs">
           <Link
             href={`/budgets?tab=edition&budget=${budget.id}`}
             className="rounded border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50"
@@ -147,43 +161,74 @@ function BudgetRow({
           >
             Dupliquer
           </button>
+          {!budget.is_active && (
+            <button
+              onClick={() => {
+                if (window.confirm(`Supprimer le scénario « ${budget.name} » ? Êtes-vous sûr ?`))
+                  run(() => deleteBudget(budget.id));
+              }}
+              disabled={pending}
+              className="rounded border border-alert/50 px-2 py-1 text-alert hover:bg-red-50"
+            >
+              Supprimer
+            </button>
+          )}
         </div>
       </div>
 
-      {/* F2.9 — montant total par année + couvert / restant à couvrir */}
-      {coverage.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          {coverage.map((c) => (
-            <span key={c.year} className="text-slate-500">
-              <span className="font-medium text-brand-night">{c.year}</span> :{" "}
-              {formatEur(c.charges)} · couvert {c.couvertPct}%
-              {c.restantACouvrir > 0 && (
-                <span className="font-bold text-alert"> · reste {formatEur(c.restantACouvrir)}</span>
-              )}
-            </span>
-          ))}
+      {/* Détail déplié */}
+      {open && (
+        <div className="border-t border-slate-100 p-3">
+          {/* Une ligne par année : total dépense / total reçu / solde fin / couvert */}
+          {coverage.length > 0 ? (
+            <table className="mb-3 text-xs">
+              <thead>
+                <tr className="text-slate-400">
+                  <th className="px-2 py-1 text-left">Année</th>
+                  <th className="px-2 py-1 text-right">Total dépense</th>
+                  <th className="px-2 py-1 text-right">Total reçu</th>
+                  <th className="px-2 py-1 text-right">Solde fin</th>
+                  <th className="px-2 py-1 text-right">Couvert</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coverage.map((c) => (
+                  <tr key={c.year} className="border-t border-slate-100">
+                    <td className="px-2 py-1 font-medium">{c.year}</td>
+                    <td className="px-2 py-1 text-right font-bold text-brand-night">{formatEur(c.charges)}</td>
+                    <td className="px-2 py-1 text-right">{formatEur(c.recettes)}</td>
+                    <td className={`px-2 py-1 text-right ${c.soldeFin < 0 ? "font-bold text-alert" : ""}`}>{formatEur(c.soldeFin)}</td>
+                    <td className={`px-2 py-1 text-right ${c.couvertPct < 100 ? "text-alert" : "text-brand-emerald"}`}>{c.couvertPct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="mb-3 text-xs text-slate-400">
+              {years.length === 0 ? "Aucune année." : "Aucune donnée de couverture."}
+            </p>
+          )}
+
+          <div className="flex items-center gap-2 text-sm">
+            <label className="text-slate-500">Solde initial tréso (1er janv.)</label>
+            <input
+              type="number"
+              value={cash}
+              onChange={(e) => setCash(e.target.value)}
+              className="w-32 rounded border border-slate-300 px-2 py-1 text-right text-input"
+            />
+            {dirty && (
+              <button
+                onClick={() => run(() => updateInitialCash(budget.id, Number(cash) || 0))}
+                disabled={pending}
+                className="rounded bg-input px-2 py-1 text-xs text-white"
+              >
+                Enregistrer
+              </button>
+            )}
+          </div>
         </div>
       )}
-
-      <div className="mt-2 flex items-center gap-2 text-sm">
-        <label className="text-slate-500">Solde initial tréso (1er janv.)</label>
-        <input
-          type="number"
-          value={cash}
-          onChange={(e) => setCash(e.target.value)}
-          className="w-32 rounded border border-slate-300 px-2 py-1 text-right text-input"
-        />
-        <span className="text-xs text-slate-400">{formatEur(budget.initial_cash)}</span>
-        {dirty && (
-          <button
-            onClick={() => run(() => updateInitialCash(budget.id, Number(cash) || 0))}
-            disabled={pending}
-            className="rounded bg-input px-2 py-1 text-xs text-white"
-          >
-            Enregistrer
-          </button>
-        )}
-      </div>
     </div>
   );
 }

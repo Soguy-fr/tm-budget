@@ -6,6 +6,7 @@ import type { StructureLine, Budget, Bailleur } from "@/lib/types";
 import { BudgetList } from "@/components/budgets/BudgetList";
 import { ScenarioSelect } from "@/components/budgets/ScenarioSelect";
 import { CoveragePanel, type CoverageFinancing } from "@/components/budgets/CoveragePanel";
+import { ScenarioMeta } from "@/components/budgets/ScenarioMeta";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 import { computeCoverage, type CoverageYearSummary } from "@/lib/coverage";
 import { GuideLink } from "@/components/GuideLink";
@@ -220,7 +221,6 @@ async function EditionTab({
   const coverageFinancings: CoverageFinancing[] = (finRows ?? []).map((f) => ({
     id: f.id as string,
     name: f.name as string,
-    amount_total: Number(f.amount_total),
     converted: f.converted_bailleur_id != null,
     months: finMonthsById[f.id as string] ?? {},
   }));
@@ -231,6 +231,12 @@ async function EditionTab({
   return (
     <div>
       <ScenarioSelect budgets={budgets} selectedId={selected.id} />
+      <ScenarioMeta
+        budgetId={selected.id}
+        name={selected.name}
+        description={selected.description}
+        canEdit={canEdit}
+      />
       <p className="mb-3 text-xs text-slate-400">
         Brouillon : le total des lignes est modifiable ici. Sur le scénario actif
         (Suivi interne) il est verrouillé (BR-1.4).

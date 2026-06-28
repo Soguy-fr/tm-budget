@@ -45,6 +45,44 @@ export async function setActiveBudget(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+// F2.11 — Modifier le titre (nom) et la description d'un scénario.
+export async function updateBudgetMeta(
+  id: string,
+  name: string,
+  description: string | null,
+): Promise<ActionResult> {
+  if (!name.trim()) return { ok: false, error: "Le nom est requis." };
+  const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
+  const { error } = await supabase
+    .from("budgets")
+    .update({ name: name.trim(), description: description?.trim() || null })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/budgets");
+  return { ok: true };
+}
+
+// F2.10 — Supprimer un scénario. Interdit sur le scénario actif.
+export async function deleteBudget(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_budgets");
+  if (deny) return { ok: false, error: deny };
+  const { data: b } = await supabase
+    .from("budgets")
+    .select("is_active")
+    .eq("id", id)
+    .maybeSingle();
+  if (b?.is_active) {
+    return { ok: false, error: "Impossible de supprimer le scénario actif." };
+  }
+  const { error } = await supabase.from("budgets").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/budgets");
+  return { ok: true };
+}
+
 // F2.5 — Saisir le solde initial de trésorerie (1er janvier, 1re année).
 export async function updateInitialCash(
   id: string,

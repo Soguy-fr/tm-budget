@@ -23,11 +23,11 @@ export async function updateCoverageBaseline(
   return { ok: true };
 }
 
-// F2.7 — créer une ligne de financement prévisionnel.
+// F2.7 — créer une ligne de financement prévisionnel (NOM seul ; le montant est
+// dérivé de la répartition mensuelle, BR-12.3).
 export async function addScenarioFinancing(
   budgetId: string,
   name: string,
-  amountTotal: number,
 ): Promise<ActionResult> {
   if (!name.trim()) return { ok: false, error: "Nom requis." };
   const supabase = createClient();
@@ -35,23 +35,24 @@ export async function addScenarioFinancing(
   if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("scenario_financing")
-    .insert({ budget_id: budgetId, name: name.trim(), amount_total: amountTotal });
+    .insert({ budget_id: budgetId, name: name.trim(), amount_total: 0 });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/budgets");
   return { ok: true };
 }
 
-export async function updateScenarioFinancing(
+// Renommer une ligne de financement prévisionnel.
+export async function renameScenarioFinancing(
   id: string,
   name: string,
-  amountTotal: number,
 ): Promise<ActionResult> {
+  if (!name.trim()) return { ok: false, error: "Nom requis." };
   const supabase = createClient();
   const deny = await denyUnless(supabase, "edit_budget");
   if (deny) return { ok: false, error: deny };
   const { error } = await supabase
     .from("scenario_financing")
-    .update({ name: name.trim(), amount_total: amountTotal })
+    .update({ name: name.trim() })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/budgets");
@@ -78,6 +79,16 @@ export async function saveScenarioFinancingMonths(
   const supabase = createClient();
   const deny = await denyUnless(supabase, "edit_budget");
   if (deny) return { ok: false, error: deny };
+  // La ligne parente doit exister (évite l'erreur FK si l'UI est désynchronisée).
+  const { data: parent } = await supabase
+    .from("scenario_financing")
+    .select("id")
+    .eq("id", financingId)
+    .maybeSingle();
+  if (!parent) {
+    return { ok: false, error: "Ligne de financement introuvable (rafraîchissez la page)." };
+  }
+
   const rows = months.map((amount, i) => ({
     scenario_financing_id: financingId,
     year,
@@ -88,6 +99,18 @@ export async function saveScenarioFinancingMonths(
     .from("scenario_financing_monthly")
     .upsert(rows, { onConflict: "scenario_financing_id,year,month" });
   if (error) return { ok: false, error: error.message };
+
+  // Montant total = Σ de tous les mois (dérivé, F2.7).
+  const { data: allM } = await supabase
+    .from("scenario_financing_monthly")
+    .select("amount")
+    .eq("scenario_financing_id", financingId);
+  const total = (allM ?? []).reduce((s, r) => s + Number(r.amount), 0);
+  await supabase
+    .from("scenario_financing")
+    .update({ amount_total: total })
+    .eq("id", financingId);
+
   revalidatePath("/budgets");
   return { ok: true };
 }
