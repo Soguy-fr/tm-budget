@@ -43,16 +43,15 @@ export function CoveragePanel({
   const [error, setError] = useState<string | null>(null);
   const [baseStr, setBaseStr] = useState(String(baseline));
   const [work, setWork] = useState<CoverageFinancing[]>(financings);
-  // édition mensuelle d'un (financement × année) : une à la fois.
-  const [editKey, setEditKey] = useState<string | null>(null);
 
-  // Resync depuis le serveur quand rien n'est en cours d'édition (corrige les ids
-  // périmés → évite l'erreur FK à l'enregistrement).
+  // Resync depuis le serveur quand les props changent (après save/ajout/refresh).
+  // Corrige les ids périmés → évite l'erreur FK à l'enregistrement.
   useEffect(() => {
-    if (editKey) return;
     setWork(financings);
+  }, [financings]);
+  useEffect(() => {
     setBaseStr(String(baseline));
-  }, [financings, baseline, editKey]);
+  }, [baseline]);
 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
@@ -108,7 +107,6 @@ export function CoveragePanel({
         setError(res.error ?? "Erreur.");
         return;
       }
-      setEditKey(null);
       router.refresh();
     });
   }
@@ -253,14 +251,13 @@ export function CoveragePanel({
                   </thead>
                   <tbody>
                     {years.map((year) => {
-                      const editing = editKey === `${f.id}@${year}`;
                       const arr = monthsArray(f, year);
                       return (
                         <tr key={year} className="border-b border-slate-50">
                           <td className="px-1 py-0.5 font-medium">{year}</td>
                           {arr.map((v, i) => (
                             <td key={i} className="px-0.5 py-0.5 text-right">
-                              {editing ? (
+                              {canEdit ? (
                                 <input
                                   type="number"
                                   value={v}
@@ -276,21 +273,16 @@ export function CoveragePanel({
                           ))}
                           <td className="px-1 py-0.5 text-right text-slate-500">{formatEur(yearTotal(f, year))}</td>
                           <td className="px-1 py-0.5 text-right">
-                            {canEdit && (editing ? (
-                              <span className="flex gap-1">
-                                <button onClick={() => saveYear(f.id, year)} disabled={pending} className="rounded bg-brand-emerald px-1 py-0.5 text-[10px] text-white">✓</button>
-                                <button onClick={() => { setEditKey(null); setWork(financings); }} className="text-[10px] text-slate-500">✕</button>
-                              </span>
-                            ) : (
+                            {canEdit && (
                               <button
-                                onClick={() => setEditKey(`${f.id}@${year}`)}
-                                disabled={editKey !== null}
-                                className="text-slate-400 hover:text-brand-night disabled:opacity-30"
-                                title="Éditer les mois de cette année"
+                                onClick={() => saveYear(f.id, year)}
+                                disabled={pending}
+                                className="rounded bg-brand-emerald px-1.5 py-0.5 text-[10px] text-white disabled:opacity-40"
+                                title="Enregistrer les recettes de cette année"
                               >
-                                ✏
+                                ✓ Enreg.
                               </button>
-                            ))}
+                            )}
                           </td>
                         </tr>
                       );

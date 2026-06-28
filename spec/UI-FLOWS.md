@@ -187,13 +187,14 @@ Solde initial de couverture : [ 40 000 ]  (?) caisse + financements antérieurs 
 │ 2027   60 000    36 %    38 200   −38 200    │   │ (total)    50 000      │
 └──────────────────────────────────────┘   └─────────────────────────┘
 
-GIZ                                       [✏ par année]
-  2026   Jan … Déc   (✏ ouvre les 12 mois)        Σ 40 000
-  2027   Jan … Déc                                 Σ 10 000
+GIZ                              ✎ rename · Convertir · ✕
+  Année   Jan … Déc  (12 inputs éditables)   Σ      ✓ Enreg.
+  2026    …                                  40 000  ✓
+  2027    …                                  10 000  ✓
 [+ ligne de financement]   (nom seul ; le montant = Σ des mois)
 ```
 - Créer une ligne = **nom seul** ; le **montant** est `Σ scenario_financing_monthly` (dérivé).
-- Saisie mensuelle via un **stylo ✏ par (financement × année)** : ouvre les 12 mois.
+- Détail mensuel **toujours éditable** (12 inputs), **enregistré par année** (bouton ✓).
 - **Solde initial de couverture** = `coverage_baseline`, distinct d'`initial_cash` ; **(?)**
   survol + lien guide.
 - Deux tableaux : **Couverture par année** (charges, couvert %, restant, solde fin — BR-12.2)
