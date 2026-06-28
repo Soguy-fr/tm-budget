@@ -3,6 +3,7 @@
 > Liste des choses à tester. Coche au fur et à mesure. Chaque mise à jour est horodatée.
 
 ## Journal des mises à jour
+- **2026-06-28 12:24** — Itération 2 **livrée** (build OK, 227 tests verts, 5 commits). À tester ci-dessous. Migration **0011** ajoutée (description).
 - **2026-06-28 12:11** — Itération 2 : Config en onglets, stylo /interne, refonte liste scénarios (accordéon + description + suppression + couverture par année + « ? »), refonte CoveragePanel (montant auto, stylo par année, 2e tableau financements, fix FK), nouvelle formule de couverture (solde fin d'année).
 - **2026-06-28 (matin)** — Itération 1 : 4 chantiers (rôles, édition ligne-par-ligne, onglets scénario, financements prévisionnels).
 
