@@ -769,10 +769,11 @@ function GridRow({
             <button
               onClick={() => openLine(row.id, year)}
               disabled={anyEditing}
-              className="ml-2 rounded bg-brand-night px-1.5 py-0.5 text-[10px] text-white disabled:opacity-30"
+              className="ml-2 text-slate-400 hover:text-brand-night disabled:opacity-30"
               title={anyEditing ? "Fermez la ligne en cours d'abord" : "Éditer cette ligne"}
+              aria-label="Éditer la ligne"
             >
-              Éditer
+              ✏
             </button>
           )}
           {isLeaf && editingThis && (
