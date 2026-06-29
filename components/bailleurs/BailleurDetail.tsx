@@ -23,9 +23,9 @@ import {
 } from "@/app/(app)/financements/actions";
 
 const STATUT_LABEL: Record<FinancingStatus, string> = {
-  signe: "Signé",
-  promis: "Promis",
-  espere: "Espéré",
+  signe: "Contrat signé",
+  promis: "En cours de signature",
+  espere: "Promesse",
 };
 const TYPE_LABEL: Record<FundType, string> = {
   non_affecte: "Fonds non-affectés",
@@ -656,9 +656,9 @@ function FinancementEdit({
           className="rounded border border-slate-300 px-2 py-1 text-sm"
           title="Statut du financement (BR-12.1)"
         >
-          <option value="signe">Signé</option>
-          <option value="promis">Promis</option>
-          <option value="espere">Espéré</option>
+          <option value="signe">Contrat signé</option>
+          <option value="promis">En cours de signature</option>
+          <option value="espere">Promesse</option>
         </select>
       </div>
       <select

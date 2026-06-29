@@ -27,9 +27,9 @@ type Fin = {
 };
 
 const TIER_LABEL: Record<FinancingStatus, string> = {
-  signe: "Signé seul",
-  promis: "Signé + promis",
-  espere: "Signé + promis + espéré",
+  signe: "Contrat signé seul",
+  promis: "+ en cours de signature",
+  espere: "+ promesse",
 };
 
 export function TresorerieTable({

@@ -21,9 +21,9 @@ export type ScenarioFinancingRow = {
 };
 
 const STATUT_LABEL: Record<FinancingStatus, string> = {
-  signe: "Signé",
-  promis: "Promis",
-  espere: "Espéré",
+  signe: "Contrat signé",
+  promis: "En cours de signature",
+  espere: "Promesse",
 };
 
 export function CoveragePanel({
@@ -87,9 +87,9 @@ export function CoveragePanel({
               <th className="px-2 py-1 text-left">Année</th>
               <th className="px-2 py-1 text-right">Charges</th>
               <th className="px-2 py-1 text-left">Couverture</th>
-              <th className="px-2 py-1 text-right">Signé</th>
-              <th className="px-2 py-1 text-right">Promis</th>
-              <th className="px-2 py-1 text-right">Espéré</th>
+              <th className="px-2 py-1 text-right">Contrat signé</th>
+              <th className="px-2 py-1 text-right">En signature</th>
+              <th className="px-2 py-1 text-right">Promesse</th>
               <th className="px-2 py-1 text-right">Non couvert</th>
             </tr>
           </thead>
@@ -171,7 +171,7 @@ function CoverageBar({
   c: { pctSigne: number; pctPromis: number; pctEspere: number; pctNonCouvert: number };
 }) {
   return (
-    <span className="flex h-3 w-40 overflow-hidden rounded bg-slate-100" title="Signé / Promis / Espéré / Non couvert">
+    <span className="flex h-3 w-40 overflow-hidden rounded bg-slate-100" title="Contrat signé / En signature / Promesse / Non couvert">
       <span className="bg-brand-emerald" style={{ width: `${c.pctSigne}%` }} />
       <span className="bg-emerald-300" style={{ width: `${c.pctPromis}%` }} />
       <span className="bg-amber-400" style={{ width: `${c.pctEspere}%` }} />
@@ -185,7 +185,7 @@ function HelpDot() {
     <Link
       href="/guide#le-plan-de-financement-ai-je-de-quoi-payer-tout-ca"
       className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] text-slate-500 hover:bg-slate-100"
-      title="Couverture = répartition annuelle des financements retenus, par statut (signé/promis/espéré), sur la dépense annuelle. Les signés sont retenus d'office. Cliquez pour le guide."
+      title="Couverture = répartition annuelle des financements retenus, par statut (contrat signé / en cours de signature / promesse), sur la dépense annuelle. Les contrats signés sont retenus d'office. Cliquez pour le guide."
     >
       ?
     </Link>

@@ -84,19 +84,19 @@ Tu sélectionnes un scénario (même non actif) et tu l'édites comme le Suivi i
 
 Tes **financements réels** (page Financement) sont le registre de **tous** tes fonds possibles, signés ou pas. Sur la page d'un financement tu renseignes, en plus de ses infos habituelles :
 
-- un **statut** : **signé** (l'argent est sûr, convention signée), **promis** (accord de principe, oral ou écrit, mais rien de signé) ou **espéré** (tu as toutes les chances, mais rien n'est acquis) ;
+- un **statut** : **Contrat signé** (l'argent est sûr, convention signée), **En cours de signature** ou **Promesse** (accord de principe, mais rien de signé) ;
 - sa **répartition par année** (couche couverture) : combien ce fonds couvre sur 2026, 2027… (un fonds peut porter sur une seule année ou s'étaler sur plusieurs) ;
 - ses **déblocages mensuels** (couche trésorerie) : à quel mois l'argent tombe réellement — parfois la dernière tranche arrive *après* la dernière dépense éligible (le bailleur paie sur rapport).
 
 Ces deux couches répondent à deux questions différentes. La **répartition annuelle** sert à la **couverture** : mes dépenses de l'année sont-elles financées ? Les **déblocages mensuels** servent à la **trésorerie** : ai-je le cash au bon moment ? Un **⚠** discret te prévient si la somme des années ou des mois ne colle pas au montant total (sans t'empêcher d'enregistrer — normal en cours de saisie).
 
-Dans un **scénario**, tu choisis **quels financements tu retiens** (bloc « Plan de financement » de l'onglet Édition). Les fonds **signés** sont retenus d'office et **non retirables** (l'argent est garanti). Les **promis/espéré**, tu les **ajoutes ou retires** pour simuler : « et si je n'obtiens pas ce fonds promis, suis-je toujours couvert ? ».
+Dans un **scénario**, tu choisis **quels financements tu retiens** (bloc « Plan de financement » de l'onglet Édition). Les fonds **Contrat signé** sont retenus d'office et **non retirables** (l'argent est garanti). Ceux **En cours de signature** ou en **Promesse**, tu les **ajoutes ou retires** pour simuler : « et si je n'obtiens pas ce fonds, suis-je toujours couvert ? ».
 
-> 🎯 **Comment lire la couverture ?** Pour chaque année, une **barre empilée** montre le taux de couverture des dépenses par les fonds retenus : **vert = signé**, **vert clair = promis**, **jaune = espéré**, **rouge = non couvert**. Exemple : dépense 100, dont 60 signé, 20 promis, 10 espéré → **60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge**. D'un coup d'œil tu sais ce qui est sûr et combien il reste à décrocher.
+> 🎯 **Comment lire la couverture ?** Pour chaque année, une **barre empilée** montre le taux de couverture des dépenses par les fonds retenus : **vert = contrat signé**, **vert clair = en cours de signature**, **jaune = promesse**, **rouge = non couvert**. Exemple : dépense 100, dont 60 signé, 20 en cours, 10 promesse → **60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge**. D'un coup d'œil tu sais ce qui est sûr et combien il reste à décrocher.
 
 Tu retrouves cette couverture dans la **liste des scénarios** (chaque scénario se déplie en une ligne par année) et sur le **dashboard** (bloc « Plan de financement »).
 
-> 🔁 **Tester une hypothèse** : duplique le scénario actif, retire (ou ajoute) un fonds promis/espéré sur la copie, compare la couverture. Le statut d'un fonds, lui, se change globalement sur sa page (espéré → signé le jour où ça signe).
+> 🔁 **Tester une hypothèse** : duplique le scénario actif, retire (ou ajoute) un fonds en cours/promesse sur la copie, compare la couverture. Le statut d'un fonds, lui, se change globalement sur sa page (promesse → contrat signé le jour où ça signe).
 
 ### Le solde initial de trésorerie
 
@@ -261,7 +261,7 @@ Un mois en **rouge** = solde négatif prévu. Exemple typique : la mission fluvi
 
 Cette page projette le solde du **scénario actif** mois par mois, à partir des **versements** de ton plan de financement : une ligne par **fonds** (ses versements mois par mois, avec son statut), une ligne **Dépenses totales**, une ligne **Solde**.
 
-Le **filtre statut** en tête change tout : **signé seul** (le plus prudent — n'inclut que l'argent sûr), **signé + promis**, ou **signé + promis + espéré** (tout). Tu vois ainsi si tu tombes à zéro selon ton degré d'optimisme. Si même en comptant l'espéré ça passe juste, c'est un signal.
+Le **filtre statut** en tête change tout : **contrat signé seul** (le plus prudent — n'inclut que l'argent sûr), **+ en cours de signature**, ou **+ promesse** (tout). Tu vois ainsi si tu tombes à zéro selon ton degré d'optimisme. Si même en comptant les promesses ça passe juste, c'est un signal.
 
 Le petit plus malin : la case **« Date du jour du calcul »**. Tu y mets une date (par défaut aujourd'hui) et l'appli **grise tous les mois passés** — tu ne regardes que l'avenir. Le solde réellement en caisse à cette date se saisit dans la case **Solde forcé**, qui se pose dans le mois juste avant (date au 13 juin 2025 → solde forcé affiché en « Solde mai 2025 »), et la projection repart de là. Change la date pour simuler « et si on était déjà en septembre ? » sans toucher à ton budget.
 

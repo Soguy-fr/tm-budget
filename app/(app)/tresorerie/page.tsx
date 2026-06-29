@@ -81,7 +81,7 @@ export default async function TresoreriePage() {
       </div>
       <p className="mb-4 text-sm text-slate-500">
         Scénario actif ({budget.name}) — versements par fonds, dépenses totales et solde chaîné,
-        filtrables par statut (signé / promis / espéré).
+        filtrables par statut (contrat signé / en cours de signature / promesse).
       </p>
       <TresorerieTable
         budgetId={budget.id}

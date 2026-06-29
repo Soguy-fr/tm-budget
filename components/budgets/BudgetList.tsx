@@ -46,7 +46,7 @@ export function BudgetList({
       )}
 
       <div className="mb-3 flex items-center gap-1 text-xs text-slate-500">
-        <span>Couverture = répartition annuelle des fonds par statut (signé / promis / espéré).</span>
+        <span>Couverture = répartition annuelle des fonds par statut (contrat signé / en cours de signature / promesse).</span>
         <Link
           href="/guide#le-plan-de-financement-ai-je-de-quoi-payer-tout-ca"
           title="Pour chaque année, on empile la répartition annuelle des fonds par statut sur la dépense : signé (vert), promis (vert clair), espéré (jaune), non couvert (rouge). Cliquez pour le guide."
@@ -186,7 +186,7 @@ function BudgetRow({
                 <tr className="text-slate-400">
                   <th className="px-2 py-1 text-left">Année</th>
                   <th className="px-2 py-1 text-right">Total dépense</th>
-                  <th className="px-2 py-1 text-left">Couverture (signé / promis / espéré / non couvert)</th>
+                  <th className="px-2 py-1 text-left">Couverture (contrat signé / en cours / promesse / non couvert)</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,7 +196,7 @@ function BudgetRow({
                     <td className="px-2 py-1 text-right font-bold text-brand-night">{formatEur(c.charges)}</td>
                     <td className="px-2 py-1">
                       <span className="flex items-center gap-2">
-                        <span className="flex h-3 w-32 overflow-hidden rounded bg-slate-100" title="Signé / Promis / Espéré / Non couvert">
+                        <span className="flex h-3 w-32 overflow-hidden rounded bg-slate-100" title="Contrat signé / En signature / Promesse / Non couvert">
                           <span className="bg-brand-emerald" style={{ width: `${c.pctSigne}%` }} />
                           <span className="bg-emerald-300" style={{ width: `${c.pctPromis}%` }} />
                           <span className="bg-amber-400" style={{ width: `${c.pctEspere}%` }} />

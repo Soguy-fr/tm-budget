@@ -447,9 +447,9 @@ Objectif : ce qui a été reporté (bailleur, CA) ne peut plus bouger silencieus
 
 ### BR-12.1 — Modèle d'un financement (`bailleurs`)
 Champs ajoutés au financement réel :
-- `statut` ∈ { `signe`, `promis`, `espere` } (défaut `signe`) — niveau de certitude :
-  *signé* = argent sûr (convention signée) ; *promis* = accord de principe (oral/écrit, non
-  signé) ; *espéré* = forte probabilité, rien d'acquis ;
+- `statut` ∈ { `signe`, `promis`, `espere` } (défaut `signe`) — niveau de certitude (libellés UI) :
+  `signe` = **Contrat signé** (argent sûr) ; `promis` = **En cours de signature** ; `espere` =
+  **Promesse** (accord de principe, rien de signé) ;
 - **couche 1** `bailleur_yearly` — répartition par **année** d'éligibilité (couverture) ;
 - **couche 2** `bailleur_income_monthly` — versements/déblocages par **mois** (existant ;
   peuvent tomber hors éligibilité : dernière tranche après la dernière dépense éligible).

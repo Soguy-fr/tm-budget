@@ -19,9 +19,9 @@ export function PlanFinancementBlock({ coverage }: { coverage: PlanYearCoverage[
             <span className="w-12 font-medium text-brand-night">{c.year}</span>
             <span className="w-24 text-right text-slate-500">{formatEur(c.charges)}</span>
             <span className="flex h-4 flex-1 overflow-hidden rounded bg-slate-100">
-              <span className="bg-brand-emerald" style={{ width: `${c.pctSigne}%` }} title={`Signé ${c.pctSigne}%`} />
-              <span className="bg-emerald-300" style={{ width: `${c.pctPromis}%` }} title={`Promis ${c.pctPromis}%`} />
-              <span className="bg-amber-400" style={{ width: `${c.pctEspere}%` }} title={`Espéré ${c.pctEspere}%`} />
+              <span className="bg-brand-emerald" style={{ width: `${c.pctSigne}%` }} title={`Contrat signé ${c.pctSigne}%`} />
+              <span className="bg-emerald-300" style={{ width: `${c.pctPromis}%` }} title={`En cours de signature ${c.pctPromis}%`} />
+              <span className="bg-amber-400" style={{ width: `${c.pctEspere}%` }} title={`Promesse ${c.pctEspere}%`} />
               <span className="bg-alert" style={{ width: `${c.pctNonCouvert}%` }} title={`Non couvert ${c.pctNonCouvert}%`} />
             </span>
             <span className="w-44 text-right text-[11px] text-slate-500">
@@ -36,9 +36,9 @@ export function PlanFinancementBlock({ coverage }: { coverage: PlanYearCoverage[
 
 function Legend() {
   const items: Array<[string, string]> = [
-    ["bg-brand-emerald", "Signé"],
-    ["bg-emerald-300", "Promis"],
-    ["bg-amber-400", "Espéré"],
+    ["bg-brand-emerald", "Contrat signé"],
+    ["bg-emerald-300", "En cours de signature"],
+    ["bg-amber-400", "Promesse"],
     ["bg-alert", "Non couvert"],
   ];
   return (
