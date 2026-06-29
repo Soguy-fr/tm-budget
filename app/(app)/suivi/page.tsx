@@ -6,6 +6,9 @@ import { isAllocated } from "@/lib/gl";
 import type { StructureLine, Budget, GlEntry } from "@/lib/types";
 import { SuiviTabs } from "@/components/suivi/SuiviTabs";
 import { DepenseTable } from "@/components/suivi/DepenseTable";
+import { PlanFinancementBlock } from "@/components/suivi/PlanFinancementBlock";
+import { computePlanCoverage, type PlanFinancing } from "@/lib/coverage";
+import type { FinancingStatus } from "@/lib/types";
 import { GuideLink } from "@/components/GuideLink";
 
 export const dynamic = "force-dynamic";
@@ -31,12 +34,14 @@ export default async function SuiviPage({
   }
   const budget = budgetRow as Budget;
 
-  const [{ data: structure }, { data: yearRows }, { data: monthly }, { data: gl }] =
+  const [{ data: structure }, { data: yearRows }, { data: monthly }, { data: gl }, { data: fins }, { data: finY }] =
     await Promise.all([
       supabase.from("structure_lines").select("*").eq("active", true),
       supabase.from("budget_years").select("year").eq("budget_id", budget.id),
       supabase.from("budget_monthly").select("line_id, year, month, amount").eq("budget_id", budget.id).range(0, 99999),
       supabase.from("gl_entries").select("*").eq("entry_type", "Dépense").eq("archived", false).range(0, 99999),
+      supabase.from("scenario_financing").select("id, statut").eq("budget_id", budget.id),
+      supabase.from("scenario_financing_yearly").select("scenario_financing_id, year, amount"),
     ]);
 
   const lines = (structure ?? []) as StructureLine[];
@@ -73,6 +78,21 @@ export default async function SuiviPage({
     if (mo <= mFor(y)) realiseTD[k] = (realiseTD[k] ?? 0) + a;
   }
 
+  // F8.6 / BR-12.2 — couverture annuelle (plan de financement) du scénario actif.
+  const depByYear: Record<number, number> = {};
+  for (const r of monthly ?? []) {
+    depByYear[r.year as number] = (depByYear[r.year as number] ?? 0) + Number(r.amount);
+  }
+  const planByFin: Record<string, PlanFinancing> = {};
+  for (const f of fins ?? []) {
+    planByFin[f.id as string] = { statut: f.statut as FinancingStatus, yearly: {} };
+  }
+  for (const r of finY ?? []) {
+    const pf = planByFin[r.scenario_financing_id as string];
+    if (pf) pf.yearly[r.year as number] = Number(r.amount);
+  }
+  const planCoverage = computePlanCoverage(allYears, depByYear, Object.values(planByFin));
+
   const leafLines = lines.filter((l) => l.level === 3);
   const data = years.map((year) => {
     const leaf: Record<string, LeafAmounts> = {};
@@ -95,6 +115,7 @@ export default async function SuiviPage({
         <GuideLink anchor="suivre-les-depenses" />
       </div>
       <SuiviTabs />
+      <PlanFinancementBlock coverage={planCoverage} />
       <p className="mb-3 text-sm text-slate-500">
         Prévu vs réalisé par catégorie (niveaux 1 et 2) — {budget.name}. Vitesse calculée
         au {refMonth.toString().padStart(2, "0")}/{refYear}
