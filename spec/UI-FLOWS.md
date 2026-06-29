@@ -196,6 +196,19 @@ Financements du scénario :                    [gérer les financements →]
 - Tableau **Couverture par année** : signé/promis/espéré/non couvert empilé sur les fonds
   **retenus** (BR-12.3).
 
+### Onglet « Comparaison » — 2 scénarios côte à côte (F2.12)
+```
+Comparer : [Budget 2026 v1 ▾]   vs   [Budget 2026 +GIZ ▾]
+
+2026
+  LB                         Scénario A      •     Scénario B
+  1.1.1 Salaires             425 000         ●(vert)   425 000
+  1.2.1 Loyer                 12 000         ●(orange)  18 000
+  Total année                ...             •         ...
+```
+- Deux **menus déroulants** (A, B). Tableau groupé par **année**, une ligne par **LB niv.3**
+  (mois repliés → total annuel). **Point** entre les colonnes : **vert** si A = B, **orange** sinon.
+
 ## 4. Pages « Financement » (F4) — même gabarit
 
 Identiques au tableur interne, mais centrées sur le financement (sert au **rapport financier**).

@@ -7,6 +7,7 @@ import { BudgetList } from "@/components/budgets/BudgetList";
 import { ScenarioSelect } from "@/components/budgets/ScenarioSelect";
 import { CoveragePanel, type ScenarioFinancingRow } from "@/components/budgets/CoveragePanel";
 import { ScenarioMeta } from "@/components/budgets/ScenarioMeta";
+import { ComparisonView } from "@/components/budgets/ComparisonView";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 import { computePlanCoverage, type PlanYearCoverage, type PlanFinancing } from "@/lib/coverage";
 import type { FinancingStatus } from "@/lib/types";
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function BudgetsPage({
   searchParams,
 }: {
-  searchParams: { tab?: string; budget?: string };
+  searchParams: { tab?: string; budget?: string; a?: string; b?: string };
 }) {
   if (!isSupabaseConfigured()) {
     return (
@@ -46,7 +47,12 @@ export default async function BudgetsPage({
     (yearsByBudget[y.budget_id as string] ??= []).push(y.year as number);
   }
 
-  const tab = searchParams.tab === "edition" ? "edition" : "liste";
+  const tab =
+    searchParams.tab === "edition"
+      ? "edition"
+      : searchParams.tab === "comparaison"
+        ? "comparaison"
+        : "liste";
 
   return (
     <div>
@@ -73,6 +79,14 @@ export default async function BudgetsPage({
         >
           Édition
         </Link>
+        <Link
+          href="/budgets?tab=comparaison"
+          className={`-mb-px border-b-2 px-3 py-1.5 ${
+            tab === "comparaison" ? "border-brand-night font-medium text-brand-night" : "border-transparent text-slate-500"
+          }`}
+        >
+          Comparaison
+        </Link>
       </div>
 
       {tab === "liste" ? (
@@ -87,10 +101,73 @@ export default async function BudgetsPage({
             coverageByBudget={await coverageByBudget(supabase, budgets, yearsByBudget)}
           />
         </>
+      ) : tab === "comparaison" ? (
+        <ComparisonTab supabase={supabase} budgets={budgets} a={searchParams.a} b={searchParams.b} />
       ) : (
         <EditionTab supabase={supabase} budgets={budgets} selectedId={searchParams.budget} />
       )}
     </div>
+  );
+}
+
+// F2.12 — onglet Comparaison : 2 scénarios côte à côte (totaux annuels par LB).
+async function ComparisonTab({
+  supabase,
+  budgets,
+  a,
+  b,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  budgets: Budget[];
+  a?: string;
+  b?: string;
+}) {
+  if (budgets.length < 2) {
+    return <p className="text-sm text-slate-500">Il faut au moins deux scénarios pour comparer.</p>;
+  }
+  const active = budgets.find((x) => x.is_active) ?? budgets[0];
+  const selectedA = budgets.find((x) => x.id === a)?.id ?? active.id;
+  const selectedB =
+    budgets.find((x) => x.id === b)?.id ?? budgets.find((x) => x.id !== selectedA)!.id;
+
+  const [{ data: lines }, { data: mA }, { data: mB }] = await Promise.all([
+    supabase.from("structure_lines").select("id, code, label, level, sort_order").eq("active", true).eq("level", 3).order("sort_order"),
+    supabase.from("budget_monthly").select("line_id, year, amount").eq("budget_id", selectedA).range(0, 99999),
+    supabase.from("budget_monthly").select("line_id, year, amount").eq("budget_id", selectedB).range(0, 99999),
+  ]);
+
+  // Σ par (ligne, année) pour chaque scénario.
+  const sumBy = (rows: { line_id: string; year: number; amount: number }[] | null) => {
+    const m: Record<string, number> = {};
+    for (const r of rows ?? []) m[`${r.line_id}:${r.year}`] = (m[`${r.line_id}:${r.year}`] ?? 0) + Number(r.amount);
+    return m;
+  };
+  const aBy = sumBy(mA as { line_id: string; year: number; amount: number }[] | null);
+  const bBy = sumBy(mB as { line_id: string; year: number; amount: number }[] | null);
+  const years = Array.from(
+    new Set([...(mA ?? []), ...(mB ?? [])].map((r) => r.year as number)),
+  ).sort((x, y) => x - y);
+
+  const data = years.map((year) => {
+    const rows = (lines ?? [])
+      .map((l) => {
+        const av = aBy[`${l.id}:${year}`] ?? 0;
+        const bv = bBy[`${l.id}:${year}`] ?? 0;
+        return { lineId: l.id as string, code: l.code as string, label: l.label as string, a: av, b: bv, same: av === bv };
+      })
+      .filter((r) => r.a !== 0 || r.b !== 0);
+    const totalA = rows.reduce((s, r) => s + r.a, 0);
+    const totalB = rows.reduce((s, r) => s + r.b, 0);
+    return { year, rows, totalA, totalB };
+  });
+
+  return (
+    <ComparisonView
+      budgets={budgets.map((x) => ({ id: x.id, name: x.name }))}
+      selectedA={selectedA}
+      selectedB={selectedB}
+      data={data}
+    />
   );
 }
 

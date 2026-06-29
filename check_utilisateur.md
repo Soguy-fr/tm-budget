@@ -4,6 +4,7 @@
 
 ## Journal des mises à jour
 
+- **2026-06-29 22:00** — **Lot 4c — Corrections** (build OK, 229 tests, migration **0014**) : total éditable en brouillon (blocage Σ≠total réservé à l'actif) ; page financement refondue (réconciliation au montant du fonds + « Assigné mais non mappé », « Couverture », « Décaissement », retrait du check GL, champ **Type**) ; nouvel **onglet Comparaison** de 2 scénarios.
 - **2026-06-29 20:59** — **Lot 4b — Plan sur financements réels** (build OK, 229 tests verts, migration **0013**). Pivot : le plan de financement porte sur tes **vrais financements** (page Financement), enrichis de **statut** + **répartition annuelle** ; un scénario **retient** des financements (signés d'office, promis/espéré ajoutables). Remplace les « fonds par scénario » de la v2.
 - **2026-06-29 17:32** — **Lot 4 — Plan de financement v2** livré (build OK, 229 tests verts, migration **0012**). Statut signé/promis/espéré, 2 couches (annuelle = couverture, mensuelle = trésorerie), dashboard empilé, filtre tréso par statut. Pseudo-trésorerie + solde initial de couverture **supprimés**. À tester ci-dessous.
 - **2026-06-28 13:25** — Fix : détail mensuel de chaque financement **toujours visible et éditable** (12 inputs + ✓ par année). Le stylo verrou est retiré (il masquait les mois).
@@ -15,13 +16,35 @@
 
 ## ⚠️ Prérequis (à faire une fois)
 
-- [ ] Appliquer les migrations dans l'ordre : `0009`, `0010`, `0011`, `0012`, `0013` (Supabase → SQL Editor). *(0013 supprime `scenario_financing*` + `coverage_baseline` et ajoute `bailleurs.statut`, `bailleur_yearly`, `budget_financing`.)*
+- [ ] Appliquer les migrations dans l'ordre : `0009` … `0013`, puis `0014` (Supabase → SQL Editor). *(0013 supprime `scenario_financing*` + `coverage_baseline`, ajoute `bailleurs.statut`, `bailleur_yearly`, `budget_financing` ; 0014 ajoute `bailleurs.type`.)*
 - [ ] `.env.local` : `SUPABASE_SERVICE_ROLE_KEY` (pour l'onglet Utilisateurs).
 - [ ] Redémarrer `npm run dev` après un `git pull`.
 
 ---
 
-## Lot 4b — Plan sur financements réels (nouveau, remplace v2)
+## Lot 4c — Corrections (nouveau)
+
+### Édition de scénario — total éditable en brouillon
+
+- [ ] `/budgets?tab=edition` : modifier le **total** d'une LB et enregistrer **sans** que Σmois = total (plus d'erreur « Σ mois ≠ total »). L'⚠ reste affiché (informatif).
+- [ ] Sur le **Suivi interne** (scénario actif), le total reste **verrouillé** et l'erreur Σ≠total persiste (comportement voulu).
+
+### Page d'un financement
+
+- [ ] **Budget dépense bailleur** : ligne **« Assigné mais non mappé »** (mailles imputées hors mapping) + **« Non assigné (reste à budgéter) »** ; **Total = montant du fonds**.
+- [ ] Bloc renommé **« Couverture »** ; ⚠ uniquement si Σ ≠ montant du fonds.
+- [ ] Bloc renommé **« Décaissement »** ; ⚠ uniquement si Σ ≠ montant du fonds ; **plus** de ligne « Reçues (GL) » ni « Solde prévu ».
+- [ ] Bouton **« Assigner les lignes »** au même format (bordé) que Modifier / Règles.
+- [ ] Champ **Type** (Fonds non-affectés / affectés) dans **Modifier**, affiché dans l'en-tête.
+
+### Onglet Comparaison (`/budgets?tab=comparaison`)
+
+- [ ] Deux menus déroulants pour choisir 2 scénarios.
+- [ ] Tableau par année, une ligne par LB : total A · **point** (vert = identique, orange = différent) · total B.
+
+---
+
+## Lot 4b — Plan sur financements réels (remplace v2)
 
 > ⚠️ Migration **0013** : le plan de financement porte sur tes **vrais financements** (page Financement). Les financements existants passent en **statut « signé »** par défaut (à ajuster). Saisis leur **répartition annuelle** sur leur page.
 

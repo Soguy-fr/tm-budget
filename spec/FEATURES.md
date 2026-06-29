@@ -39,6 +39,7 @@
 | F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras) + couverture **signé / promis / espéré / non couvert** (BR-12.3). Indicateur **« ? »** (survol + lien guide) | 🟢 | BR-12.3 |
 | F2.10 | **Supprimer un scénario** : bouton + confirmation « Êtes-vous sûr ? ». **Interdit sur le scénario actif** | 🟢 | — |
 | F2.11 | **Description de scénario** (`budgets.description`) : éditable dans l'onglet Édition (avec le titre) ; aperçu (premières lignes) dans la liste | 🟢 | — |
+| F2.12 | **Onglet « Comparaison »** : 2 menus déroulants pour choisir 2 scénarios ; tableau côte à côte des **totaux annuels par LB** (mois repliés), avec un **point** entre les deux colonnes (**vert** = montants identiques, **orange** = différents) | 🟢 | — |
 
 ## F3 — Prévisionnel interne (page tableur principale)
 
