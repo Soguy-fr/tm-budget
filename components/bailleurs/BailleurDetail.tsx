@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Bailleur, BailleurLine, StructureLine, Funder, FinancingStatus } from "@/lib/types";
+import type { Bailleur, BailleurLine, StructureLine, Funder, FinancingStatus, FundType } from "@/lib/types";
 import { formatEur, MONTHS_FR } from "@/lib/format";
 import {
   derivedExpenseForLine,
@@ -10,7 +10,6 @@ import {
   realisedExpenseForLine,
   totalRealisedExpenses,
   fundGap,
-  nonAssigne,
 } from "@/lib/bailleur-report";
 import {
   addBailleurLine,
@@ -27,6 +26,10 @@ const STATUT_LABEL: Record<FinancingStatus, string> = {
   signe: "Signé",
   promis: "Promis",
   espere: "Espéré",
+};
+const TYPE_LABEL: Record<FundType, string> = {
+  non_affecte: "Fonds non-affectés",
+  affecte: "Fonds affectés",
 };
 
 type Plan = { line_id: string; amount: number; bailleur_id: string | null };
@@ -125,17 +128,22 @@ export function BailleurDetail({
     (s, y) => s + Array.from({ length: 12 }, (_, i) => workIncome[`${y}:${i + 1}`] ?? 0).reduce((a, b) => a + b, 0),
     0,
   );
-  // Recettes RÉELLEMENT reçues (GL, type Recette non archivée) imputées à ce financement.
-  const recettesRecues = glEntries
-    .filter((g) => g.entry_type === "Recette" && !g.archived)
-    .reduce((s, g) => s + Number(g.amount), 0);
-  const ecartRecettes = recettesTotal - recettesRecues;
-  const depensesAssignees = totalAssignedExpenses(planMonthly, bailleur.id);
-  const reste = nonAssigne(recettesTotal, depensesAssignees);
-
-  // BR-3.4 — Dépensé (GL) + écarts vs montant_total.
+  // BR-3.2 — réconciliation vers le montant du fonds.
+  const mt = bailleur.montant_total != null ? Number(bailleur.montant_total) : null;
+  const mappedBudgete = lines.reduce(
+    (s, l) => s + derivedExpenseForLine(planMonthly, bailleur.id, mappingByLine[l.id] ?? []),
+    0,
+  );
+  const mappedDepense = lines.reduce(
+    (s, l) => s + realisedExpenseForLine(glEntries, bailleur.id, mappingByLine[l.id] ?? []),
+    0,
+  );
+  const totalAssigned = totalAssignedExpenses(planMonthly, bailleur.id);
   const totalDepense = totalRealisedExpenses(glEntries, bailleur.id);
-  const gapBudget = fundGap(bailleur.montant_total, depensesAssignees);
+  const assigneNonMappe = totalAssigned - mappedBudgete;
+  const assigneNonMappeDepense = totalDepense - mappedDepense;
+  const totalRow = mt ?? totalAssigned;        // BR-3.2 — Total = montant du fonds
+  const nonAssigneBudget = totalRow - totalAssigned; // reste à budgéter (< 0 = sur-affectation)
   const gapDepense = fundGap(bailleur.montant_total, totalDepense);
   const funderName = funders.find((f) => f.id === bailleur.funder_id)?.name ?? null;
 
@@ -201,6 +209,8 @@ export function BailleurDetail({
         >
           {STATUT_LABEL[bailleur.statut]}
         </span>
+        {" · "}
+        <span className="text-slate-600">{TYPE_LABEL[bailleur.type]}</span>
       </div>
       {bailleur.description && (
         <p className="mb-2 max-w-3xl text-sm text-slate-600">{bailleur.description}</p>
@@ -211,7 +221,7 @@ export function BailleurDetail({
           <button
             disabled={pending}
             onClick={assignLines}
-            className="rounded bg-brand-night px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40"
             title="Impute les LB mappées à ce financement sur sa fenêtre d'éligibilité"
           >
             Assigner les lignes dans le budget
@@ -283,22 +293,34 @@ export function BailleurDetail({
               );
             })}
 
-            {/* BR-3.2 — ligne « Non assigné » calculée (équilibre) */}
+            {/* BR-3.2 — assigné à ce fonds mais sur des LB non mappées */}
+            {assigneNonMappe !== 0 && (
+              <tr className="border-b border-slate-100 bg-amber-50 text-amber-800">
+                <td className="px-2 py-1"></td>
+                <td className="px-2 py-1 italic" colSpan={2}>
+                  Assigné mais non mappé (mailles imputées hors mapping)
+                </td>
+                <td className="px-2 py-1 text-right">{formatEur(assigneNonMappe)}</td>
+                <td className="px-2 py-1 text-right text-slate-600">{formatEur(assigneNonMappeDepense)}</td>
+                <td></td>
+              </tr>
+            )}
+            {/* BR-3.2 — reste du fonds à budgéter */}
             <tr className="border-b border-slate-100 bg-slate-50 text-slate-600">
               <td className="px-2 py-1"></td>
               <td className="px-2 py-1 italic" colSpan={2}>
-                Non assigné (équilibre recettes = dépenses)
+                Non assigné (reste à budgéter)
               </td>
-              <td className={`px-2 py-1 text-right ${reste < 0 ? "font-medium text-alert" : ""}`}>
-                {formatEur(reste)}
+              <td className={`px-2 py-1 text-right ${nonAssigneBudget < 0 ? "font-medium text-alert" : ""}`}>
+                {formatEur(nonAssigneBudget)}
               </td>
               <td colSpan={2}></td>
             </tr>
             <tr className="font-medium">
               <td className="px-2 py-1" colSpan={3}>
-                Total
+                Total {mt != null ? "(montant du fonds)" : "(assigné)"}
               </td>
-              <td className="px-2 py-1 text-right">{formatEur(depensesAssignees)}</td>
+              <td className="px-2 py-1 text-right">{formatEur(totalRow)}</td>
               <td className="px-2 py-1 text-right">{formatEur(totalDepense)}</td>
               <td></td>
             </tr>
@@ -306,14 +328,14 @@ export function BailleurDetail({
         </table>
       </div>
 
-      {/* BR-3.4 — récap écarts vs montant total du fonds */}
-      {bailleur.montant_total != null && (
+      {/* BR-3.4 — récap écart dépensé vs montant total du fonds */}
+      {mt != null && (
         <p className="mt-1 text-xs text-slate-500">
-          Fonds {formatEur(Number(bailleur.montant_total))} ·{" "}
-          <span className={gapBudget != null && gapBudget < 0 ? "text-alert" : ""}>
-            {gapBudget != null && gapBudget >= 0
-              ? `reste ${formatEur(gapBudget)} à budgéter`
-              : `sur-budgété de ${formatEur(Math.abs(gapBudget ?? 0))}`}
+          Fonds {formatEur(mt)} ·{" "}
+          <span className={nonAssigneBudget < 0 ? "text-alert" : ""}>
+            {nonAssigneBudget >= 0
+              ? `reste ${formatEur(nonAssigneBudget)} à budgéter`
+              : `sur-affecté de ${formatEur(Math.abs(nonAssigneBudget))}`}
           </span>
           {" · "}
           <span className={gapDepense != null && gapDepense < 0 ? "text-alert" : ""}>
@@ -321,11 +343,6 @@ export function BailleurDetail({
               ? `${formatEur(gapDepense)} non encore dépensés`
               : `dépassement de ${formatEur(Math.abs(gapDepense ?? 0))}`}
           </span>
-        </p>
-      )}
-      {reste < 0 && (
-        <p className="mt-1 text-xs text-alert">
-          Sur-affectation : les dépenses fléchées dépassent les recettes promises (BR-3.2).
         </p>
       )}
 
@@ -358,10 +375,10 @@ export function BailleurDetail({
         </button>
       </form>
 
-      {/* ── BLOC RÉPARTITION ANNUELLE (couche 1, couverture, F4.15/BR-12.3) ── */}
+      {/* ── BLOC COUVERTURE (couche 1, F4.15/BR-12.3) ── */}
       <div className="mt-6 mb-2 flex items-center gap-3">
         <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
-          Répartition annuelle (couverture)
+          Couverture
         </h2>
         {!yearlyEditing ? (
           <button
@@ -393,24 +410,18 @@ export function BailleurDetail({
           </label>
         ))}
       </div>
-      {(() => {
-        const mt = bailleur.montant_total != null ? Number(bailleur.montant_total) : null;
-        const mismatch =
-          (mt != null && sumYearly !== mt) || sumYearly !== recettesTotal;
-        return (
-          <p className={`mb-2 text-xs ${mismatch ? "text-amber-600" : "text-slate-400"}`}>
-            {mismatch ? "⚠ " : ""}
-            Σ annuel {formatEur(sumYearly)} · Σ déblocages {formatEur(recettesTotal)}
-            {mt != null ? ` · montant ${formatEur(mt)}` : ""}
-            {mismatch ? " (écart — voir BR-12.1)" : " (OK)"}
-          </p>
-        );
-      })()}
+      {mt != null && (
+        <p className={`mb-2 text-xs ${sumYearly !== mt ? "text-amber-600" : "text-slate-400"}`}>
+          {sumYearly !== mt ? "⚠ " : ""}
+          Σ couverture {formatEur(sumYearly)} · montant du fonds {formatEur(mt)}
+          {sumYearly !== mt ? " (écart — BR-12.1)" : " (OK)"}
+        </p>
+      )}
 
-      {/* ── BLOC RECETTES PRÉVUES (déblocages, BR-3.3) ── */}
+      {/* ── BLOC DÉCAISSEMENT (déblocages mensuels, couche 2, BR-3.3/7.7) ── */}
       <div className="mt-6 mb-2 flex items-center gap-3">
         <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
-          Recettes prévues (déblocages attendus)
+          Décaissement
         </h2>
         {!editingIncome ? (
           <button
@@ -444,7 +455,7 @@ export function BailleurDetail({
               </thead>
               <tbody>
                 <tr>
-                  <td className="px-2 py-1 text-slate-500">Recettes</td>
+                  <td className="px-2 py-1 text-slate-500">Décaissement</td>
                   <td className="px-2 py-1 text-right font-medium">{formatEur(yearTotal)}</td>
                   {Array.from({ length: 12 }, (_, i) => {
                     const v = workIncome[`${year}:${i + 1}`] ?? 0;
@@ -472,26 +483,17 @@ export function BailleurDetail({
         );
       })}
 
-      {/* Total + vérif reçu vs attendu */}
-      <div className="mt-2 space-y-0.5 text-sm">
-        <div>
-          <span className="text-slate-500">Total recettes prévues : </span>
-          <span className="font-medium">{formatEur(recettesTotal)}</span>
-          <span className="ml-4 text-slate-500">Reçues (GL) : </span>
-          <span className="font-medium">{formatEur(recettesRecues)}</span>
-          <span className={`ml-2 text-xs ${ecartRecettes === 0 ? "text-brand-green" : "text-alert"}`}>
-            {ecartRecettes === 0
-              ? "✓ reçu = attendu"
-              : ecartRecettes > 0
-                ? `reste ${formatEur(ecartRecettes)} à recevoir`
-                : `reçu ${formatEur(-ecartRecettes)} de plus que prévu`}
+      {/* Total décaissement + vérif vs montant du fonds (BR-3.3, pas de rapprochement GL) */}
+      <div className="mt-2 text-sm">
+        <span className="text-slate-500">Total décaissement : </span>
+        <span className="font-medium">{formatEur(recettesTotal)}</span>
+        {mt != null && (
+          <span className={`ml-2 text-xs ${recettesTotal !== mt ? "text-amber-600" : "text-slate-400"}`}>
+            {recettesTotal !== mt
+              ? `⚠ écart de ${formatEur(Math.abs(recettesTotal - mt))} vs montant du fonds (${formatEur(mt)})`
+              : "✓ = montant du fonds"}
           </span>
-        </div>
-        <div>
-          <span className="text-slate-500">Solde prévu (recettes − dépenses) : </span>
-          <span className="font-medium">{formatEur(recettesTotal - (depensesAssignees + reste))}</span>
-          <span className="ml-1 text-xs text-slate-400">(équilibré par « Non assigné »)</span>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -599,6 +601,7 @@ function FinancementEdit({
     convention_end: bailleur.convention_end ?? "",
     description: bailleur.description ?? "",
     statut: bailleur.statut as FinancingStatus,
+    type: bailleur.type as FundType,
   });
 
   if (!open) {
@@ -658,6 +661,15 @@ function FinancementEdit({
           <option value="espere">Espéré</option>
         </select>
       </div>
+      <select
+        value={f.type}
+        onChange={(e) => setF({ ...f, type: e.target.value as FundType })}
+        className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+        title="Type de financement (F4.10)"
+      >
+        <option value="non_affecte">Fonds non-affectés</option>
+        <option value="affecte">Fonds affectés</option>
+      </select>
       <div className="flex items-center gap-2 text-sm">
         <span className="text-slate-500">Éligibilité</span>
         <input
@@ -694,6 +706,7 @@ function FinancementEdit({
                 convention_start: f.convention_start || null,
                 convention_end: f.convention_end || null,
                 statut: f.statut,
+                type: f.type,
               }),
             );
             setOpen(false);

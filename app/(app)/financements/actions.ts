@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { denyUnless } from "@/lib/auth/role";
 import { eligibleMonths, planAssignment } from "@/lib/financement";
-import type { FinancingStatus } from "@/lib/types";
+import type { FinancingStatus, FundType } from "@/lib/types";
 
 type ActionResult = { ok: boolean; error?: string };
 
@@ -71,6 +71,7 @@ export async function updateFinancement(
     convention_start: string | null;
     convention_end: string | null;
     statut?: FinancingStatus; // BR-12.1
+    type?: FundType;          // F4.10
   },
 ): Promise<ActionResult> {
   const supabase = createClient();
@@ -86,6 +87,7 @@ export async function updateFinancement(
     convention_end: fields.convention_end || null,
   };
   if (fields.statut) patch.statut = fields.statut;
+  if (fields.type) patch.type = fields.type;
   if (fields.name?.trim()) patch.name = fields.name.trim();
   if (ref) patch.code = ref; // garde code = ID
   const { error } = await supabase.from("bailleurs").update(patch).eq("id", id);

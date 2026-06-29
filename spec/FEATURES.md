@@ -72,13 +72,13 @@
 | F4.2 | Créer des lignes de financement (A1, A2…) | 🟢 | — |
 | F4.3 | Mapper une ligne de financement → une ou plusieurs LB internes | 🟢 | BR-3.1 |
 | F4.4 | Saisir les dépenses prévues du financement (mensuel, multi-années, accordéon) | 🟡 | BR-3.1 |
-| F4.5 | Saisir les recettes prévues (déblocages attendus par mois) | 🟢 | BR-3.3 |
+| F4.5 | Saisir le **Décaissement** (déblocages mensuels) ; vérif Σ ≈ montant_total (⚠), sans rapprochement GL | 🟢 | BR-3.3 |
 | F4.6 | Ligne « Non assigné » calculée (équilibre recettes = dépenses) | 🟢 | BR-3.2 |
 | F4.7 | Affichage du réalisé sur la page financement (bouton, comme l'interne) | 🟡 | BR-5.3, BR-6.1 |
 | F4.8 | Export rapport financier par financement | 🟡 | BR-10.1 |
 | F4.9 | **Bailleur (acteur)** : entité parente ; un bailleur porte 1..N financements ; sélection du bailleur à la création d'un financement | 🟢 | — |
-| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total**, **statut** (signé/promis/espéré) | 🟢 | BR-12.1 |
-| F4.15 | **Répartition annuelle** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année d'éligibilité (couverture). **⚠ non bloquant** si Σannuel ≠ Σmensuel (déblocages) ≠ montant_total | 🟢 | BR-12.1, BR-12.3 |
+| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total**, **statut** (signé/promis/espéré), **type** (Fonds non-affectés / affectés) | 🟢 | BR-12.1 |
+| F4.15 | **Couverture** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année d'éligibilité. **⚠ non bloquant** si Σannuel ≠ montant_total | 🟢 | BR-12.1, BR-12.3 |
 | F4.11 | Colonnes **Budgété** (ancien « Total dérivé ») + **Dépensé** (GL) + écart vs `montant_total` (reste à budgéter / sous-/sur-dépensé) | 🟢 | BR-3.4 |
 | F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement | 🟢 | BR-3.5 |
 | F4.13 | Liste des financements : **filtre actif/inactif** (actif = aujourd'hui ∈ `[début, fin]` d'éligibilité, bornes ouvertes = actif) + **tri par date de début d'éligibilité** | 🟢 | — |

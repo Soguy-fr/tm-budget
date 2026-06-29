@@ -55,12 +55,15 @@ export type Bailleur = {
   description: string | null;           // 0007 — description du fonds
   montant_total: number | null;         // 0007 — total accordé (BR-3.4)
   statut: FinancingStatus;               // 0013 — signe | promis | espere (BR-12.1)
+  type: FundType;                        // 0014 — non_affecte | affecte (F4.10)
   regles: string | null;                // 0008 — règles du fonds (page dédiée)
   created_at: string;
 };
 
 // BR-12.1 — statut d'un financement.
 export type FinancingStatus = "signe" | "promis" | "espere";
+// F4.10 — type d'un financement (Fonds non-affectés / affectés).
+export type FundType = "non_affecte" | "affecte";
 
 // Couche 1 — répartition annuelle d'éligibilité d'un financement (couverture, BR-12.3).
 export type BailleurYearly = {

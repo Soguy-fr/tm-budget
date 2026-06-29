@@ -81,16 +81,28 @@ couleur ↔ bailleur. Les mailles sans bailleur restent neutres (signalées « n
 Une ligne bailleur (A1…) agrège les montants des LB internes qui lui sont mappées,
 restreints aux mois assignés à ce bailleur.
 
-### BR-3.2 — Ligne « Non assigné » (équilibre)
-Dans la vue bailleur :
+### BR-3.2 — Réconciliation du budget dépense bailleur (vers le montant du fonds)
+Dans la vue bailleur, le **« Budget dépense bailleur »** se réconcilie au **`montant_total`**
+du fonds, via deux lignes calculées (jamais saisies) :
 ```
-non_assigné = Σ recettes prévues − Σ dépenses prévues assignées
+Σ mappé              = Σ budgété des lignes bailleur (mailles imputées à CE fonds ET LB mappées)
+assigné_mais_non_mappé = (Σ mailles imputées à CE fonds, toutes LB) − Σ mappé
+non_assigné          = montant_total − (Σ mappé + assigné_mais_non_mappé)
+                     = montant_total − Σ mailles imputées à CE fonds
+Total                = montant_total
 ```
-Cette ligne est **calculée**, jamais saisie. Elle garantit `recettes = dépenses` à l'affichage.
-Si négative, c'est un signal de sur-affectation (dépenses fléchées > recettes promises).
+- **« Assigné mais non mappé »** : des mailles `budget_monthly` ont été imputées à ce fonds dans
+  le prévisionnel, mais sur des LB **absentes du mapping** du fonds — sinon invisibles. Ligne dédiée.
+- **« Non assigné »** : reste du fonds **à budgéter** (`montant_total` non encore couvert par des
+  mailles imputées). Négatif = **sur-affectation** (mailles imputées > montant du fonds).
+- Si `montant_total` est nul, le Total = Σ mailles imputées et « Non assigné » = 0.
+- La colonne **Dépensé** suit la même décomposition (réalisé GL mappé / non mappé).
 
-### BR-3.3 — Recettes prévues
-Saisie directe du montant attendu par mois (pas de %). Le total = Σ des 12 mois × années.
+### BR-3.3 — Décaissement (déblocages mensuels)
+Bloc **« Décaissement »** (ex-« Recettes prévues ») : saisie directe du montant débloqué par mois
+(pas de %). Total = Σ des 12 mois × années. Sert à la **trésorerie** (couche 2, BR-7.7).
+- **Vérification** : on contrôle seulement que `Σ décaissement ≈ montant_total` (⚠ non bloquant).
+  **Pas** de rapprochement avec le Grand Livre ici (la ligne « Reçues (GL) » est retirée).
 
 ### BR-3.4 — Colonnes Budgété / Dépensé d'un financement
 Sur la page d'un financement, chaque ligne (et le total) affiche :

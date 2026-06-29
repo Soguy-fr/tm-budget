@@ -93,7 +93,13 @@ alter table budgets drop column if exists coverage_baseline;
 ```
 > Migration 0013 active la **RLS** sur `bailleur_yearly` et `budget_financing` au **tier
 > opérationnel** (écriture `admin_systeme`/`directrice`/`respo_financiere`, lecture authentifiée).
-> `bailleur_income_monthly` (couche 2, déblocages) préexiste et reste inchangée.
+> `bailleur_income_monthly` (couche 2, déblocages = « Décaissement ») préexiste et reste inchangée.
+
+```sql
+-- migration 0014 — type d'un financement (F4.10).
+alter table bailleurs add column if not exists type text not null default 'non_affecte'
+  check (type in ('non_affecte', 'affecte'));  -- Fonds non-affectés / Fonds affectés
+```
 
 ### budget_years
 
