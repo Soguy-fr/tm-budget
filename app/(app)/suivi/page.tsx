@@ -7,7 +7,7 @@ import type { StructureLine, Budget, GlEntry } from "@/lib/types";
 import { SuiviTabs } from "@/components/suivi/SuiviTabs";
 import { DepenseTable } from "@/components/suivi/DepenseTable";
 import { PlanFinancementBlock } from "@/components/suivi/PlanFinancementBlock";
-import { computePlanCoverage, type PlanFinancing } from "@/lib/coverage";
+import { computePlanCoverage } from "@/lib/coverage";
 import type { FinancingStatus } from "@/lib/types";
 import { GuideLink } from "@/components/GuideLink";
 
@@ -34,15 +34,14 @@ export default async function SuiviPage({
   }
   const budget = budgetRow as Budget;
 
-  const [{ data: structure }, { data: yearRows }, { data: monthly }, { data: gl }, { data: bailleurs }, { data: by }, { data: budgetFin }] =
+  const [{ data: structure }, { data: yearRows }, { data: monthly }, { data: gl }, { data: bailleurs }, { data: by }] =
     await Promise.all([
       supabase.from("structure_lines").select("*").eq("active", true),
       supabase.from("budget_years").select("year").eq("budget_id", budget.id),
       supabase.from("budget_monthly").select("line_id, year, month, amount").eq("budget_id", budget.id).range(0, 99999),
       supabase.from("gl_entries").select("*").eq("entry_type", "Dépense").eq("archived", false).range(0, 99999),
-      supabase.from("bailleurs").select("id, statut"),
+      supabase.from("bailleurs").select("id, code, reference, name, statut").order("code"),
       supabase.from("bailleur_yearly").select("bailleur_id, year, amount"),
-      supabase.from("budget_financing").select("bailleur_id").eq("budget_id", budget.id),
     ]);
 
   const lines = (structure ?? []) as StructureLine[];
@@ -84,21 +83,30 @@ export default async function SuiviPage({
   for (const r of monthly ?? []) {
     depByYear[r.year as number] = (depByYear[r.year as number] ?? 0) + Number(r.amount);
   }
-  const planByFin: Record<string, PlanFinancing> = {};
-  for (const b of bailleurs ?? []) {
-    planByFin[b.id as string] = { statut: b.statut as FinancingStatus, yearly: {} };
-  }
+  // Répartition annuelle (couche 1) par fonds.
+  const yearlyByFin: Record<string, Record<number, number>> = {};
   for (const r of by ?? []) {
-    const pf = planByFin[r.bailleur_id as string];
-    if (pf) pf.yearly[r.year as number] = Number(r.amount);
+    (yearlyByFin[r.bailleur_id as string] ??= {})[r.year as number] = Number(r.amount);
   }
-  // BR-12.2 — retenus = signés ∪ appartenance explicite.
-  const explicitFin = new Set((budgetFin ?? []).map((r) => r.bailleur_id as string));
-  const retained = (bailleurs ?? [])
-    .filter((b) => b.statut === "signe" || explicitFin.has(b.id as string))
-    .map((b) => planByFin[b.id as string])
-    .filter((p): p is PlanFinancing => !!p);
-  const planCoverage = computePlanCoverage(allYears, depByYear, retained);
+  // Le dashboard montre TOUS les financements (signés + en cours + promesse), par statut.
+  const fundList = (bailleurs ?? []).map((b) => ({
+    label: (b.reference || b.code) as string,
+    statut: b.statut as FinancingStatus,
+    yearly: yearlyByFin[b.id as string] ?? {},
+  }));
+  // Années = celles du scénario ∪ celles des financements (rien ne disparaît silencieusement).
+  const planYearsSet = new Set<number>(allYears);
+  for (const f of fundList) for (const y of Object.keys(f.yearly)) planYearsSet.add(Number(y));
+  const planYears = [...planYearsSet].sort((a, b) => a - b);
+  const planCoverage = computePlanCoverage(planYears, depByYear, fundList);
+  // Détail par année (accordéon) : fonds ayant un montant cette année-là.
+  const planDetails: Record<number, { label: string; statut: FinancingStatus; amount: number }[]> = {};
+  for (const y of planYears) {
+    const rows = fundList
+      .filter((f) => (f.yearly[y] ?? 0) !== 0)
+      .map((f) => ({ label: f.label, statut: f.statut, amount: f.yearly[y] ?? 0 }));
+    if (rows.length > 0) planDetails[y] = rows;
+  }
 
   const leafLines = lines.filter((l) => l.level === 3);
   const data = years.map((year) => {
@@ -122,7 +130,7 @@ export default async function SuiviPage({
         <GuideLink anchor="suivre-les-depenses" />
       </div>
       <SuiviTabs />
-      <PlanFinancementBlock coverage={planCoverage} />
+      <PlanFinancementBlock coverage={planCoverage} details={planDetails} />
       <p className="mb-3 text-sm text-slate-500">
         Prévu vs réalisé par catégorie (niveaux 1 et 2) — {budget.name}. Vitesse calculée
         au {refMonth.toString().padStart(2, "0")}/{refYear}

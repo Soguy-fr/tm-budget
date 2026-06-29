@@ -82,7 +82,7 @@
 | F4.15 | **Couverture** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année. **⚠ non bloquant** si Σannuel ≠ montant_total. Les **années** affichées dérivent de l'**éligibilité** du fonds (`convention_start..end`) ∪ années déjà saisies — **indépendantes** des années du scénario actif (pas de bouton « Ajouter année » pour les fonds) | 🟢 | BR-12.1, BR-12.3 |
 | F4.11 | Colonnes **Budgété** (ancien « Total dérivé ») + **Dépensé** (GL) + écart vs `montant_total` (reste à budgéter / sous-/sur-dépensé) | 🟢 | BR-3.4 |
 | F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement | 🟢 | BR-3.5 |
-| F4.13 | Liste des financements : **filtre actif/inactif** (actif = aujourd'hui ∈ `[début, fin]` d'éligibilité, bornes ouvertes = actif) + **tri par date de début d'éligibilité** | 🟢 | — |
+| F4.13 | Liste des financements : **filtre par statut** (contrat signé / en cours de signature / promesse), **tri par bailleur (acteur) puis date de début** ; affiche **statut** + **type** (non-affectés / affectés) par ligne. *(La notion actif/inactif est retirée.)* | 🟢 | BR-12.1 |
 | F4.14 | Menu Financement à **onglets** « Financements \| Bailleurs » ; onglet Bailleur = liste des acteurs + financements liés (accordéon), filtres actif/année, éditer le bailleur ; création d'un bailleur (acteur) uniquement ici | 🟢 | — |
 
 ## F5 — Grand Livre
@@ -138,7 +138,7 @@
 | F8.3 | Courbe trésorerie cumulée prévu vs réel | 🟡 | BR-7.* |
 | F8.4 | Tableau de bord complet multi-indicateurs | 🔵 | — |
 | F8.5 | Onglet **Dépense** : n'afficher que les niveaux 1 et 2 (pas niveau 3) + colonne **Commentaire** éditable (édit/OK), liée au champ `comment` partagé | 🟢 | BR-5.4, F1.7 |
-| F8.6 | **Plan de financement** (bloc dashboard) : par année du scénario actif, **barre empilée** du taux de couverture des dépenses — **signé** (vert) / **promis** (vert clair) / **espéré** (jaune) / **non couvert** (rouge) | 🟢 | BR-12.2 |
+| F8.6 | **Plan de financement** (bloc dashboard) : par année, **barre empilée** du taux de couverture (contrat signé / en cours / promesse / non couvert) avec le **% affiché dans chaque segment** ; **accordéon** par année listant les financements (nom, statut, montant). Montre **tous** les financements (pas seulement les retenus du scénario) | 🟢 | BR-12.2 |
 | F8.6 | Onglet **Dépense** : hiérarchie niv.1/2 plus lisible (indentation, typo) + **accordéon** repliant les sous-catégories niv.2 sous leur niv.1 | 🟢 | BR-5.4 |
 | F8.7 | Onglet **Dépense** : **barre de couleur en dégradé** dans la colonne « % consommé » — 0 % blanc → 100 % vert ; négatif (avoir net) rouge | 🟢 | BR-5.6 |
 | F8.8 | Onglet **Dépense** : colonne **Vitesse** — jauge 0→200 % du rythme de dépense à la date du jour (réalisé à date / prévu cumulé à date) ; vert 80–120 %, rouge < 80 % (sous-régime) ou > 120 % (surrégime) | 🟢 | BR-5.5 |

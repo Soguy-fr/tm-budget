@@ -489,6 +489,11 @@ Affichage barre empilée : **signé = vert**, **promis = vert clair**, **espér�
 **non couvert = rouge**. Ex. charges 100, signé 60 / promis 20 / espéré 10 →
 60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge.
 
+**Périmètre** : l'onglet Édition d'un scénario et la liste utilisent les financements **retenus**
+(BR-12.2). Le **dashboard** (vue d'ensemble, F8.6) montre **tous** les financements par statut —
+on veut y voir l'ensemble du paysage de financement (signés, en cours, promesses), pas seulement
+ceux retenus.
+
 ### BR-12.4 — Trésorerie du plan (mois-par-mois, scénario actif)
 La trésorerie (page Trésorerie, BR-7.7/7.8) lit les **versements mensuels** (couche 2 =
 `bailleur_income_monthly`) des financements **retenus** par le **scénario actif**, filtrés par

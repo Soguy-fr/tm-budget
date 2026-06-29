@@ -1,8 +1,22 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { isActiveOn } from "@/lib/financement";
-import type { Bailleur, Funder } from "@/lib/types";
+import type { Bailleur, Funder, FinancingStatus, FundType } from "@/lib/types";
+
+const STATUT_LABEL: Record<FinancingStatus, string> = {
+  signe: "Contrat signé",
+  promis: "En cours de signature",
+  espere: "Promesse",
+};
+const STATUT_CLASS: Record<FinancingStatus, string> = {
+  signe: "bg-brand-emerald text-white",
+  promis: "bg-emerald-200 text-emerald-900",
+  espere: "bg-amber-200 text-amber-900",
+};
+const TYPE_LABEL: Record<FundType, string> = {
+  non_affecte: "Fonds non-affectés",
+  affecte: "Fonds affectés",
+};
 import { BailleurCreate } from "@/components/bailleurs/BailleurCreate";
 import { FinancementTabs } from "@/components/financements/FinancementTabs";
 import { BailleurTab, type FinLite } from "@/components/financements/BailleurTab";
@@ -34,16 +48,22 @@ export default async function BailleursPage({
   const funders = (fundersData ?? []) as Funder[];
   const funderName = new Map(funders.map((f) => [f.id, f.name]));
 
-  // F4.13 — statut actif/inactif (date du jour) + tri par date de début d'éligibilité.
+  // F4.13 — filtre par STATUT (contrat signé / en cours / promesse) ; tri par bailleur
+  // (acteur) puis date de début d'éligibilité. La notion actif/inactif n'a plus de sens.
   const today = new Date().toISOString().slice(0, 10);
-  const statut = searchParams.statut === "actif" || searchParams.statut === "inactif"
-    ? searchParams.statut
-    : null;
+  const statut: FinancingStatus | null =
+    searchParams.statut === "signe" || searchParams.statut === "promis" || searchParams.statut === "espere"
+      ? (searchParams.statut as FinancingStatus)
+      : null;
   const all = (data ?? []) as Bailleur[];
-  const withActive = all.map((b) => ({ b, actif: isActiveOn(b.convention_start, b.convention_end, today) }));
-  const bailleurs = withActive
-    .filter((x) => (statut === "actif" ? x.actif : statut === "inactif" ? !x.actif : true))
-    .sort((a, z) => (a.b.convention_start ?? "9999").localeCompare(z.b.convention_start ?? "9999"));
+  const bailleurs = all
+    .filter((b) => !statut || b.statut === statut)
+    .sort((a, z) => {
+      const fa = a.funder_id ? funderName.get(a.funder_id) ?? "" : "";
+      const fz = z.funder_id ? funderName.get(z.funder_id) ?? "" : "";
+      if (fa !== fz) return fa.localeCompare(fz);
+      return (a.convention_start ?? "9999").localeCompare(z.convention_start ?? "9999");
+    });
 
   const filterLink = (s: string | null) =>
     `border px-2 py-0.5 rounded ${statut === s ? "border-brand-olive bg-brand-lime/20 text-brand-brown" : "border-slate-200 text-slate-500"}`;
@@ -87,34 +107,38 @@ export default async function BailleursPage({
 
       <BailleurCreate />
 
-      {/* F4.13 — filtre statut (tri par date de début d'éligibilité) */}
-      <div className="mt-4 flex items-center gap-1 text-xs">
+      {/* F4.13 — filtre par statut ; tri par bailleur puis date de début */}
+      <div className="mt-4 flex flex-wrap items-center gap-1 text-xs">
         <span className="text-slate-500">Statut :</span>
         <Link href="/financements" className={filterLink(null)}>Tous</Link>
-        <Link href="/financements?statut=actif" className={filterLink("actif")}>Actifs</Link>
-        <Link href="/financements?statut=inactif" className={filterLink("inactif")}>Inactifs</Link>
-        <span className="ml-2 text-slate-400">triés par date de début</span>
+        <Link href="/financements?statut=signe" className={filterLink("signe")}>Contrat signé</Link>
+        <Link href="/financements?statut=promis" className={filterLink("promis")}>En cours de signature</Link>
+        <Link href="/financements?statut=espere" className={filterLink("espere")}>Promesse</Link>
+        <span className="ml-2 text-slate-400">triés par bailleur, puis date de début</span>
       </div>
 
       <div className="mt-2 space-y-2">
         {bailleurs.length === 0 && (
           <p className="text-sm text-slate-500">Aucun financement.</p>
         )}
-        {bailleurs.map(({ b, actif }) => (
+        {bailleurs.map((b) => (
           <Link
             key={b.id}
             href={`/financements/${b.id}`}
             className="flex items-center justify-between rounded border border-slate-200 bg-white p-3 hover:border-brand-emerald"
           >
-            <span className="flex items-center gap-2">
+            <span className="flex flex-wrap items-center gap-2">
               <span className="inline-block h-3 w-3 rounded-sm" style={{ background: b.color }} />
               <span className="font-medium text-brand-night">{b.reference || b.code}</span>
               <span className="text-sm text-slate-500">{b.name}</span>
               {b.funder_id && (
                 <span className="text-xs text-slate-400">· {funderName.get(b.funder_id)}</span>
               )}
-              <span className={`rounded px-1.5 py-0.5 text-[10px] ${actif ? "bg-brand-lime/30 text-brand-brown" : "bg-slate-100 text-slate-400"}`}>
-                {actif ? "actif" : "inactif"}
+              <span className={`rounded px-1.5 py-0.5 text-[10px] ${STATUT_CLASS[b.statut]}`}>
+                {STATUT_LABEL[b.statut]}
+              </span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                {TYPE_LABEL[b.type]}
               </span>
             </span>
             <span className="text-xs text-slate-400">
