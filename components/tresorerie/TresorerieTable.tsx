@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ResponsiveContainer,
@@ -11,23 +11,42 @@ import {
   Tooltip,
   ReferenceLine,
 } from "recharts";
-import type { TreasuryCell } from "@/lib/treasury";
+import { treasuryForecast, type TreasuryCell } from "@/lib/treasury";
+import { statusInTier } from "@/lib/coverage";
+import type { FinancingStatus } from "@/lib/types";
 import { formatEur, MONTHS_FR } from "@/lib/format";
 import { saveTreasurySettings } from "@/app/(app)/tresorerie/actions";
 
-type Fin = { id: string; label: string; name: string; color: string; recByCell: Record<string, number> };
+type Fin = {
+  id: string;
+  label: string;
+  name: string;
+  color: string;
+  statut: FinancingStatus;
+  recByCell: Record<string, number>;
+};
+
+const TIER_LABEL: Record<FinancingStatus, string> = {
+  signe: "Signé seul",
+  promis: "Signé + promis",
+  espere: "Signé + promis + espéré",
+};
 
 export function TresorerieTable({
   budgetId,
   calcDate,
   forcedBalance,
-  cells,
+  years,
+  depByMonth,
+  initialCash,
   financements,
 }: {
   budgetId: string;
   calcDate: string | null;
   forcedBalance: number | null;
-  cells: TreasuryCell[];
+  years: number[];
+  depByMonth: Record<string, number>;
+  initialCash: number;
   financements: Fin[];
 }) {
   const router = useRouter();
@@ -35,6 +54,23 @@ export function TresorerieTable({
   const [date, setDate] = useState(calcDate ?? "");
   const [forced, setForced] = useState(forcedBalance != null ? String(forcedBalance) : "");
   const [error, setError] = useState<string | null>(null);
+
+  // BR-7.8 — filtre statut (signé / +promis / +espéré). Défaut : tout (espéré).
+  const [tier, setTier] = useState<FinancingStatus>("espere");
+  const includedFins = useMemo(
+    () => financements.filter((f) => statusInTier(f.statut, tier)),
+    [financements, tier],
+  );
+  // BR-7.7 — cellules recalculées côté client selon le filtre.
+  const cells = useMemo(() => {
+    const recByMonth: Record<string, number> = {};
+    for (const f of includedFins)
+      for (const [k, v] of Object.entries(f.recByCell)) recByMonth[k] = (recByMonth[k] ?? 0) + v;
+    const calc = calcDate
+      ? { year: Number(calcDate.slice(0, 4)), month: Number(calcDate.slice(5, 7)) }
+      : null;
+    return treasuryForecast({ years, recByMonth, depByMonth, initialCash, calc, forcedBalance });
+  }, [includedFins, years, depByMonth, initialCash, calcDate, forcedBalance]);
 
   function save() {
     setError(null);
@@ -50,7 +86,6 @@ export function TresorerieTable({
   }
 
   const key = (c: TreasuryCell) => `${c.year}:${c.month}`;
-  const years = Array.from(new Set(cells.map((c) => c.year)));
   const grey = "bg-slate-100 text-slate-300";
 
   // Accordéon : années repliées (colonnes masquées).
@@ -92,6 +127,18 @@ export function TresorerieTable({
             onChange={(e) => setForced(e.target.value)}
             className="w-36 rounded border border-slate-300 px-2 py-1 text-right text-input"
           />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Filtre statut (BR-7.8)</span>
+          <select
+            value={tier}
+            onChange={(e) => setTier(e.target.value as FinancingStatus)}
+            className="rounded border border-slate-300 px-2 py-1"
+          >
+            <option value="signe">{TIER_LABEL.signe}</option>
+            <option value="promis">{TIER_LABEL.promis}</option>
+            <option value="espere">{TIER_LABEL.espere}</option>
+          </select>
         </label>
         <button
           onClick={save}
@@ -168,8 +215,8 @@ export function TresorerieTable({
             </tr>
           </thead>
           <tbody>
-            {/* Une ligne par financement : recettes prévues */}
-            {financements.map((f) => (
+            {/* Une ligne par fonds : versements (couche 2), filtrés par statut */}
+            {includedFins.map((f) => (
               <tr key={f.id} className="border-b border-slate-50">
                 <td className="sticky left-0 bg-white px-2 py-1">
                   <span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: f.color }} />

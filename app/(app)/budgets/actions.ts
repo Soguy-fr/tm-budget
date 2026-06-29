@@ -122,7 +122,6 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
       type: source.type,
       is_active: false,
       initial_cash: source.initial_cash,
-      coverage_baseline: source.coverage_baseline,
     })
     .select("id")
     .single();
@@ -164,10 +163,10 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
       .insert(totals.map((t) => ({ budget_id: newId, ...t })));
   }
 
-  // BR-12 — financements prévisionnels + leur répartition mensuelle.
+  // BR-12 — plan de financement : fonds + couche annuelle + versements mensuels.
   const { data: fins } = await supabase
     .from("scenario_financing")
-    .select("id, name, amount_total, sort_order, converted_bailleur_id")
+    .select("id, name, statut, amount_total, eligib_start, eligib_end, sort_order, converted_bailleur_id")
     .eq("budget_id", id);
   for (const f of fins ?? []) {
     const { data: nf } = await supabase
@@ -175,13 +174,26 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
       .insert({
         budget_id: newId,
         name: f.name,
+        statut: f.statut,
         amount_total: f.amount_total,
+        eligib_start: f.eligib_start,
+        eligib_end: f.eligib_end,
         sort_order: f.sort_order,
         converted_bailleur_id: f.converted_bailleur_id,
       })
       .select("id")
       .single();
     if (!nf) continue;
+    const newFinId = nf.id as string;
+    const { data: fy } = await supabase
+      .from("scenario_financing_yearly")
+      .select("year, amount")
+      .eq("scenario_financing_id", f.id);
+    if (fy && fy.length > 0) {
+      await supabase
+        .from("scenario_financing_yearly")
+        .insert(fy.map((r) => ({ scenario_financing_id: newFinId, ...r })));
+    }
     const { data: fm } = await supabase
       .from("scenario_financing_monthly")
       .select("year, month, amount")
@@ -189,7 +201,7 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
     if (fm && fm.length > 0) {
       await supabase
         .from("scenario_financing_monthly")
-        .insert(fm.map((r) => ({ scenario_financing_id: nf.id as string, ...r })));
+        .insert(fm.map((r) => ({ scenario_financing_id: newFinId, ...r })));
     }
   }
 

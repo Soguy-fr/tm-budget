@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Budget } from "@/lib/types";
 import { formatEur } from "@/lib/format";
-import type { CoverageYearSummary } from "@/lib/coverage";
+import type { PlanYearCoverage } from "@/lib/coverage";
 import {
   createBudget,
   setActiveBudget,
@@ -21,7 +21,7 @@ export function BudgetList({
 }: {
   budgets: Budget[];
   yearsByBudget: Record<string, number[]>;
-  coverageByBudget?: Record<string, CoverageYearSummary[]>;
+  coverageByBudget?: Record<string, PlanYearCoverage[]>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -46,10 +46,10 @@ export function BudgetList({
       )}
 
       <div className="mb-3 flex items-center gap-1 text-xs text-slate-500">
-        <span>Couverture = approximation par trésorerie prévisionnelle.</span>
+        <span>Couverture = répartition annuelle des fonds par statut (signé / promis / espéré).</span>
         <Link
-          href="/guide#travailler-un-nouveau-budget"
-          title="La couverture est approximée par une pseudo-trésorerie : solde de fin d'année positif = 100 % couvert, négatif = il manque ce montant. Le solde initial de couverture = caisse + financements antérieurs garantis. Cliquez pour le guide."
+          href="/guide#le-plan-de-financement-ai-je-de-quoi-payer-tout-ca"
+          title="Pour chaque année, on empile la répartition annuelle des fonds par statut sur la dépense : signé (vert), promis (vert clair), espéré (jaune), non couvert (rouge). Cliquez pour le guide."
           className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 text-[10px] hover:bg-slate-100"
         >
           ?
@@ -109,7 +109,7 @@ function BudgetRow({
 }: {
   budget: Budget;
   years: number[];
-  coverage: CoverageYearSummary[];
+  coverage: PlanYearCoverage[];
   pending: boolean;
   run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
 }) {
@@ -186,9 +186,7 @@ function BudgetRow({
                 <tr className="text-slate-400">
                   <th className="px-2 py-1 text-left">Année</th>
                   <th className="px-2 py-1 text-right">Total dépense</th>
-                  <th className="px-2 py-1 text-right">Total reçu</th>
-                  <th className="px-2 py-1 text-right">Solde fin</th>
-                  <th className="px-2 py-1 text-right">Couvert</th>
+                  <th className="px-2 py-1 text-left">Couverture (signé / promis / espéré / non couvert)</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,9 +194,19 @@ function BudgetRow({
                   <tr key={c.year} className="border-t border-slate-100">
                     <td className="px-2 py-1 font-medium">{c.year}</td>
                     <td className="px-2 py-1 text-right font-bold text-brand-night">{formatEur(c.charges)}</td>
-                    <td className="px-2 py-1 text-right">{formatEur(c.recettes)}</td>
-                    <td className={`px-2 py-1 text-right ${c.soldeFin < 0 ? "font-bold text-alert" : ""}`}>{formatEur(c.soldeFin)}</td>
-                    <td className={`px-2 py-1 text-right ${c.couvertPct < 100 ? "text-alert" : "text-brand-emerald"}`}>{c.couvertPct}%</td>
+                    <td className="px-2 py-1">
+                      <span className="flex items-center gap-2">
+                        <span className="flex h-3 w-32 overflow-hidden rounded bg-slate-100" title="Signé / Promis / Espéré / Non couvert">
+                          <span className="bg-brand-emerald" style={{ width: `${c.pctSigne}%` }} />
+                          <span className="bg-emerald-300" style={{ width: `${c.pctPromis}%` }} />
+                          <span className="bg-amber-400" style={{ width: `${c.pctEspere}%` }} />
+                          <span className="bg-alert" style={{ width: `${c.pctNonCouvert}%` }} />
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {c.pctSigne}/{c.pctPromis}/{c.pctEspere}/{c.pctNonCouvert}%
+                        </span>
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
