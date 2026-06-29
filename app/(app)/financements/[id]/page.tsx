@@ -84,8 +84,23 @@ export default async function BailleurPage({ params }: { params: { id: string } 
     income2[`${r.year}:${r.month}`] = Number(r.amount);
   }
 
-  const years = (yearRes.data ?? []).map((y) => y.year as number).sort((a, b) => a - b);
-  const yearList = years.length ? years : [new Date().getFullYear()];
+  // Années de la page financement = celles de son ÉLIGIBILITÉ (convention_start..end)
+  // ∪ celles déjà saisies (couverture/décaissement). Indépendant des années du scénario
+  // actif : un fonds 2024-2029 reste pleinement éditable même si le scénario s'arrête avant.
+  const b = bailleur as Bailleur;
+  const yearSet = new Set<number>();
+  for (const y of Object.keys(yearly)) yearSet.add(Number(y));
+  for (const k of Object.keys(income2)) yearSet.add(Number(k.split(":")[0]));
+  if (b.convention_start && b.convention_end) {
+    const ys = Number(b.convention_start.slice(0, 4));
+    const ye = Number(b.convention_end.slice(0, 4));
+    for (let y = ys; y <= ye; y++) yearSet.add(y);
+  }
+  let yearList = [...yearSet].sort((a, c) => a - c);
+  if (yearList.length === 0) {
+    const budgetYears = (yearRes.data ?? []).map((y) => y.year as number).sort((a, c) => a - c);
+    yearList = budgetYears.length ? budgetYears : [new Date().getFullYear()];
+  }
 
   return (
     <div>

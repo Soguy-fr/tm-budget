@@ -79,7 +79,7 @@
 | F4.8 | Export rapport financier par financement | 🟡 | BR-10.1 |
 | F4.9 | **Bailleur (acteur)** : entité parente ; un bailleur porte 1..N financements ; sélection du bailleur à la création d'un financement | 🟢 | — |
 | F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total**, **statut** (signé/promis/espéré), **type** (Fonds non-affectés / affectés) | 🟢 | BR-12.1 |
-| F4.15 | **Couverture** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année d'éligibilité. **⚠ non bloquant** si Σannuel ≠ montant_total | 🟢 | BR-12.1, BR-12.3 |
+| F4.15 | **Couverture** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année. **⚠ non bloquant** si Σannuel ≠ montant_total. Les **années** affichées dérivent de l'**éligibilité** du fonds (`convention_start..end`) ∪ années déjà saisies — **indépendantes** des années du scénario actif (pas de bouton « Ajouter année » pour les fonds) | 🟢 | BR-12.1, BR-12.3 |
 | F4.11 | Colonnes **Budgété** (ancien « Total dérivé ») + **Dépensé** (GL) + écart vs `montant_total` (reste à budgéter / sous-/sur-dépensé) | 🟢 | BR-3.4 |
 | F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement | 🟢 | BR-3.5 |
 | F4.13 | Liste des financements : **filtre actif/inactif** (actif = aujourd'hui ∈ `[début, fin]` d'éligibilité, bornes ouvertes = actif) + **tri par date de début d'éligibilité** | 🟢 | — |
