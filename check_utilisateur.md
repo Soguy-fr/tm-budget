@@ -4,6 +4,7 @@
 
 ## Journal des mises à jour
 
+- **2026-06-29 20:59** — **Lot 4b — Plan sur financements réels** (build OK, 229 tests verts, migration **0013**). Pivot : le plan de financement porte sur tes **vrais financements** (page Financement), enrichis de **statut** + **répartition annuelle** ; un scénario **retient** des financements (signés d'office, promis/espéré ajoutables). Remplace les « fonds par scénario » de la v2.
 - **2026-06-29 17:32** — **Lot 4 — Plan de financement v2** livré (build OK, 229 tests verts, migration **0012**). Statut signé/promis/espéré, 2 couches (annuelle = couverture, mensuelle = trésorerie), dashboard empilé, filtre tréso par statut. Pseudo-trésorerie + solde initial de couverture **supprimés**. À tester ci-dessous.
 - **2026-06-28 13:25** — Fix : détail mensuel de chaque financement **toujours visible et éditable** (12 inputs + ✓ par année). Le stylo verrou est retiré (il masquait les mois).
 - **2026-06-28 12:24** — Itération 2 **livrée** (build OK, 227 tests verts, 5 commits). À tester ci-dessous. Migration **0011** ajoutée (description).
@@ -14,37 +15,42 @@
 
 ## ⚠️ Prérequis (à faire une fois)
 
-- [ ] Appliquer les migrations dans l'ordre : `0009`, `0010`, `0011`, `0012` (Supabase → SQL Editor).
+- [ ] Appliquer les migrations dans l'ordre : `0009`, `0010`, `0011`, `0012`, `0013` (Supabase → SQL Editor). *(0013 supprime `scenario_financing*` + `coverage_baseline` et ajoute `bailleurs.statut`, `bailleur_yearly`, `budget_financing`.)*
 - [ ] `.env.local` : `SUPABASE_SERVICE_ROLE_KEY` (pour l'onglet Utilisateurs).
 - [ ] Redémarrer `npm run dev` après un `git pull`.
 
 ---
 
-## Lot 4 — Plan de financement v2 (nouveau)
+## Lot 4b — Plan sur financements réels (nouveau, remplace v2)
 
-> ⚠️ La migration **0012** supprime `coverage_baseline` (solde initial de couverture) et ajoute le statut + la répartition annuelle. Les anciennes lignes de financement gardent leurs versements mensuels ; saisis leur **statut**, **montant** et **répartition annuelle**.
+> ⚠️ Migration **0013** : le plan de financement porte sur tes **vrais financements** (page Financement). Les financements existants passent en **statut « signé »** par défaut (à ajuster). Saisis leur **répartition annuelle** sur leur page.
+
+### Page d'un financement (`/financements/[id]`)
+
+- [ ] L'en-tête affiche un **statut** (Signé / Promis / Espéré) ; éditable via **Modifier**.
+- [ ] Bloc **« Répartition annuelle (couverture) »** : un montant par année (Éditer → Enregistrer).
+- [ ] Bloc **« Recettes prévues (déblocages) »** : inchangé (couche trésorerie).
+- [ ] **⚠ réconciliation** : s'affiche si Σannuel ≠ Σdéblocages ≠ montant total (non bloquant).
 
 ### Édition d'un scénario (`/budgets?tab=edition`)
 
-- [ ] Bloc **« Plan de financement »** : par fonds, on choisit un **statut** (Signé / Promis / Espéré), un **montant total**, des **dates d'éligibilité**.
-- [ ] **Répartition annuelle** (couche 1) : un montant par année + bouton ✓.
-- [ ] **Versements mensuels** (couche 2) : 12 inputs par année + ✓ (inchangé).
-- [ ] **⚠ réconciliation** : s'affiche si Σannuel ≠ Σmensuel ≠ montant total (n'empêche pas d'enregistrer).
-- [ ] Tableau **Couverture par année** : barre empilée signé (vert) / promis (vert clair) / espéré (jaune) / non couvert (rouge).
-- [ ] Le **solde initial de couverture** a **disparu** (normal).
+- [ ] Bloc **« Plan de financement »** : la liste de **tes financements** apparaît (plus vide !).
+- [ ] Les **signés** sont cochés et **verrouillés** (🔒 garanti, non décochables).
+- [ ] Les **promis/espéré** : cases à cocher **inclure/exclure** du scénario.
+- [ ] Tableau **Couverture par année** : barre empilée signé / promis / espéré / non couvert, sur les fonds **retenus**.
 
 ### Liste des scénarios (`/budgets?tab=liste`)
 
-- [ ] Au dépli : une ligne par année = **total dépense** + **barre de couverture empilée** (plus de « solde fin »).
+- [ ] Au dépli : une ligne par année = **total dépense** + **barre de couverture empilée**.
 
 ### Dashboard (`/suivi`)
 
-- [ ] Bloc **« Plan de financement — couverture des dépenses »** en tête : une barre empilée par année (signé/promis/espéré/non couvert) + légende.
+- [ ] Bloc **« Plan de financement — couverture des dépenses »** en tête (barres empilées des fonds retenus du scénario actif).
 
 ### Trésorerie (`/tresorerie`)
 
-- [ ] Les recettes viennent désormais des **versements du scénario actif** (une ligne par fonds, couleur selon statut).
-- [ ] **Filtre statut** : « Signé seul » / « Signé + promis » / « Signé + promis + espéré ». Le solde se recalcule selon le niveau choisi.
+- [ ] Une ligne par **financement retenu** du scénario actif (déblocages mensuels).
+- [ ] **Filtre statut** : « Signé seul » / « + promis » / « + espéré ». Le solde se recalcule.
 
 ---
 
