@@ -178,25 +178,23 @@ des dépenses » (réservés au suivi de l'actif). Le **total** des LB y est **m
 
 **Bloc « Plan de financement »** (sous le budget dépenses, F2.7, BR-12) :
 ```
-┌ Couverture par année ─────────────────────────────────┐
+┌ Couverture par année (financements retenus) ──────────┐
 │ Année  Charges   Signé   Promis  Espéré  Non couvert  │
 │ 2026   58 800    35 280  11 760  5 880   5 880  (60/20/10/10 %) │
 │ 2027   60 000    21 600     0       0    38 400 (36/0/0/64 %)   │
 └────────────────────────────────────────────────────────┘
 
-GIZ   [signé ▾]  montant total [50 000]  élig. [01/2026]→[06/2028]   ✎ · Convertir · ✕
-  ⚠ Σannuel 50 000 · Σmensuel 50 000 · montant 50 000  (OK)
-  Répartition annuelle :  2026 [40 000]  2027 [10 000]                ✓
-  Versements mensuels :
-    Année   Jan … Déc  (12 inputs éditables)   Σ      ✓ Enreg.
-    2026    …                                  40 000  ✓
-    2027    …                                  10 000  ✓
-[+ fonds]   (nom + statut ; montant total saisi)
+Financements du scénario :                    [gérer les financements →]
+  ☑ HWF01  (signé)    — verrouillé (garanti)
+  ☑ GIZ    (promis)   [retirer]
+  ☐ SYE    (espéré)   [ajouter]
 ```
-- Par fonds : **statut** (signé/promis/espéré), **montant total** saisi, **dates d'éligibilité**,
-  **répartition annuelle** (couche 1) et **versements mensuels** (couche 2, 12 inputs).
-- **⚠ non bloquant** si Σannuel ≠ Σmensuel ≠ montant total (BR-12.1).
-- Tableau **Couverture par année** : signé/promis/espéré/non couvert empilé (BR-12.2).
+- Liste des **financements réels** : case **inclure/exclure** du scénario (`budget_financing`).
+  Les **signés** sont cochés et **verrouillés** (BR-12.2).
+- Le **statut**, la **répartition annuelle** et les **déblocages** d'un fonds s'éditent sur sa
+  **page financement** (F4.10/F4.15) — lien « gérer les financements ».
+- Tableau **Couverture par année** : signé/promis/espéré/non couvert empilé sur les fonds
+  **retenus** (BR-12.3).
 
 ## 4. Pages « Financement » (F4) — même gabarit
 
@@ -221,7 +219,10 @@ BLOC RECETTES PRÉVUES (déblocages)
 
 Solde prévu (recettes − dépenses)
 ```
-- **En-tête** : référence, bailleur (acteur), `montant_total`, fenêtre d'éligibilité, description (F4.9/F4.10).
+- **En-tête** : référence, bailleur (acteur), `montant_total`, fenêtre d'éligibilité, description,
+  **statut** signé/promis/espéré (F4.9/F4.10).
+- **Répartition annuelle (couverture)** (F4.15, couche 1 `bailleur_yearly`) : un montant par
+  année d'éligibilité, à côté des recettes/déblocages. **⚠** si Σannuel ≠ Σdéblocages ≠ montant_total.
 - Colonnes **Budgété** / **Dépensé** par ligne + récap d'écart vs `montant_total` (F4.11, BR-3.4) :
   « reste X à budgéter » si sous-budgété, « sur-budgété » / dépassement (rouge) sinon.
 - Bouton **« Assigner les lignes dans le budget »** (F4.12, BR-3.5) : impute les LB mappées

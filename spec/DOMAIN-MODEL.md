@@ -68,24 +68,24 @@ Un conteneur de prévisionnel, nommé librement par l'utilisateur.
 - Un seul budget actif ; sélectionner un nouveau désactive le précédent.
 - Activer (`est_actif`) est un droit réservé direction (P10), distinct de créer/dupliquer.
 
-### 2.2b Plan de financement de scénario
+### 2.2b Plan de financement (financements réels × scénarios)
 
-Chaque scénario porte un **plan de financement** : une liste de **fonds**, pour répondre à
-deux questions distinctes — « mes dépenses **annuelles** sont-elles couvertes ? » (plan) et
-« ai-je le **cash** au bon mois ? » (trésorerie).
+Le **plan de financement** s'appuie sur les **financements réels** (2.5b) — registre de tous
+les fonds possibles. Il répond à deux questions : « mes dépenses **annuelles** sont-elles
+couvertes ? » (plan) et « ai-je le **cash** au bon mois ? » (trésorerie).
 
-- **Fonds** (`scenario_financing`) : `nom` libre (ex « GIZ »), **statut** (signé / promis /
-  espéré), `montant_total` saisi, **dates d'éligibilité**, **répartition annuelle** (couche 1)
-  et **versements mensuels** (couche 2). Autonome, copié à la duplication du scénario.
-- **Couverture annuelle** (BR-12.2) : par année, on empile la répartition annuelle des fonds
-  par statut (signé/promis/espéré) sur la dépense annuelle. Base du **plan de financement**
-  du dashboard.
+- **Financement** (`bailleurs`, 2.5b) enrichi : **statut** (signé / promis / espéré),
+  **répartition annuelle** (couche 1, `bailleur_yearly`) et **versements mensuels** (couche 2,
+  `bailleur_income_monthly`, les déblocages). `montant_total` + dates d'éligibilité préexistent.
+- **Appartenance scénario** (`budget_financing`, BR-12.2) : un scénario **retient** un
+  sous-ensemble de fonds. Un **signé** est dans tous les scénarios et **non retirable** ; un
+  **promis/espéré** n'y est que s'il est ajouté. Simuler = inclure/exclure un fonds.
+- **Couverture annuelle** (BR-12.3) : par année, on empile la répartition annuelle des fonds
+  **retenus** par statut sur la dépense annuelle. Base du **plan de financement** (dashboard, liste).
 - **Trésorerie** (BR-7.7) : pour le **scénario actif**, solde mois-par-mois depuis les
-  versements (couche 2), avec **filtre statut**. Pas de pseudo-trésorerie de couverture.
+  versements (couche 2) des fonds retenus, avec **filtre statut**.
 - **Réconciliation** (BR-12.1) : Σcouche1 et Σcouche2 devraient égaler `montant_total` (⚠ non
   bloquant).
-- **Conversion** (BR-12.4) : à l'activation, un fonds peut devenir un **financement réel**
-  (2.5b) + ses versements deviennent des recettes prévues (2.7).
 
 ### 2.3 Période (année)
 

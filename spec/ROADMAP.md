@@ -172,6 +172,21 @@ avant implémentation**, commit par étape, tests à chaque étape. Migration **
 4. **Édition** (F2.7) : bloc plan de financement — statut, montant, dates, répartition
    annuelle, versements mensuels, ⚠ réconciliation non bloquant.
 
+## Jalon 18 — Lot 4b « Plan sur financements réels » (2026-06-29)
+
+Correctif de modèle : le plan de financement porte sur les **financements réels** (`bailleurs`),
+pas sur un objet autonome par scénario. Migration **0013** remplace `scenario_financing*`.
+
+1. **Modèle** (BR-12.1/12.2, DATA-MODEL 0013) : `bailleurs.statut`, table `bailleur_yearly`
+   (couche 1), table de jonction `budget_financing` (appartenance scénario). Drop
+   `scenario_financing*` + `coverage_baseline`.
+2. **Page financement** (F4.10/F4.15) : statut + répartition annuelle (couche 1), à côté des
+   déblocages (couche 2 `bailleur_income_monthly`).
+3. **Scénario** (F2.7/F2.8) : inclure/exclure des financements (signés verrouillés) ; couverture
+   par année sur les fonds retenus.
+4. **Dashboard / liste / trésorerie** : lisent les financements **retenus** du scénario
+   (signés implicites ∪ `budget_financing`), filtre statut sur la trésorerie.
+
 ## Phase 3 — industrialisation
 
 - ~~Multi-utilisateurs + rôles + RLS (F10.2)~~ → **avancé au Lot 3** (Chantier 1).

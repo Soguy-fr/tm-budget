@@ -82,23 +82,21 @@ Tu sélectionnes un scénario (même non actif) et tu l'édites comme le Suivi i
 
 ### Le plan de financement : « ai-je de quoi payer tout ça ? »
 
-Sous le budget de dépenses, un bloc te laisse **bâtir ton plan de financement**. Pour chaque **fonds** tu renseignes :
+Tes **financements réels** (page Financement) sont le registre de **tous** tes fonds possibles, signés ou pas. Sur la page d'un financement tu renseignes, en plus de ses infos habituelles :
 
 - un **statut** : **signé** (l'argent est sûr, convention signée), **promis** (accord de principe, oral ou écrit, mais rien de signé) ou **espéré** (tu as toutes les chances, mais rien n'est acquis) ;
-- un **montant total** accordé ;
-- ses **dates d'éligibilité** (jusqu'à quand les dépenses sont éligibles) ;
-- sa **répartition par année** : combien ce fonds couvre sur 2026, 2027… (un fonds peut porter sur une seule année ou s'étaler sur plusieurs) ;
-- ses **versements mensuels** : à quel mois l'argent tombe réellement — parfois la dernière tranche arrive *après* la dernière dépense éligible (le bailleur paie sur rapport).
+- sa **répartition par année** (couche couverture) : combien ce fonds couvre sur 2026, 2027… (un fonds peut porter sur une seule année ou s'étaler sur plusieurs) ;
+- ses **déblocages mensuels** (couche trésorerie) : à quel mois l'argent tombe réellement — parfois la dernière tranche arrive *après* la dernière dépense éligible (le bailleur paie sur rapport).
 
-Ces deux dernières couches répondent à deux questions différentes. La **répartition annuelle** sert à la **couverture** : mes dépenses de l'année sont-elles financées ? Les **versements mensuels** servent à la **trésorerie** : ai-je le cash au bon moment ? Un **⚠** discret te prévient si la somme des années ou la somme des mois ne colle pas au montant total (sans t'empêcher d'enregistrer — c'est normal en cours de saisie).
+Ces deux couches répondent à deux questions différentes. La **répartition annuelle** sert à la **couverture** : mes dépenses de l'année sont-elles financées ? Les **déblocages mensuels** servent à la **trésorerie** : ai-je le cash au bon moment ? Un **⚠** discret te prévient si la somme des années ou des mois ne colle pas au montant total (sans t'empêcher d'enregistrer — normal en cours de saisie).
 
-> 🎯 **Comment lire la couverture ?** Pour chaque année, une **barre empilée** montre le taux de couverture des dépenses : **vert = signé**, **vert clair = promis**, **jaune = espéré**, **rouge = non couvert**. Exemple : dépense 100, dont 60 signé, 20 promis, 10 espéré → **60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge**. D'un coup d'œil tu sais ce qui est sûr et combien il reste à décrocher.
+Dans un **scénario**, tu choisis **quels financements tu retiens** (bloc « Plan de financement » de l'onglet Édition). Les fonds **signés** sont retenus d'office et **non retirables** (l'argent est garanti). Les **promis/espéré**, tu les **ajoutes ou retires** pour simuler : « et si je n'obtiens pas ce fonds promis, suis-je toujours couvert ? ».
 
-Tu retrouves cette couverture dans la **liste des scénarios** (chaque scénario se déplie en une ligne par année) et sur le **dashboard** (bloc « Plan de financement »). C'est ton bac à sable pour aller chercher les bons bailleurs.
+> 🎯 **Comment lire la couverture ?** Pour chaque année, une **barre empilée** montre le taux de couverture des dépenses par les fonds retenus : **vert = signé**, **vert clair = promis**, **jaune = espéré**, **rouge = non couvert**. Exemple : dépense 100, dont 60 signé, 20 promis, 10 espéré → **60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge**. D'un coup d'œil tu sais ce qui est sûr et combien il reste à décrocher.
 
-> 🔁 **Tester une hypothèse de fonds** : tu ne touches pas au scénario actif à la légère. Tu le **dupliques** (dépenses + fonds), tu modifies les statuts ou la répartition sur la copie, et tu compares. Quand c'est validé, tu actives la nouvelle version.
+Tu retrouves cette couverture dans la **liste des scénarios** (chaque scénario se déplie en une ligne par année) et sur le **dashboard** (bloc « Plan de financement »).
 
-> 💡 **Et quand le financement tombe pour de vrai ?** Le jour où GIZ signe et que tu actives le scénario, l'appli te demande, fonds par fonds : « Créer le financement GIZ de 50 000 ? ». Si oui, elle te fait compléter les infos manquantes (référence, bailleur, couleur, dates d'éligibilité) et crée le vrai financement — avec ses recettes prévues déjà remplies. Ta simulation devient réalité sans ressaisie.
+> 🔁 **Tester une hypothèse** : duplique le scénario actif, retire (ou ajoute) un fonds promis/espéré sur la copie, compare la couverture. Le statut d'un fonds, lui, se change globalement sur sa page (espéré → signé le jour où ça signe).
 
 ### Le solde initial de trésorerie
 

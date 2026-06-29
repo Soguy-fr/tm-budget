@@ -53,59 +53,47 @@ create table budgets (
 create unique index one_active_budget on budgets(is_active) where is_active = true;
 ```
 
-### scenario_financing (fonds du plan de financement) + couches annuelle / mensuelle
+### Plan de financement : financements réels × scénarios (migration 0013)
 
-Le **plan de financement** d'un scénario : des **fonds** autonomes (saisis dans le scénario,
-copiés à la duplication), chacun avec un **statut** (signé/promis/espéré), un **montant total**
-saisi, des **dates d'éligibilité**, une **répartition annuelle** (couche 1, couverture) et un
-**échéancier de versements mensuels** (couche 2, trésorerie). Indépendants des `bailleurs`
-réels ; à l'activation un fonds peut être **converti** en financement réel (BR-12.4).
-
-```sql
--- migration 0010 (création) + migration 0012 (statut, montant saisi, dates, couche annuelle)
-create table scenario_financing (
-  id            uuid primary key default gen_random_uuid(),
-  budget_id     uuid not null references budgets(id) on delete cascade,
-  name          text not null,                 -- 'GIZ' (libre)
-  statut        text not null default 'espere' -- 0012 : signe | promis | espere (BR-12.1)
-                  check (statut in ('signe','promis','espere')),
-  amount_total  numeric(14,2) not null default 0,  -- SAISI (montant accordé). ⚠ vs Σcouches (non bloquant)
-  eligib_start  date,                          -- 0012 : début d'éligibilité (BR-12.1)
-  eligib_end    date,                          -- 0012 : fin d'éligibilité
-  sort_order    int not null default 0,
-  converted_bailleur_id uuid references bailleurs(id),  -- non null = converti en financement réel
-  created_at    timestamptz not null default now()
-);
-create index on scenario_financing(budget_id);
-
--- couche 1 — répartition par année d'éligibilité (base de la couverture, BR-12.2)
-create table scenario_financing_yearly (        -- migration 0012
-  id                     uuid primary key default gen_random_uuid(),
-  scenario_financing_id  uuid not null references scenario_financing(id) on delete cascade,
-  year                   int not null,
-  amount                 numeric(14,2) not null default 0,
-  unique (scenario_financing_id, year)
-);
-
--- couche 2 — versements par mois (base de la trésorerie, BR-7.7/12.3)
-create table scenario_financing_monthly (
-  id                     uuid primary key default gen_random_uuid(),
-  scenario_financing_id  uuid not null references scenario_financing(id) on delete cascade,
-  year                   int not null,
-  month                  smallint not null check (month between 1 and 12),
-  amount                 numeric(14,2) not null default 0,  -- versement du mois
-  unique (scenario_financing_id, year, month)
-);
-```
-> Migrations 0010/0012 activent la **RLS** sur ces tables au **tier opérationnel** (écriture
-> `admin_systeme`/`directrice`/`respo_financiere`, lecture authentifiée), comme le reste des
-> données de production.
+Le **plan de financement** s'appuie sur les **financements réels** (`bailleurs`) — registre de
+tous les fonds possibles. On y ajoute un **statut** + une **couche annuelle** ; l'**appartenance**
+d'un fonds à un scénario est une jonction `budget_financing`. *(Les tables `scenario_financing*`
+et la colonne `budgets.coverage_baseline` — pseudo-trésorerie — sont supprimées.)*
 
 ```sql
--- migration 0012 — suppression de la pseudo-trésorerie de couverture (remplacée par le
--- plan de financement BR-12 + la trésorerie scénario-actif BR-7.7). coverage_baseline retiré.
+-- migration 0013
+
+-- statut du financement (BR-12.1). Backfill des fonds existants → 'signe' (conventions réelles).
+alter table bailleurs add column if not exists statut text not null default 'signe'
+  check (statut in ('signe','promis','espere'));
+
+-- couche 1 — répartition par année d'éligibilité (couverture, BR-12.3)
+create table bailleur_yearly (
+  id          uuid primary key default gen_random_uuid(),
+  bailleur_id uuid not null references bailleurs(id) on delete cascade,
+  year        int not null,
+  amount      numeric(14,2) not null default 0,
+  unique (bailleur_id, year)
+);
+
+-- appartenance d'un financement (promis/espéré) à un scénario (BR-12.2).
+-- Les fonds signés sont implicitement dans tous les scénarios (pas de ligne ici).
+create table budget_financing (
+  id          uuid primary key default gen_random_uuid(),
+  budget_id   uuid not null references budgets(id) on delete cascade,
+  bailleur_id uuid not null references bailleurs(id) on delete cascade,
+  unique (budget_id, bailleur_id)
+);
+
+-- suppression du modèle précédent (pseudo-trésorerie + fonds autonomes par scénario)
+drop table if exists scenario_financing_monthly;
+drop table if exists scenario_financing_yearly;
+drop table if exists scenario_financing;
 alter table budgets drop column if exists coverage_baseline;
 ```
+> Migration 0013 active la **RLS** sur `bailleur_yearly` et `budget_financing` au **tier
+> opérationnel** (écriture `admin_systeme`/`directrice`/`respo_financiere`, lecture authentifiée).
+> `bailleur_income_monthly` (couche 2, déblocages) préexiste et reste inchangée.
 
 ### budget_years
 
@@ -334,7 +322,7 @@ create table user_roles (
 
 | Tables                                                                                   | Écriture autorisée |
 | ---------------------------------------------------------------------------------------- | ------------------ |
-| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `scenario_financing`, `scenario_financing_yearly`, `scenario_financing_monthly` | `admin_systeme`, `directrice`, `respo_financiere` |
+| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `bailleur_yearly`, `budget_financing` | `admin_systeme`, `directrice`, `respo_financiere` |
 | **Budgets** (`budgets`, `budget_years`) — création/duplication/édition                   | `admin_systeme`, `directrice`, `respo_financiere` ; **activation `is_active` trigger-gated** (admin_systeme/directrice, voir ci-dessous) |
 | **Référence + gouvernance** — `structure_lines`, `user_roles`                            | `admin_systeme`, `directrice` |
 | **Audit** — `audit_log`                                                                  | lecture `admin_systeme` + `directrice` ; écriture trigger uniquement |

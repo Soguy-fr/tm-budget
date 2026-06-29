@@ -34,9 +34,9 @@
 | F2.4 | Archiver un budget                                             | 🟡    | —      |
 | F2.5 | Saisir le solde initial de trésorerie (1er janvier, 1re année) | 🟢    | BR-7.1 |
 | F2.6 | **Onglet « Édition du scénario »** (dans /budgets) : tableur du scénario **sélectionné**. Réutilise édition ligne-par-ligne, afficher bailleur, +année, replier les mois, filtre année. **Sans** solde tréso ni suivi. On peut **modifier le titre (nom) et la description** du scénario | 🟢 | P7, P10 |
-| F2.7 | **Plan de financement** (bloc de l'onglet édition) : on saisit par fonds **nom**, **statut** (signé/promis/espéré), **montant total**, **dates d'éligibilité**, **répartition annuelle** (couche 1) et **versements mensuels** (couche 2, 12 inputs **toujours éditables**, enregistrés par année ✓). **⚠ non bloquant** si Σannuel ≠ Σmensuel ≠ montant total. Tableau **couverture par année** (signé/promis/espéré/non couvert) + liste des fonds | 🟢 | BR-12.1, BR-12.2 |
-| F2.8 | **Conversion à l'activation** : proposer **fonds par fonds** de créer le financement réel (formulaire champs manquants, montant = `montant_total`) + copier les versements en recettes prévues ; marquer le fonds converti | 🟢 | BR-12.4 |
-| F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras) + couverture **signé / promis / espéré / non couvert** (BR-12.2). Indicateur **« ? »** (survol + lien guide) | 🟢 | BR-12.2 |
+| F2.7 | **Plan de financement** (bloc de l'onglet édition) : liste des **financements réels** avec **inclure/exclure** du scénario (`budget_financing`) ; les **signés** sont retenus d'office et **non retirables**. Tableau **couverture par année** (signé/promis/espéré/non couvert) des financements **retenus** + lien « gérer les financements » | 🟢 | BR-12.2, BR-12.3 |
+| F2.8 | **Ajouter / retirer un financement d'un scénario** (`budget_financing`) : ajout d'un fonds promis/espéré ; retrait interdit sur un fonds **signé** (garanti). Duplication d'un scénario : copie ses appartenances | 🟢 | BR-12.2 |
+| F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras) + couverture **signé / promis / espéré / non couvert** (BR-12.3). Indicateur **« ? »** (survol + lien guide) | 🟢 | BR-12.3 |
 | F2.10 | **Supprimer un scénario** : bouton + confirmation « Êtes-vous sûr ? ». **Interdit sur le scénario actif** | 🟢 | — |
 | F2.11 | **Description de scénario** (`budgets.description`) : éditable dans l'onglet Édition (avec le titre) ; aperçu (premières lignes) dans la liste | 🟢 | — |
 
@@ -77,7 +77,8 @@
 | F4.7 | Affichage du réalisé sur la page financement (bouton, comme l'interne) | 🟡 | BR-5.3, BR-6.1 |
 | F4.8 | Export rapport financier par financement | 🟡 | BR-10.1 |
 | F4.9 | **Bailleur (acteur)** : entité parente ; un bailleur porte 1..N financements ; sélection du bailleur à la création d'un financement | 🟢 | — |
-| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total** | 🟢 | — |
+| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total**, **statut** (signé/promis/espéré) | 🟢 | BR-12.1 |
+| F4.15 | **Répartition annuelle** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année d'éligibilité (couverture). **⚠ non bloquant** si Σannuel ≠ Σmensuel (déblocages) ≠ montant_total | 🟢 | BR-12.1, BR-12.3 |
 | F4.11 | Colonnes **Budgété** (ancien « Total dérivé ») + **Dépensé** (GL) + écart vs `montant_total` (reste à budgéter / sous-/sur-dépensé) | 🟢 | BR-3.4 |
 | F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement | 🟢 | BR-3.5 |
 | F4.13 | Liste des financements : **filtre actif/inactif** (actif = aujourd'hui ∈ `[début, fin]` d'éligibilité, bornes ouvertes = actif) + **tri par date de début d'éligibilité** | 🟢 | — |
