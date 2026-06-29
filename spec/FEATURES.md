@@ -34,9 +34,9 @@
 | F2.4 | Archiver un budget                                             | 🟡    | —      |
 | F2.5 | Saisir le solde initial de trésorerie (1er janvier, 1re année) | 🟢    | BR-7.1 |
 | F2.6 | **Onglet « Édition du scénario »** (dans /budgets) : tableur du scénario **sélectionné**. Réutilise édition ligne-par-ligne, afficher bailleur, +année, replier les mois, filtre année. **Sans** solde tréso ni suivi. On peut **modifier le titre (nom) et la description** du scénario | 🟢 | P7, P10 |
-| F2.7 | **Financements prévisionnels** (bloc de l'onglet édition) : on crée une ligne avec **le nom seul** ; son **montant est calculé** (Σ des mois). Chaque financement a un **détail mensuel par année** (12 inputs **toujours éditables**), enregistré **par année** (bouton ✓). **Solde initial de couverture** (`coverage_baseline`, ≠ initial_cash) ; **pseudo-trésorerie de couverture** ; tableau **couverture par année** + tableau **liste des financements** (montant total = Σ années) | 🟢 | BR-12.1, BR-12.2 |
-| F2.8 | **Conversion à l'activation** : proposer **ligne par ligne** de créer le financement réel (formulaire champs manquants, montant = Σ mois) + copier la répartition en recettes prévues ; marquer la ligne convertie | 🟢 | BR-12.3 |
-| F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras), **total reçu**, **solde fin d'année**, **% couvert** (BR-12.2). `coverage_baseline` n'est **pas** affiché ici. Indicateur **« ? »** (survol + lien guide) rappelant la logique d'approximation par pseudo-trésorerie | 🟢 | BR-12.2 |
+| F2.7 | **Plan de financement** (bloc de l'onglet édition) : on saisit par fonds **nom**, **statut** (signé/promis/espéré), **montant total**, **dates d'éligibilité**, **répartition annuelle** (couche 1) et **versements mensuels** (couche 2, 12 inputs **toujours éditables**, enregistrés par année ✓). **⚠ non bloquant** si Σannuel ≠ Σmensuel ≠ montant total. Tableau **couverture par année** (signé/promis/espéré/non couvert) + liste des fonds | 🟢 | BR-12.1, BR-12.2 |
+| F2.8 | **Conversion à l'activation** : proposer **fonds par fonds** de créer le financement réel (formulaire champs manquants, montant = `montant_total`) + copier les versements en recettes prévues ; marquer le fonds converti | 🟢 | BR-12.4 |
+| F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras) + couverture **signé / promis / espéré / non couvert** (BR-12.2). Indicateur **« ? »** (survol + lien guide) | 🟢 | BR-12.2 |
 | F2.10 | **Supprimer un scénario** : bouton + confirmation « Êtes-vous sûr ? ». **Interdit sur le scénario actif** | 🟢 | — |
 | F2.11 | **Description de scénario** (`budgets.description`) : éditable dans l'onglet Édition (avec le titre) ; aperçu (premières lignes) dans la liste | 🟢 | — |
 
@@ -124,7 +124,8 @@
 | F7.4 | Détection visuelle des trous de trésorerie | 🟢 | BR-7.4 |
 | F7.5 | Tréso réelle = toutes écritures GL (allouées ou non) — la caisse reflète la banque | 🟢 | BR-7.3 |
 | F7.6 | Rapprochement bancaire : saisie solde relevé mensuel + écart vs solde calculé (rouge si ≠ 0) | 🟡 | BR-7.5 |
-| F7.7 | **Page « Trésorerie »** (menu dédié) : synthèse budgété — ligne recettes par financement, dépenses totales, solde ; cellule solde forcé + date du jour grisant le passé | 🟢 | BR-7.7 |
+| F7.7 | **Page « Trésorerie »** (menu dédié) : **scénario actif** — ligne **versements par fonds** (couche 2), dépenses totales, solde chaîné ; cellule solde forcé + date du jour grisant le passé | 🟢 | BR-7.7 |
+| F7.8 | **Filtre statut** sur la page Trésorerie : signé seul / signé+promis / signé+promis+espéré — n'inclut que les versements des fonds du niveau choisi | 🟢 | BR-7.8 |
 
 ## F8 — Dashboard
 
@@ -135,6 +136,7 @@
 | F8.3 | Courbe trésorerie cumulée prévu vs réel | 🟡 | BR-7.* |
 | F8.4 | Tableau de bord complet multi-indicateurs | 🔵 | — |
 | F8.5 | Onglet **Dépense** : n'afficher que les niveaux 1 et 2 (pas niveau 3) + colonne **Commentaire** éditable (édit/OK), liée au champ `comment` partagé | 🟢 | BR-5.4, F1.7 |
+| F8.6 | **Plan de financement** (bloc dashboard) : par année du scénario actif, **barre empilée** du taux de couverture des dépenses — **signé** (vert) / **promis** (vert clair) / **espéré** (jaune) / **non couvert** (rouge) | 🟢 | BR-12.2 |
 | F8.6 | Onglet **Dépense** : hiérarchie niv.1/2 plus lisible (indentation, typo) + **accordéon** repliant les sous-catégories niv.2 sous leur niv.1 | 🟢 | BR-5.4 |
 | F8.7 | Onglet **Dépense** : **barre de couleur en dégradé** dans la colonne « % consommé » — 0 % blanc → 100 % vert ; négatif (avoir net) rouge | 🟢 | BR-5.6 |
 | F8.8 | Onglet **Dépense** : colonne **Vitesse** — jauge 0→200 % du rythme de dépense à la date du jour (réalisé à date / prévu cumulé à date) ; vert 80–120 %, rouge < 80 % (sous-régime) ou > 120 % (surrégime) | 🟢 | BR-5.5 |

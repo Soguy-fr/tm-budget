@@ -154,6 +154,23 @@ Migrations **0009** (rôles) et **0010** (scénario : financements prévisionnel
 4. **Chantier 4 — Financements prévisionnels & couverture** (F2.7/F2.8/F2.9, BR-12,
    tables 0010) : bloc recettes simulées + pseudo-trésorerie + couvert/restant par année ;
    **conversion** à l'activation. **Zone danger déplacée** /budgets → Configuration.
+   *(Refondu au Jalon 17 — plan de financement par statut, pseudo-trésorerie supprimée.)*
+
+## Jalon 17 — Lot 4 « Plan de financement v2 » (2026-06-29)
+
+Refonte du financement/trésorerie (fichier « Plan de financements 2024-2029 »). **Specs MAJ
+avant implémentation**, commit par étape, tests à chaque étape. Migration **0012**.
+
+1. **Modèle** (BR-12.1, DATA-MODEL 0012) : `scenario_financing` enrichi (`statut`
+   signé/promis/espéré, `montant_total` **saisi**, `eligib_start/end`) + nouvelle table
+   `scenario_financing_yearly` (couche 1, répartition annuelle). **Suppression**
+   `coverage_baseline` + pseudo-trésorerie (`lib/coverage.ts` réécrit).
+2. **Couverture annuelle** (BR-12.2, F8.6) : taux empilé signé/promis/espéré/non couvert
+   par année — bloc liste scénarios + **bloc dashboard**.
+3. **Trésorerie** (BR-7.7/7.8, F7.7/F7.8) : page Trésorerie lit les **versements du scénario
+   actif** (couche 2) + **filtre statut** (signé / +promis / +espéré).
+4. **Édition** (F2.7) : bloc plan de financement — statut, montant, dates, répartition
+   annuelle, versements mensuels, ⚠ réconciliation non bloquant.
 
 ## Phase 3 — industrialisation
 

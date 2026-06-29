@@ -80,21 +80,25 @@ Un « budget » ici, c'est un scénario complet de prévisionnel. Tu peux en avo
 
 Tu sélectionnes un scénario (même non actif) et tu l'édites comme le Suivi interne : édition ligne par ligne, couleur bailleur, ajout d'année, replier les mois, filtrer une année. Ici, contrairement au Suivi interne, tu peux **modifier les totaux** des lignes — c'est l'atelier où l'on prépare. (Pas de trésorerie ni de suivi des dépenses dans cet onglet : ça, c'est pour observer l'actif.)
 
-### Les financements prévisionnels : « ai-je de quoi payer tout ça ? »
+### Le plan de financement : « ai-je de quoi payer tout ça ? »
 
-Sous le budget de dépenses, un bloc te laisse **simuler tes recettes**. Tu pars d'un **solde initial de couverture** : ce n'est pas seulement l'argent en caisse, c'est surtout **la somme des financements déjà acquis et garantis** des années précédentes — repliée en un seul chiffre, inutile d'en détailler le passé. Puis tu ajoutes des **lignes de financement prévisionnel** : tu crées une ligne « GIZ » (juste le nom), et son montant **se construit tout seul** au fur et à mesure que tu saisis les recettes mois par mois sur chaque année.
+Sous le budget de dépenses, un bloc te laisse **bâtir ton plan de financement**. Pour chaque **fonds** tu renseignes :
 
-L'appli calcule alors une **pseudo-trésorerie de couverture** : solde initial + recettes simulées − dépenses, cumulé dans le temps. C'est une **approximation assumée** : elle te dit si tes financements couvrent tes charges **sans que tu aies à flécher chaque ligne budgétaire à un bailleur**, et elle gère naturellement les financements qui **démarrent en cours d'année, glissent sur plusieurs années ou se chevauchent**.
+- un **statut** : **signé** (l'argent est sûr, convention signée), **promis** (accord de principe, oral ou écrit, mais rien de signé) ou **espéré** (tu as toutes les chances, mais rien n'est acquis) ;
+- un **montant total** accordé ;
+- ses **dates d'éligibilité** (jusqu'à quand les dépenses sont éligibles) ;
+- sa **répartition par année** : combien ce fonds couvre sur 2026, 2027… (un fonds peut porter sur une seule année ou s'étaler sur plusieurs) ;
+- ses **versements mensuels** : à quel mois l'argent tombe réellement — parfois la dernière tranche arrive *après* la dernière dépense éligible (le bailleur paie sur rapport).
 
-> 🎯 **Comment lire la couverture ?** Pour chaque année, regarde le **solde de fin d'année** :
-> - **Solde positif → couverture 100 %** : tes financements (report inclus) couvrent tout.
-> - **Solde négatif → il manque ce montant.** Exemple : charges 100, solde fin −20 → **couvert 80 %**, reste 20 à trouver.
->
-> Le **solde de début d'année** (ton solde initial de couverture) n'est là que pour dire « voici ce qui est déjà garanti » — c'est le socle sur lequel s'empile la simulation. C'est volontairement simple : on se sert de la trésorerie prévisionnelle comme d'une **jauge** pour savoir combien de financement il reste à décrocher.
+Ces deux dernières couches répondent à deux questions différentes. La **répartition annuelle** sert à la **couverture** : mes dépenses de l'année sont-elles financées ? Les **versements mensuels** servent à la **trésorerie** : ai-je le cash au bon moment ? Un **⚠** discret te prévient si la somme des années ou la somme des mois ne colle pas au montant total (sans t'empêcher d'enregistrer — c'est normal en cours de saisie).
 
-Concrètement, dans l'onglet Édition tu vois deux tableaux : **la couverture par année** (charges, % couvert, reste à trouver, solde fin) et **la liste de tes financements** avec leur montant total. Tu ajoutes une ligne, tu vois tout de suite l'effet. Dans la **liste des scénarios**, chaque scénario se déplie en une ligne par année : total dépense, total reçu, solde de fin d'année et % couvert. C'est ton bac à sable pour aller chercher les bons bailleurs.
+> 🎯 **Comment lire la couverture ?** Pour chaque année, une **barre empilée** montre le taux de couverture des dépenses : **vert = signé**, **vert clair = promis**, **jaune = espéré**, **rouge = non couvert**. Exemple : dépense 100, dont 60 signé, 20 promis, 10 espéré → **60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge**. D'un coup d'œil tu sais ce qui est sûr et combien il reste à décrocher.
 
-> 💡 **Et quand le financement tombe pour de vrai ?** Le jour où tu obtiens GIZ et que tu actives le scénario, l'appli te demande, ligne par ligne : « Créer le financement GIZ de 50 000 ? ». Si oui, elle te fait compléter les infos manquantes (référence, bailleur, couleur, dates d'éligibilité) et crée le vrai financement — avec ses recettes prévues déjà remplies. Ta simulation devient réalité sans ressaisie.
+Tu retrouves cette couverture dans la **liste des scénarios** (chaque scénario se déplie en une ligne par année) et sur le **dashboard** (bloc « Plan de financement »). C'est ton bac à sable pour aller chercher les bons bailleurs.
+
+> 🔁 **Tester une hypothèse de fonds** : tu ne touches pas au scénario actif à la légère. Tu le **dupliques** (dépenses + fonds), tu modifies les statuts ou la répartition sur la copie, et tu compares. Quand c'est validé, tu actives la nouvelle version.
+
+> 💡 **Et quand le financement tombe pour de vrai ?** Le jour où GIZ signe et que tu actives le scénario, l'appli te demande, fonds par fonds : « Créer le financement GIZ de 50 000 ? ». Si oui, elle te fait compléter les infos manquantes (référence, bailleur, couleur, dates d'éligibilité) et crée le vrai financement — avec ses recettes prévues déjà remplies. Ta simulation devient réalité sans ressaisie.
 
 ### Le solde initial de trésorerie
 
@@ -257,7 +261,9 @@ Un mois en **rouge** = solde négatif prévu. Exemple typique : la mission fluvi
 
 *Page : Trésorerie*
 
-Cette page est une **synthèse** du solde budgété (les mêmes chiffres que la ligne du bas de Suivi interne, mode Budgété) présentée clairement : une ligne par **financement** (ses recettes prévues mois par mois), une ligne **Dépenses totales**, une ligne **Solde**.
+Cette page projette le solde du **scénario actif** mois par mois, à partir des **versements** de ton plan de financement : une ligne par **fonds** (ses versements mois par mois, avec son statut), une ligne **Dépenses totales**, une ligne **Solde**.
+
+Le **filtre statut** en tête change tout : **signé seul** (le plus prudent — n'inclut que l'argent sûr), **signé + promis**, ou **signé + promis + espéré** (tout). Tu vois ainsi si tu tombes à zéro selon ton degré d'optimisme. Si même en comptant l'espéré ça passe juste, c'est un signal.
 
 Le petit plus malin : la case **« Date du jour du calcul »**. Tu y mets une date (par défaut aujourd'hui) et l'appli **grise tous les mois passés** — tu ne regardes que l'avenir. Le solde réellement en caisse à cette date se saisit dans la case **Solde forcé**, qui se pose dans le mois juste avant (date au 13 juin 2025 → solde forcé affiché en « Solde mai 2025 »), et la projection repart de là. Change la date pour simuler « et si on était déjà en septembre ? » sans toucher à ton budget.
 

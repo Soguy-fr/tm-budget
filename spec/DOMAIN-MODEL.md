@@ -66,24 +66,26 @@ Un conteneur de prévisionnel, nommé librement par l'utilisateur.
 - Tous les budgets internes partagent la même structure de LB (P2).
 - Dupliquer un budget copie l'intégralité de ses montants et assignations.
 - Un seul budget actif ; sélectionner un nouveau désactive le précédent.
-- `coverage_baseline` : base de **couverture** du scénario (financements déjà acquis,
-  repliés). Sert uniquement à la pseudo-trésorerie de couverture (2.2b, BR-12) ; n'alimente
-  PAS la trésorerie réelle.
 - Activer (`est_actif`) est un droit réservé direction (P10), distinct de créer/dupliquer.
 
-### 2.2b Financement prévisionnel & couverture de scénario
+### 2.2b Plan de financement de scénario
 
-Outil de **simulation** propre à un scénario : « mes financements couvrent-ils mes charges
-dans le temps ? », sans flécher chaque LB à un bailleur.
+Chaque scénario porte un **plan de financement** : une liste de **fonds**, pour répondre à
+deux questions distinctes — « mes dépenses **annuelles** sont-elles couvertes ? » (plan) et
+« ai-je le **cash** au bon mois ? » (trésorerie).
 
-- **Financement prévisionnel** : une recette simulée (`nom` libre ex « GIZ », `montant_total`)
-  avec sa **répartition mensuelle** multi-années. Indépendant des bailleurs réels.
-- **Pseudo-trésorerie de couverture** (BR-12.1) : cumul chaîné
-  `coverage_baseline + Σ recettes simulées − Σ dépenses`, mensuel et annuel. Négatif = trou.
-- **Couvert / restant à couvrir** par année (BR-12.2) : présenté dans la liste et l'édition
-  des scénarios.
-- **Conversion** (BR-12.3) : à l'activation, une ligne prévisionnelle peut devenir un
-  **financement réel** (2.5b) + ses recettes simulées deviennent des recettes prévues (2.7).
+- **Fonds** (`scenario_financing`) : `nom` libre (ex « GIZ »), **statut** (signé / promis /
+  espéré), `montant_total` saisi, **dates d'éligibilité**, **répartition annuelle** (couche 1)
+  et **versements mensuels** (couche 2). Autonome, copié à la duplication du scénario.
+- **Couverture annuelle** (BR-12.2) : par année, on empile la répartition annuelle des fonds
+  par statut (signé/promis/espéré) sur la dépense annuelle. Base du **plan de financement**
+  du dashboard.
+- **Trésorerie** (BR-7.7) : pour le **scénario actif**, solde mois-par-mois depuis les
+  versements (couche 2), avec **filtre statut**. Pas de pseudo-trésorerie de couverture.
+- **Réconciliation** (BR-12.1) : Σcouche1 et Σcouche2 devraient égaler `montant_total` (⚠ non
+  bloquant).
+- **Conversion** (BR-12.4) : à l'activation, un fonds peut devenir un **financement réel**
+  (2.5b) + ses versements deviennent des recettes prévues (2.7).
 
 ### 2.3 Période (année)
 

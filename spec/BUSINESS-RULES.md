@@ -307,14 +307,24 @@ Pour chaque mois, l'utilisateur peut saisir le **solde du relevé bancaire** en 
 - Le rapprochement (écart = 0) est un prérequis **recommandé** (non bloquant au début)
   de la clôture mensuelle (BR-11.1).
 
-### BR-7.7 — Page Trésorerie (synthèse budgété)
-Une page dédiée (menu **« Trésorerie »**) présente une **synthèse lisible**, en mode
-**Budgété uniquement** : ses montants sont **identiques** à la ligne « Solde trésorerie
-(Budgété) » de Suivi interne (BR-7.2). Tableau, colonnes = mois (multi-années) :
-- une **ligne par financement** : ses recettes prévues du mois (BR-3.3) ;
+### BR-7.7 — Page Trésorerie (scénario actif)
+Une page dédiée (menu **« Trésorerie »**) présente une **synthèse lisible** du **scénario
+actif uniquement** (pas calculée dans les scénarios non-actifs). Les recettes proviennent
+des **versements mensuels du plan de financement** du scénario actif (couche 2,
+`scenario_financing_monthly`, BR-12.1) — **plus** de `bailleur_income_monthly`. Tableau,
+colonnes = mois (multi-années) :
+- une **ligne par fonds** : ses versements du mois (couche 2), avec son **statut** ;
 - une ligne **« Dépenses totales »** : `Σ budget_monthly.amount` (toutes LB) du mois ;
-- une ligne **« Solde »** : cumul chaîné (`solde = solde_précédent + Σ recettes − dépenses`).
+- une ligne **« Solde »** : cumul chaîné (`solde = solde_précédent + Σ versements − dépenses`).
 - Vocabulaire : on parle de **Financement** (pas « Bailleur »).
+
+### BR-7.8 — Filtre par statut (signé / promis / espéré)
+La page Trésorerie porte un **filtre à 3 niveaux** sur le statut des fonds (BR-12.1) :
+- **signé seul** — n'inclut que les versements des fonds *signés* (le plus prudent) ;
+- **signé + promis** — ajoute les fonds *promis* ;
+- **signé + promis + espéré** — inclut tout.
+Un fonds n'entre dans le calcul du solde que si son statut appartient au niveau choisi.
+Permet de vérifier qu'on ne tombe pas à zéro selon le degré de certitude retenu.
 
 **Date du jour du calcul** (`calc_date`, saisissable pour simuler à différentes dates) :
 - toutes les colonnes de mois **antérieures** au mois de `calc_date` sont **grisées** ;
@@ -405,60 +415,70 @@ Sur un mois clos :
   avec confirmation), puis une re-clôture.
 Objectif : ce qui a été reporté (bailleur, CA) ne peut plus bouger silencieusement.
 
-## 12. Couverture de scénario (pseudo-trésorerie de simulation)
+## 12. Plan de financement (par scénario)
 
-> Outil de **simulation** propre à un scénario (brouillon ou actif), distinct de la
-> trésorerie réelle (section 7) et de la page Trésorerie (BR-7.7). But : vérifier si les
-> **financements couvrent les charges dans le temps**, sans flécher chaque LB à un bailleur.
-> Gère naturellement les financements **glissants / décalés / multi-annuels**.
+> Chaque scénario porte un **plan de financement** : une liste de fonds, chacun avec un
+> **statut** (signé / promis / espéré), une **répartition annuelle d'éligibilité** (couche 1,
+> base de la couverture) et un **échéancier de versements mensuels** (couche 2, base de la
+> trésorerie). Deux vues distinctes en découlent :
+> - **Plan de financement** (dashboard) — couverture **annuelle** des dépenses, par statut.
+> - **Trésorerie** (§7, scénario actif) — solde **mois-par-mois** depuis les versements.
+>
+> Dans les scénarios on **simule le plan de financement** (statut, répartition, versements) ;
+> la trésorerie précise n'est calculée que pour le **scénario actif**. Pour tester une autre
+> hypothèse de fonds, on **duplique** le scénario actif (dépenses + fonds) et on simule.
+> *(La « pseudo-trésorerie de couverture » et `coverage_baseline` sont supprimées.)*
 
-### BR-12.1 — Cumul de couverture
-Entrées : `coverage_baseline` (financements déjà acquis, repliés) + les lignes
-`scenario_financing` (recettes simulées, réparties par mois) − les dépenses du budget
-(`Σ budget_monthly.amount` toutes LB du mois). Dans l'ordre chronologique (toutes années) :
+### BR-12.1 — Modèle d'un fonds (`scenario_financing`)
+Un fonds du plan est **autonome** (saisi directement dans le scénario, copié à la
+duplication ; aucune FK obligatoire vers un bailleur réel). Champs :
+- `name` — nom du fonds ;
+- `statut` ∈ { `signe`, `promis`, `espere` } (défaut `espere`) — niveau de certitude :
+  *signé* = argent sûr (convention signée) ; *promis* = accord de principe (oral/écrit, non
+  signé) ; *espéré* = forte probabilité, rien d'acquis ;
+- `montant_total` — montant total accordé, **saisi** ;
+- `eligib_start` / `eligib_end` — dates de début/fin d'éligibilité (dépenses éligibles) ;
+- **couche 1** `scenario_financing_yearly` — répartition par **année** d'éligibilité ;
+- **couche 2** `scenario_financing_monthly` — versements par **mois** (peuvent tomber hors
+  période d'éligibilité : ex. dernière tranche versée après la dernière dépense éligible).
+
+**Réconciliation (⚠ non bloquant)** : `Σ couche 1` et `Σ couche 2` devraient égaler
+`montant_total`. Tout écart affiche un **⚠** mais **n'empêche pas** d'enregistrer (le
+décalage est normal en transitoire). Les deux couches sont **indépendantes** à la saisie.
+
+### BR-12.2 — Couverture annuelle (plan de financement, dashboard)
+Pour chaque année N, on empile la **répartition annuelle** (couche 1) des fonds par statut,
+rapportée à la dépense annuelle :
 ```
-recettes_mois = Σ scenario_financing_monthly.amount du mois
-dépenses_mois = Σ budget_monthly.amount du mois (toutes LB)
-cumul_mois    = cumul_mois_précédent + recettes_mois − dépenses_mois
-                (cumul du tout 1er mois = coverage_baseline + recettes − dépenses)
+charges(N) = Σ budget_monthly.amount de l'année N (toutes LB)
+signé(N)   = Σ couche1.amount (année N) des fonds statut=signé
+promis(N)  = Σ couche1.amount (année N) des fonds statut=promis
+espéré(N)  = Σ couche1.amount (année N) des fonds statut=espéré
+
+# empilement capé à charges (jamais > 100 %) :
+s  = min(signé,  charges)
+p  = min(promis, charges − s)
+e  = min(espéré, charges − s − p)
+non_couvert = charges − s − p − e            (≥ 0)
+% chaque tranche = 100 × tranche / charges    (si charges = 0 → tout à 0 %)
 ```
-Un **solde de couverture mensuel ET annuel** est affiché. `cumul_mois < 0` → **rouge**
-(les financements ne couvrent pas les charges à cette date = trou de financement).
+Affichage barre empilée : **signé = vert**, **promis = vert clair**, **espéré = jaune**,
+**non couvert = rouge**. Ex. charges 100, signé 60 / promis 20 / espéré 10 →
+60 % vert, 20 % vert clair, 10 % jaune, 10 % rouge.
 
-### BR-12.2 — Couvert / Restant à couvrir (par année), depuis le solde de fin d'année
-Pour présenter un scénario (liste ET onglet édition), **une ligne par année** N, calculée
-à partir du **solde de couverture de fin d'année** (cumul à décembre N, BR-12.1) :
-```
-charges(N)   = Σ dépenses de l'année N (budget_monthly)
-recettes(N)  = Σ recettes simulées de l'année N (scenario_financing_monthly)
-solde_fin(N) = cumul_décembre(N)   (chaîné depuis coverage_baseline, BR-12.1)
+### BR-12.3 — Trésorerie du plan (mois-par-mois, scénario actif)
+La trésorerie (page Trésorerie, BR-7.7/7.8) lit les **versements mensuels** (couche 2) du
+**scénario actif**, filtrés par **statut** (signé seul / signé+promis / signé+promis+espéré).
+Voir §7. *(La couverture annuelle BR-12.2, elle, ne dépend pas des versements mensuels.)*
 
-restant_à_couvrir(N) = max(0, − solde_fin(N))
-couvert(N) %         = solde_fin(N) >= 0
-                       ? 100
-                       : clamp( 100 × (charges(N) + solde_fin(N)) / charges(N), 0, 100 )
-                       (si charges(N) = 0 → 100 %)
-```
-Lecture : le **solde de fin d'année** approxime la couverture. **Positif → 100 %** (les
-financements couvrent les charges, report inclus). **Négatif → il manque ce montant** :
-ex. charges 100, solde fin −20 → couvert 80 %, reste 20 à trouver.
-- Le `coverage_baseline` (solde initial) sert de point de départ : il représente la caisse
-  **et surtout les financements antérieurs garantis**, repliés (on ne veut pas leur détail ici).
-- C'est une **approximation** assumée via la pseudo-trésorerie : elle gère les financements
-  glissants/décalés sans flécher les LB.
-
-### BR-12.3 — Conversion à l'activation
-> **Montant dérivé** : `scenario_financing.amount_total` n'est **pas saisi** ; il vaut
-> `Σ scenario_financing_monthly.amount` (toutes années). À la création d'une ligne, on ne
-> saisit que le **nom** ; le montant se construit en saisissant la répartition mensuelle.
-
-Quand on **active** un scénario portant des lignes `scenario_financing` **non converties**
-(`converted_bailleur_id is null`), l'app **propose, ligne par ligne** : « Créer le financement
-\<nom\> de \<Σ mois\> ? ». Si oui :
+### BR-12.4 — Conversion à l'activation
+Quand on **active** un scénario portant des fonds `scenario_financing` **non convertis**
+(`converted_bailleur_id is null`), l'app **propose, fonds par fonds** : « Créer le financement
+réel \<nom\> de \<montant_total\> ? ». Si oui :
 1. formulaire pour **compléter les champs manquants** du financement réel (référence,
    bailleur/acteur, couleur, dates d'éligibilité, description) ;
 2. création d'un `bailleurs` (financement réel) + **copie** de la répartition mensuelle
-   (`scenario_financing_monthly`) en **recettes prévues** (`bailleur_income_monthly`) ;
-3. la ligne `scenario_financing` est marquée **convertie** (`converted_bailleur_id` posé) —
-   elle n'est plus reproposée. Refuser une ligne la laisse en simulation.
+   (couche 2) en **recettes prévues** (`bailleur_income_monthly`) ;
+3. le fonds `scenario_financing` est marqué **converti** (`converted_bailleur_id` posé) —
+   il n'est plus reproposé. Refuser un fonds le laisse en simulation.
 L'activation elle-même (passage `is_active`) reste réservée `admin_systeme`/`directrice` (P10).

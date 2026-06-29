@@ -53,46 +53,58 @@ create table budgets (
 create unique index one_active_budget on budgets(is_active) where is_active = true;
 ```
 
-### scenario_financing (financement prévisionnel) + scenario_financing_monthly
+### scenario_financing (fonds du plan de financement) + couches annuelle / mensuelle
 
-Lignes de **recettes simulées** propres à un scénario (budget), pour la **couverture**
-(F2.7, BR-12). Indépendantes des financements réels (`bailleurs`) : la simulation compare
-des **flux globaux**, sans mapping vers les LB. À l'activation, une ligne peut être
-**convertie** en financement réel (BR-12.3).
+Le **plan de financement** d'un scénario : des **fonds** autonomes (saisis dans le scénario,
+copiés à la duplication), chacun avec un **statut** (signé/promis/espéré), un **montant total**
+saisi, des **dates d'éligibilité**, une **répartition annuelle** (couche 1, couverture) et un
+**échéancier de versements mensuels** (couche 2, trésorerie). Indépendants des `bailleurs`
+réels ; à l'activation un fonds peut être **converti** en financement réel (BR-12.4).
 
 ```sql
--- migration 0010
+-- migration 0010 (création) + migration 0012 (statut, montant saisi, dates, couche annuelle)
 create table scenario_financing (
   id            uuid primary key default gen_random_uuid(),
   budget_id     uuid not null references budgets(id) on delete cascade,
   name          text not null,                 -- 'GIZ' (libre)
-  amount_total  numeric(14,2) not null default 0,  -- DÉRIVÉ (Σ des mois), non saisi (F2.7)
+  statut        text not null default 'espere' -- 0012 : signe | promis | espere (BR-12.1)
+                  check (statut in ('signe','promis','espere')),
+  amount_total  numeric(14,2) not null default 0,  -- SAISI (montant accordé). ⚠ vs Σcouches (non bloquant)
+  eligib_start  date,                          -- 0012 : début d'éligibilité (BR-12.1)
+  eligib_end    date,                          -- 0012 : fin d'éligibilité
   sort_order    int not null default 0,
-  converted_bailleur_id uuid references bailleurs(id),  -- non null = convertie en financement réel
+  converted_bailleur_id uuid references bailleurs(id),  -- non null = converti en financement réel
   created_at    timestamptz not null default now()
 );
 create index on scenario_financing(budget_id);
 
+-- couche 1 — répartition par année d'éligibilité (base de la couverture, BR-12.2)
+create table scenario_financing_yearly (        -- migration 0012
+  id                     uuid primary key default gen_random_uuid(),
+  scenario_financing_id  uuid not null references scenario_financing(id) on delete cascade,
+  year                   int not null,
+  amount                 numeric(14,2) not null default 0,
+  unique (scenario_financing_id, year)
+);
+
+-- couche 2 — versements par mois (base de la trésorerie, BR-7.7/12.3)
 create table scenario_financing_monthly (
   id                     uuid primary key default gen_random_uuid(),
   scenario_financing_id  uuid not null references scenario_financing(id) on delete cascade,
   year                   int not null,
   month                  smallint not null check (month between 1 and 12),
-  amount                 numeric(14,2) not null default 0,  -- recette simulée du mois
+  amount                 numeric(14,2) not null default 0,  -- versement du mois
   unique (scenario_financing_id, year, month)
 );
 ```
-> Migration 0010 active la **RLS** sur ces deux tables au **tier opérationnel** (écriture
+> Migrations 0010/0012 activent la **RLS** sur ces tables au **tier opérationnel** (écriture
 > `admin_systeme`/`directrice`/`respo_financiere`, lecture authentifiée), comme le reste des
-> données de production. Audit trigger optionnel (données de simulation).
+> données de production.
 
 ```sql
--- migration 0010 — base de couverture du scénario (≠ initial_cash de la trésorerie réelle)
-alter table budgets add column coverage_baseline numeric(14,2) not null default 0;
---   coverage_baseline = financements DÉJÀ acquis à date, repliés en un seul montant
---   (reliquat années précédentes + financements antérieurs dont on ne veut pas le détail).
---   Sert UNIQUEMENT à la pseudo-trésorerie de couverture (BR-12). N'alimente PAS la
---   trésorerie réelle (BR-7.*) ni la page Trésorerie (calc_date/forced_balance).
+-- migration 0012 — suppression de la pseudo-trésorerie de couverture (remplacée par le
+-- plan de financement BR-12 + la trésorerie scénario-actif BR-7.7). coverage_baseline retiré.
+alter table budgets drop column if exists coverage_baseline;
 ```
 
 ### budget_years
@@ -322,7 +334,7 @@ create table user_roles (
 
 | Tables                                                                                   | Écriture autorisée |
 | ---------------------------------------------------------------------------------------- | ------------------ |
-| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `scenario_financing`, `scenario_financing_monthly` | `admin_systeme`, `directrice`, `respo_financiere` |
+| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `scenario_financing`, `scenario_financing_yearly`, `scenario_financing_monthly` | `admin_systeme`, `directrice`, `respo_financiere` |
 | **Budgets** (`budgets`, `budget_years`) — création/duplication/édition                   | `admin_systeme`, `directrice`, `respo_financiere` ; **activation `is_active` trigger-gated** (admin_systeme/directrice, voir ci-dessous) |
 | **Référence + gouvernance** — `structure_lines`, `user_roles`                            | `admin_systeme`, `directrice` |
 | **Audit** — `audit_log`                                                                  | lecture `admin_systeme` + `directrice` ; écriture trigger uniquement |

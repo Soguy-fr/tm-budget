@@ -156,19 +156,18 @@ Deux onglets. Plus de zone danger ici (déplacée en Configuration).
 
 ### Onglet « Liste » — choisir / créer / activer (accordéon, F2.9)
 ```
-[+ Créer]        Couverture : approximation par pseudo-trésorerie  (?)
+[+ Créer]        Couverture = répartition annuelle des fonds par statut  (?)
 ▸ Budget 2026 v1   (ACTIF)     « Version votée en AG… »            [Éditer][Dupliquer]
 ▾ Budget 2026 +GIZ             « Test d'un financement GIZ… »      [Éditer][Dupliquer][Activer][Supprimer]
-     Année   Total dépense   Total reçu   Solde fin    Couvert
-     2026      58 800         47 600       −11 200       81 %
-     2027      60 000         33 000       −38 200       36 %
+     Année   Total dépense   Couverture (signé/promis/espéré/non couvert)
+     2026      58 800        ▓▓▓▓▓▓░░░▒▒░░  60 % / 20 % / 10 % / 10 %
+     2027      60 000        ▓▓▓▓░░░░░░░░░  36 % / 0 % / 0 % / 64 %
 ```
 - **Accordéon** : replié = **nom + début de la description**. Déplié = **une ligne par année**
-  (total dépense en **gras**, total reçu, solde fin d'année, % couvert — BR-12.2).
-- `coverage_baseline` n'est **pas** affiché ici (concept de couverture, visible en édition).
-- Indicateur **« ? »** : survol expliquant l'approximation par pseudo-trésorerie + **lien guide**.
-- **Activer** (admin_systeme/directrice seulement, P10) : si financements prévisionnels non
-  convertis → **conversion** (BR-12.3). **Supprimer** (F2.10) : confirmation, **interdit sur l'actif**.
+  (total dépense en **gras** + barre empilée signé/promis/espéré/non couvert — BR-12.2).
+- Indicateur **« ? »** : survol + **lien guide**.
+- **Activer** (admin_systeme/directrice seulement, P10) : si fonds non convertis →
+  **conversion** (BR-12.4). **Supprimer** (F2.10) : confirmation, **interdit sur l'actif**.
 
 ### Onglet « Édition » — éditer le scénario sélectionné (F2.6)
 Réutilise le **tableur** de Suivi interne (§3) sur le scénario **sélectionné** (pas
@@ -177,28 +176,27 @@ forcément l'actif), avec : édition **ligne-par-ligne** (P7), **Afficher baille
 des dépenses » (réservés au suivi de l'actif). Le **total** des LB y est **modifiable**
 (brouillon). En-tête éditable : **titre (nom)** + **description** du scénario (F2.11).
 
-**Bloc « Financements prévisionnels »** (sous le budget dépenses, F2.7, BR-12) :
+**Bloc « Plan de financement »** (sous le budget dépenses, F2.7, BR-12) :
 ```
-Solde initial de couverture : [ 40 000 ]  (?) caisse + financements antérieurs garantis (repliés)
+┌ Couverture par année ─────────────────────────────────┐
+│ Année  Charges   Signé   Promis  Espéré  Non couvert  │
+│ 2026   58 800    35 280  11 760  5 880   5 880  (60/20/10/10 %) │
+│ 2027   60 000    21 600     0       0    38 400 (36/0/0/64 %)   │
+└────────────────────────────────────────────────────────┘
 
-┌ Couverture par année ───────────────┐   ┌ Financements ───────────┐
-│ Année  Charges  Couvert  Restant  Solde fin │   │ Nom    Montant (Σ ans) │
-│ 2026   58 800    81 %    11 200   −11 200    │   │ GIZ        50 000      │
-│ 2027   60 000    36 %    38 200   −38 200    │   │ (total)    50 000      │
-└──────────────────────────────────────┘   └─────────────────────────┘
-
-GIZ                              ✎ rename · Convertir · ✕
-  Année   Jan … Déc  (12 inputs éditables)   Σ      ✓ Enreg.
-  2026    …                                  40 000  ✓
-  2027    …                                  10 000  ✓
-[+ ligne de financement]   (nom seul ; le montant = Σ des mois)
+GIZ   [signé ▾]  montant total [50 000]  élig. [01/2026]→[06/2028]   ✎ · Convertir · ✕
+  ⚠ Σannuel 50 000 · Σmensuel 50 000 · montant 50 000  (OK)
+  Répartition annuelle :  2026 [40 000]  2027 [10 000]                ✓
+  Versements mensuels :
+    Année   Jan … Déc  (12 inputs éditables)   Σ      ✓ Enreg.
+    2026    …                                  40 000  ✓
+    2027    …                                  10 000  ✓
+[+ fonds]   (nom + statut ; montant total saisi)
 ```
-- Créer une ligne = **nom seul** ; le **montant** est `Σ scenario_financing_monthly` (dérivé).
-- Détail mensuel **toujours éditable** (12 inputs), **enregistré par année** (bouton ✓).
-- **Solde initial de couverture** = `coverage_baseline`, distinct d'`initial_cash` ; **(?)**
-  survol + lien guide.
-- Deux tableaux : **Couverture par année** (charges, couvert %, restant, solde fin — BR-12.2)
-  et **Liste des financements** (montant total = Σ années).
+- Par fonds : **statut** (signé/promis/espéré), **montant total** saisi, **dates d'éligibilité**,
+  **répartition annuelle** (couche 1) et **versements mensuels** (couche 2, 12 inputs).
+- **⚠ non bloquant** si Σannuel ≠ Σmensuel ≠ montant total (BR-12.1).
+- Tableau **Couverture par année** : signé/promis/espéré/non couvert empilé (BR-12.2).
 
 ## 4. Pages « Financement » (F4) — même gabarit
 
@@ -283,24 +281,40 @@ Code  Ligne                Prévu   Réalisé  Écart  % consommé        Vitess
 - **Onglet Bailleurs** : tableau recettes & dépenses prévues vs réelles par financement (BR-6).
 - Dépassements en rouge.
 
-## 6b. Page « Trésorerie » (F7.7)
+## 6b. Page « Trésorerie » (F7.7/7.8)
 
-Synthèse lisible, **budgété pur** ; mêmes montants que la ligne solde de Suivi interne (BR-7.7).
+Trésorerie du **scénario actif** depuis les **versements** du plan de financement (couche 2),
+mois-par-mois, avec **filtre statut** (BR-7.7/7.8).
 
 ```
-Trésorerie — Budgété          Date du jour du calcul : [13/06/2025]
+Trésorerie — scénario actif   Statut : [signé ▾ / +promis / +espéré]   Date : [13/06/2025]
 
               (grisé) Jan  Fev  Mar  Avr  Mai  | Jun  Jul  ... Déc
-Financement JFN-001          …    …    …    …    | 60k  …
-Financement FPC              …    …    …    …    | …
+GIZ (signé)                  …    …    …    …    | 40k  …
+SYE (promis)                 …    …    …    …    | …
 Dépenses totales             …    …    …    …    | …
 ─────────────────────────────────────────────────────────────────
 Solde            (grisé)…              [Forcé: 12 000]| 13k  …
 ```
-- **Une ligne par financement** (recettes prévues du mois), **Dépenses totales**, **Solde** (BR-7.7).
+- **Une ligne par fonds** (versements du mois, avec statut), **Dépenses totales**, **Solde** (BR-7.7).
+- **Filtre statut** : signé seul / signé+promis / signé+promis+espéré (BR-7.8).
 - **Date du jour** saisissable : grise les colonnes des mois antérieurs ; la cellule **Solde
   forcé** se pose dans le **mois précédent** (ici Mai 2025) et le chaînage repart de là.
 - Vocabulaire : **Financement** (pas « Bailleur »). Solde négatif → rouge (trou de tréso).
+
+## 6c. Bloc « Plan de financement » (dashboard, F8.6)
+
+Sur le Dashboard (`/suivi`), un bloc présente la **couverture annuelle** des dépenses du
+scénario actif (BR-12.2) — taux empilé par statut.
+
+```
+Plan de financement — couverture des dépenses (scénario actif)
+
+2026  ▓▓▓▓▓▓▓▓▓▓▓▓░░░░▒▒▒▒░░░░   signé 60 %  promis 20 %  espéré 10 %  non couvert 10 %
+2027  ▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░   signé 36 %  …                          non couvert 64 %
+```
+- Barre **empilée** par année : **signé = vert**, **promis = vert clair**, **espéré = jaune**,
+  **non couvert = rouge** (BR-12.2). Base = répartition **annuelle** des fonds (couche 1).
 
 ## 7. Page « Dashboard » — onglet Graphiques (F8, Phase 2 / Jalon 10)
 
