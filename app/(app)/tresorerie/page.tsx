@@ -1,15 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Budget, FinancingStatus } from "@/lib/types";
+import type { Bailleur, Budget, FinancingStatus } from "@/lib/types";
 import { TresorerieTable } from "@/components/tresorerie/TresorerieTable";
 import { GuideLink } from "@/components/GuideLink";
-
-// Couleur d'affichage d'un fonds selon son statut (signé/promis/espéré).
-const STATUT_COLOR: Record<FinancingStatus, string> = {
-  signe: "#0FA86B",
-  promis: "#6ee7b7",
-  espere: "#fbbf24",
-};
 
 export const dynamic = "force-dynamic";
 
@@ -41,16 +34,13 @@ export default async function TresoreriePage() {
   }
   const budget = budgetRow as Budget;
 
-  const [{ data: yearRows }, { data: monthly }, { data: fins }, { data: finMonthly }] =
+  const [{ data: yearRows }, { data: monthly }, { data: bailleurs }, { data: income }, { data: budgetFin }] =
     await Promise.all([
       supabase.from("budget_years").select("year").eq("budget_id", budget.id),
       supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(0, 99999),
-      supabase
-        .from("scenario_financing")
-        .select("id, name, statut")
-        .eq("budget_id", budget.id)
-        .order("sort_order"),
-      supabase.from("scenario_financing_monthly").select("scenario_financing_id, year, month, amount"),
+      supabase.from("bailleurs").select("*").order("code"),
+      supabase.from("bailleur_income_monthly").select("bailleur_id, year, month, amount"),
+      supabase.from("budget_financing").select("bailleur_id").eq("budget_id", budget.id),
     ]);
 
   const years = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);
@@ -63,22 +53,25 @@ export default async function TresoreriePage() {
     depByMonth[k] = (depByMonth[k] ?? 0) + Number(r.amount);
   }
 
-  // BR-7.7 — versements (couche 2) par fonds du scénario actif.
+  // BR-7.7 — versements (couche 2) par financement.
   const recByFin: Record<string, Record<string, number>> = {};
-  for (const r of finMonthly ?? []) {
-    const id = r.scenario_financing_id as string;
+  for (const r of income ?? []) {
+    const id = r.bailleur_id as string;
     (recByFin[id] ??= {})[`${r.year}:${r.month}`] = Number(r.amount);
   }
 
-  // Lignes du tableau : un fonds par ligne (couleur selon statut).
-  const financements = (fins ?? []).map((f) => ({
-    id: f.id as string,
-    label: f.name as string,
-    name: f.name as string,
-    statut: f.statut as FinancingStatus,
-    color: STATUT_COLOR[f.statut as FinancingStatus],
-    recByCell: recByFin[f.id as string] ?? {},
-  }));
+  // BR-12.2 — financements retenus par le scénario actif (signés ∪ appartenance explicite).
+  const explicit = new Set((budgetFin ?? []).map((r) => r.bailleur_id as string));
+  const financements = ((bailleurs ?? []) as Bailleur[])
+    .filter((b) => b.statut === "signe" || explicit.has(b.id))
+    .map((b) => ({
+      id: b.id,
+      label: b.reference || b.code,
+      name: b.name,
+      statut: b.statut as FinancingStatus,
+      color: b.color,
+      recByCell: recByFin[b.id] ?? {},
+    }));
 
   return (
     <div>

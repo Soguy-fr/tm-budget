@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Bailleur, BailleurLine, StructureLine, Funder } from "@/lib/types";
+import type { Bailleur, BailleurLine, StructureLine, Funder, FinancingStatus } from "@/lib/types";
 import { formatEur, MONTHS_FR } from "@/lib/format";
 import {
   derivedExpenseForLine,
@@ -20,7 +20,14 @@ import {
   assignLinesToBudget,
   updateFinancement,
   updateReglesFonds,
+  saveBailleurYears,
 } from "@/app/(app)/financements/actions";
+
+const STATUT_LABEL: Record<FinancingStatus, string> = {
+  signe: "Signé",
+  promis: "Promis",
+  espere: "Espéré",
+};
 
 type Plan = { line_id: string; amount: number; bailleur_id: string | null };
 export type GlLite = {
@@ -40,6 +47,7 @@ export function BailleurDetail({
   planMonthly,
   glEntries,
   income,
+  yearly,
   years,
 }: {
   bailleur: Bailleur;
@@ -50,6 +58,7 @@ export function BailleurDetail({
   planMonthly: Plan[];
   glEntries: GlLite[];
   income: Record<string, number>;
+  yearly: Record<number, number>;
   years: number[];
 }) {
   const router = useRouter();
@@ -94,6 +103,20 @@ export function BailleurDetail({
         setIncomeDirty(false);
         setEditingIncome(false);
       }
+      return res;
+    });
+  }
+
+  // ── Répartition annuelle (couche 1, couverture, BR-12.3) ──────────────────
+  const [workYearly, setWorkYearly] = useState<Record<number, number>>(yearly);
+  const [yearlyEditing, setYearlyEditing] = useState(false);
+  const sumYearly = years.reduce((s, y) => s + (workYearly[y] ?? 0), 0);
+  function saveYearly() {
+    const map: Record<number, number> = {};
+    for (const y of years) map[y] = workYearly[y] ?? 0;
+    run(async () => {
+      const res = await saveBailleurYears(bailleur.id, map);
+      if (res.ok) setYearlyEditing(false);
       return res;
     });
   }
@@ -166,6 +189,18 @@ export function BailleurDetail({
           : "Éligibilité non renseignée"}
         {bailleur.montant_total != null &&
           ` · Montant total : ${formatEur(Number(bailleur.montant_total))}`}
+        {" · "}
+        <span
+          className={`rounded px-1.5 py-0.5 text-xs ${
+            bailleur.statut === "signe"
+              ? "bg-brand-emerald text-white"
+              : bailleur.statut === "promis"
+                ? "bg-emerald-200 text-emerald-900"
+                : "bg-amber-200 text-amber-900"
+          }`}
+        >
+          {STATUT_LABEL[bailleur.statut]}
+        </span>
       </div>
       {bailleur.description && (
         <p className="mb-2 max-w-3xl text-sm text-slate-600">{bailleur.description}</p>
@@ -322,6 +357,55 @@ export function BailleurDetail({
           + Ligne bailleur
         </button>
       </form>
+
+      {/* ── BLOC RÉPARTITION ANNUELLE (couche 1, couverture, F4.15/BR-12.3) ── */}
+      <div className="mt-6 mb-2 flex items-center gap-3">
+        <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
+          Répartition annuelle (couverture)
+        </h2>
+        {!yearlyEditing ? (
+          <button
+            onClick={() => setYearlyEditing(true)}
+            className="rounded border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+          >
+            Éditer
+          </button>
+        ) : (
+          <button onClick={saveYearly} disabled={pending} className="rounded bg-brand-emerald px-3 py-1 text-xs text-white">
+            Enregistrer
+          </button>
+        )}
+      </div>
+      <div className="mb-1 flex flex-wrap items-center gap-3 text-sm">
+        {years.map((y) => (
+          <label key={y} className="flex items-center gap-1">
+            <span className="text-slate-500">{y}</span>
+            {yearlyEditing ? (
+              <input
+                type="number"
+                value={workYearly[y] ?? 0}
+                onChange={(e) => setWorkYearly((w) => ({ ...w, [y]: Number(e.target.value) || 0 }))}
+                className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-input"
+              />
+            ) : (
+              <span className="font-medium">{formatEur(workYearly[y] ?? 0)}</span>
+            )}
+          </label>
+        ))}
+      </div>
+      {(() => {
+        const mt = bailleur.montant_total != null ? Number(bailleur.montant_total) : null;
+        const mismatch =
+          (mt != null && sumYearly !== mt) || sumYearly !== recettesTotal;
+        return (
+          <p className={`mb-2 text-xs ${mismatch ? "text-amber-600" : "text-slate-400"}`}>
+            {mismatch ? "⚠ " : ""}
+            Σ annuel {formatEur(sumYearly)} · Σ déblocages {formatEur(recettesTotal)}
+            {mt != null ? ` · montant ${formatEur(mt)}` : ""}
+            {mismatch ? " (écart — voir BR-12.1)" : " (OK)"}
+          </p>
+        );
+      })()}
 
       {/* ── BLOC RECETTES PRÉVUES (déblocages, BR-3.3) ── */}
       <div className="mt-6 mb-2 flex items-center gap-3">
@@ -514,6 +598,7 @@ function FinancementEdit({
     convention_start: bailleur.convention_start ?? "",
     convention_end: bailleur.convention_end ?? "",
     description: bailleur.description ?? "",
+    statut: bailleur.statut as FinancingStatus,
   });
 
   if (!open) {
@@ -551,16 +636,28 @@ function FinancementEdit({
           className="flex-1 rounded border border-slate-300 px-2 py-1 text-right text-sm text-input"
         />
       </div>
-      <select
-        value={f.funder_id}
-        onChange={(e) => setF({ ...f, funder_id: e.target.value })}
-        className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-      >
-        <option value="">— bailleur (acteur) : aucun —</option>
-        {funders.map((fn) => (
-          <option key={fn.id} value={fn.id}>{fn.name}</option>
-        ))}
-      </select>
+      <div className="flex gap-2">
+        <select
+          value={f.funder_id}
+          onChange={(e) => setF({ ...f, funder_id: e.target.value })}
+          className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+        >
+          <option value="">— bailleur (acteur) : aucun —</option>
+          {funders.map((fn) => (
+            <option key={fn.id} value={fn.id}>{fn.name}</option>
+          ))}
+        </select>
+        <select
+          value={f.statut}
+          onChange={(e) => setF({ ...f, statut: e.target.value as FinancingStatus })}
+          className="rounded border border-slate-300 px-2 py-1 text-sm"
+          title="Statut du financement (BR-12.1)"
+        >
+          <option value="signe">Signé</option>
+          <option value="promis">Promis</option>
+          <option value="espere">Espéré</option>
+        </select>
+      </div>
       <div className="flex items-center gap-2 text-sm">
         <span className="text-slate-500">Éligibilité</span>
         <input
@@ -596,6 +693,7 @@ function FinancementEdit({
                 montant_total: f.montant_total ? Number(f.montant_total) : null,
                 convention_start: f.convention_start || null,
                 convention_end: f.convention_end || null,
+                statut: f.statut,
               }),
             );
             setOpen(false);

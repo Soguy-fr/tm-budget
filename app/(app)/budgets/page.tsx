@@ -5,7 +5,7 @@ import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
 import type { StructureLine, Budget, Bailleur } from "@/lib/types";
 import { BudgetList } from "@/components/budgets/BudgetList";
 import { ScenarioSelect } from "@/components/budgets/ScenarioSelect";
-import { CoveragePanel, type PlanFinancingRow } from "@/components/budgets/CoveragePanel";
+import { CoveragePanel, type ScenarioFinancingRow } from "@/components/budgets/CoveragePanel";
 import { ScenarioMeta } from "@/components/budgets/ScenarioMeta";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 import { computePlanCoverage, type PlanYearCoverage, type PlanFinancing } from "@/lib/coverage";
@@ -100,15 +100,25 @@ async function coverageByBudget(
   budgets: Budget[],
   yearsByBudget: Record<string, number[]>,
 ): Promise<Record<string, PlanYearCoverage[]>> {
-  const [{ data: bm }, { data: fin }, { data: finY }] = await Promise.all([
+  const [{ data: bm }, { data: bailleurs }, { data: by }, { data: bf }] = await Promise.all([
     supabase.from("budget_monthly").select("budget_id, year, amount").range(0, 99999),
-    supabase.from("scenario_financing").select("id, budget_id, statut"),
-    supabase.from("scenario_financing_yearly").select("scenario_financing_id, year, amount"),
+    supabase.from("bailleurs").select("id, statut"),
+    supabase.from("bailleur_yearly").select("bailleur_id, year, amount"),
+    supabase.from("budget_financing").select("budget_id, bailleur_id"),
   ]);
-  // fonds → (budget, statut)
-  const finMeta = new Map<string, { budget: string; statut: FinancingStatus }>();
-  for (const f of fin ?? [])
-    finMeta.set(f.id as string, { budget: f.budget_id as string, statut: f.statut as FinancingStatus });
+
+  // financement → statut + répartition annuelle (couche 1)
+  const finPlan = new Map<string, PlanFinancing>();
+  for (const b of bailleurs ?? [])
+    finPlan.set(b.id as string, { statut: b.statut as FinancingStatus, yearly: {} });
+  for (const r of by ?? []) {
+    const pf = finPlan.get(r.bailleur_id as string);
+    if (pf) pf.yearly[r.year as number] = Number(r.amount);
+  }
+  // appartenance explicite par budget (promis/espéré)
+  const explicitByBudget: Record<string, Set<string>> = {};
+  for (const r of bf ?? [])
+    (explicitByBudget[r.budget_id as string] ??= new Set()).add(r.bailleur_id as string);
 
   // dépenses par budget × année
   const depByBudget: Record<string, Record<number, number>> = {};
@@ -117,19 +127,8 @@ async function coverageByBudget(
     (depByBudget[b] ??= {});
     depByBudget[b][r.year as number] = (depByBudget[b][r.year as number] ?? 0) + Number(r.amount);
   }
-  // plan (couche 1) par budget : un PlanFinancing par fonds
-  const planByBudget: Record<string, Record<string, PlanFinancing>> = {};
-  for (const f of fin ?? []) {
-    const b = f.budget_id as string;
-    (planByBudget[b] ??= {})[f.id as string] = { statut: f.statut as FinancingStatus, yearly: {} };
-  }
-  for (const r of finY ?? []) {
-    const meta = finMeta.get(r.scenario_financing_id as string);
-    if (!meta) continue;
-    const pf = planByBudget[meta.budget]?.[r.scenario_financing_id as string];
-    if (pf) pf.yearly[r.year as number] = Number(r.amount);
-  }
 
+  const allFins = bailleurs ?? [];
   const out: Record<string, PlanYearCoverage[]> = {};
   for (const bdg of budgets) {
     const years = yearsByBudget[bdg.id] ?? [];
@@ -137,11 +136,13 @@ async function coverageByBudget(
       out[bdg.id] = [];
       continue;
     }
-    out[bdg.id] = computePlanCoverage(
-      years,
-      depByBudget[bdg.id] ?? {},
-      Object.values(planByBudget[bdg.id] ?? {}),
-    );
+    // BR-12.2 — retenus = signés ∪ appartenance explicite.
+    const explicit = explicitByBudget[bdg.id] ?? new Set<string>();
+    const retained = allFins
+      .filter((b) => b.statut === "signe" || explicit.has(b.id as string))
+      .map((b) => finPlan.get(b.id as string))
+      .filter((p): p is PlanFinancing => !!p);
+    out[bdg.id] = computePlanCoverage(years, depByBudget[bdg.id] ?? {}, retained);
   }
   return out;
 }
@@ -171,9 +172,8 @@ async function EditionTab({
     { data: monthlyRows },
     { data: totalRows },
     { data: bailleurRows },
-    { data: finRows },
-    { data: finMonthlyRows },
-    { data: finYearlyRows },
+    { data: yearlyRows },
+    { data: budgetFinRows },
   ] = await Promise.all([
     supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
     supabase.from("budget_years").select("year").eq("budget_id", selected.id),
@@ -187,17 +187,8 @@ async function EditionTab({
       .select("line_id, year, total_input")
       .eq("budget_id", selected.id),
     supabase.from("bailleurs").select("*").order("code"),
-    supabase
-      .from("scenario_financing")
-      .select("id, name, statut, amount_total, eligib_start, eligib_end, converted_bailleur_id")
-      .eq("budget_id", selected.id)
-      .order("sort_order"),
-    supabase
-      .from("scenario_financing_monthly")
-      .select("scenario_financing_id, year, month, amount"),
-    supabase
-      .from("scenario_financing_yearly")
-      .select("scenario_financing_id, year, amount"),
+    supabase.from("bailleur_yearly").select("bailleur_id, year, amount"),
+    supabase.from("budget_financing").select("bailleur_id").eq("budget_id", selected.id),
   ]);
 
   const flat = flattenForGrid((lines ?? []) as StructureLine[]);
@@ -221,27 +212,21 @@ async function EditionTab({
   for (const r of monthlyRows ?? []) {
     depByYear[r.year as number] = (depByYear[r.year as number] ?? 0) + Number(r.amount);
   }
-  // Plan de financement : couche 1 (annuelle) + couche 2 (mensuelle) par fonds.
-  const finYearsById: Record<string, Record<number, number>> = {};
-  for (const r of finYearlyRows ?? []) {
-    const id = r.scenario_financing_id as string;
-    (finYearsById[id] ??= {})[r.year as number] = Number(r.amount);
+  // BR-12.2 — financements : répartition annuelle (couche 1) + appartenance au scénario.
+  const yearlyById: Record<string, Record<number, number>> = {};
+  for (const r of yearlyRows ?? []) {
+    const id = r.bailleur_id as string;
+    (yearlyById[id] ??= {})[r.year as number] = Number(r.amount);
   }
-  const finMonthsById: Record<string, Record<string, number>> = {};
-  for (const r of finMonthlyRows ?? []) {
-    const id = r.scenario_financing_id as string;
-    (finMonthsById[id] ??= {})[`${r.year}:${r.month}`] = Number(r.amount);
-  }
-  const planFinancings: PlanFinancingRow[] = (finRows ?? []).map((f) => ({
-    id: f.id as string,
-    name: f.name as string,
-    statut: f.statut as FinancingStatus,
-    amountTotal: Number(f.amount_total),
-    eligibStart: (f.eligib_start as string | null) ?? null,
-    eligibEnd: (f.eligib_end as string | null) ?? null,
-    converted: f.converted_bailleur_id != null,
-    yearly: finYearsById[f.id as string] ?? {},
-    months: finMonthsById[f.id as string] ?? {},
+  const explicit = new Set((budgetFinRows ?? []).map((r) => r.bailleur_id as string));
+  const allBailleurs = (bailleurRows ?? []) as Bailleur[];
+  const scenarioFinancings: ScenarioFinancingRow[] = allBailleurs.map((b) => ({
+    id: b.id,
+    label: b.reference || b.code,
+    name: b.name,
+    statut: b.statut,
+    included: b.statut === "signe" || explicit.has(b.id),
+    yearly: yearlyById[b.id] ?? {},
   }));
 
   const role = await getRole(supabase);
@@ -282,10 +267,9 @@ async function EditionTab({
       />
       <CoveragePanel
         budgetId={selected.id}
-        isActive={selected.is_active}
         years={yearList}
         depByYear={depByYear}
-        financings={planFinancings}
+        financings={scenarioFinancings}
         canEdit={canEdit}
       />
     </div>

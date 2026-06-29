@@ -163,46 +163,15 @@ export async function duplicateBudget(id: string): Promise<ActionResult> {
       .insert(totals.map((t) => ({ budget_id: newId, ...t })));
   }
 
-  // BR-12 — plan de financement : fonds + couche annuelle + versements mensuels.
-  const { data: fins } = await supabase
-    .from("scenario_financing")
-    .select("id, name, statut, amount_total, eligib_start, eligib_end, sort_order, converted_bailleur_id")
+  // BR-12.2 — appartenance des financements retenus (promis/espéré) au scénario.
+  const { data: bf } = await supabase
+    .from("budget_financing")
+    .select("bailleur_id")
     .eq("budget_id", id);
-  for (const f of fins ?? []) {
-    const { data: nf } = await supabase
-      .from("scenario_financing")
-      .insert({
-        budget_id: newId,
-        name: f.name,
-        statut: f.statut,
-        amount_total: f.amount_total,
-        eligib_start: f.eligib_start,
-        eligib_end: f.eligib_end,
-        sort_order: f.sort_order,
-        converted_bailleur_id: f.converted_bailleur_id,
-      })
-      .select("id")
-      .single();
-    if (!nf) continue;
-    const newFinId = nf.id as string;
-    const { data: fy } = await supabase
-      .from("scenario_financing_yearly")
-      .select("year, amount")
-      .eq("scenario_financing_id", f.id);
-    if (fy && fy.length > 0) {
-      await supabase
-        .from("scenario_financing_yearly")
-        .insert(fy.map((r) => ({ scenario_financing_id: newFinId, ...r })));
-    }
-    const { data: fm } = await supabase
-      .from("scenario_financing_monthly")
-      .select("year, month, amount")
-      .eq("scenario_financing_id", f.id);
-    if (fm && fm.length > 0) {
-      await supabase
-        .from("scenario_financing_monthly")
-        .insert(fm.map((r) => ({ scenario_financing_id: newFinId, ...r })));
-    }
+  if (bf && bf.length > 0) {
+    await supabase
+      .from("budget_financing")
+      .insert(bf.map((r) => ({ budget_id: newId, bailleur_id: r.bailleur_id })));
   }
 
   revalidatePath("/budgets");

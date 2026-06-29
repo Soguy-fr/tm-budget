@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { denyUnless } from "@/lib/auth/role";
 import { eligibleMonths, planAssignment } from "@/lib/financement";
+import type { FinancingStatus } from "@/lib/types";
 
 type ActionResult = { ok: boolean; error?: string };
 
@@ -69,6 +70,7 @@ export async function updateFinancement(
     montant_total: number | null;
     convention_start: string | null;
     convention_end: string | null;
+    statut?: FinancingStatus; // BR-12.1
   },
 ): Promise<ActionResult> {
   const supabase = createClient();
@@ -83,11 +85,35 @@ export async function updateFinancement(
     convention_start: fields.convention_start || null,
     convention_end: fields.convention_end || null,
   };
+  if (fields.statut) patch.statut = fields.statut;
   if (fields.name?.trim()) patch.name = fields.name.trim();
   if (ref) patch.code = ref; // garde code = ID
   const { error } = await supabase.from("bailleurs").update(patch).eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath(`/financements/${id}`);
+  return { ok: true };
+}
+
+// F4.15 / BR-12.3 — couche 1 : répartition annuelle d'un financement (couverture).
+export async function saveBailleurYears(
+  bailleurId: string,
+  yearly: Record<number, number>,
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const deny = await denyUnless(supabase, "manage_bailleurs");
+  if (deny) return { ok: false, error: deny };
+  const rows = Object.entries(yearly).map(([year, amount]) => ({
+    bailleur_id: bailleurId,
+    year: Number(year),
+    amount: amount ?? 0,
+  }));
+  if (rows.length === 0) return { ok: true };
+  const { error } = await supabase
+    .from("bailleur_yearly")
+    .upsert(rows, { onConflict: "bailleur_id,year" });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/financements/${bailleurId}`);
+  revalidatePath("/budgets");
   return { ok: true };
 }
 

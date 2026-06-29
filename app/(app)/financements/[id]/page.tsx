@@ -34,7 +34,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
     .eq("is_active", true)
     .maybeSingle();
 
-  const [{ data: lines }, { data: mapping }, { data: structure }, { data: income }, planRes, yearRes, { data: gl }, { data: funders }] =
+  const [{ data: lines }, { data: mapping }, { data: structure }, { data: income }, planRes, yearRes, { data: gl }, { data: funders }, { data: yearlyRows }] =
     await Promise.all([
       supabase.from("bailleur_lines").select("*").eq("bailleur_id", params.id).order("sort_order"),
       supabase.from("bailleur_line_mapping").select("bailleur_line_id, line_id"),
@@ -63,7 +63,12 @@ export default async function BailleurPage({ params }: { params: { id: string } 
         .select("line_id, bailleur_id, amount, entry_type, archived")
         .eq("bailleur_id", params.id),
       supabase.from("funders").select("*").order("name"),
+      supabase.from("bailleur_yearly").select("year, amount").eq("bailleur_id", params.id),
     ]);
+
+  // Couche 1 — répartition annuelle (couverture).
+  const yearly: Record<number, number> = {};
+  for (const r of yearlyRows ?? []) yearly[r.year as number] = Number(r.amount);
 
   // mapping bailleur_line_id → line_ids[] (limité à ce bailleur)
   const lineIds = new Set((lines ?? []).map((l) => l.id as string));
@@ -96,6 +101,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
         planMonthly={(planRes.data ?? []) as { line_id: string; amount: number; bailleur_id: string | null }[]}
         glEntries={(gl ?? []) as GlLite[]}
         income={income2}
+        yearly={yearly}
         years={yearList}
       />
     </div>

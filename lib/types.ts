@@ -54,40 +54,26 @@ export type Bailleur = {
   reference: string | null;             // 0007 — 'JFN-001' (= ID affiché pour l'allocation)
   description: string | null;           // 0007 — description du fonds
   montant_total: number | null;         // 0007 — total accordé (BR-3.4)
+  statut: FinancingStatus;               // 0013 — signe | promis | espere (BR-12.1)
   regles: string | null;                // 0008 — règles du fonds (page dédiée)
   created_at: string;
 };
 
-// BR-12.1 — statut d'un fonds du plan de financement.
+// BR-12.1 — statut d'un financement.
 export type FinancingStatus = "signe" | "promis" | "espere";
 
-// BR-12 — fonds du plan de financement (propre à un scénario).
-export type ScenarioFinancing = {
+// Couche 1 — répartition annuelle d'éligibilité d'un financement (couverture, BR-12.3).
+export type BailleurYearly = {
+  id: string;
+  bailleur_id: string;
+  year: number;
+  amount: number;
+};
+// Appartenance d'un financement à un scénario (BR-12.2).
+export type BudgetFinancing = {
   id: string;
   budget_id: string;
-  name: string;
-  statut: FinancingStatus;          // 0012 — signe | promis | espere
-  amount_total: number;             // saisi (montant accordé)
-  eligib_start: string | null;      // 0012 — début d'éligibilité
-  eligib_end: string | null;        // 0012 — fin d'éligibilité
-  sort_order: number;
-  converted_bailleur_id: string | null;
-  created_at: string;
-};
-// Couche 1 — répartition annuelle d'éligibilité (couverture, BR-12.2).
-export type ScenarioFinancingYearly = {
-  id: string;
-  scenario_financing_id: string;
-  year: number;
-  amount: number;
-};
-// Couche 2 — versements mensuels (trésorerie, BR-7.7/12.3).
-export type ScenarioFinancingMonthly = {
-  id: string;
-  scenario_financing_id: string;
-  year: number;
-  month: number;
-  amount: number;
+  bailleur_id: string;
 };
 
 export type BudgetMonthly = {
