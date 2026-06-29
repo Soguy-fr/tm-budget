@@ -20,7 +20,6 @@ export type Budget = {
   type: "interne";
   is_active: boolean;
   initial_cash: number;
-  coverage_baseline: number;      // BR-12 — base de couverture (≠ initial_cash)
   archived: boolean;
   calc_date: string | null;       // F7.7 — date du jour du calcul (grise le passé)
   forced_balance: number | null;  // F7.7 — solde forcé à calc_date (null = aucun)
@@ -59,16 +58,30 @@ export type Bailleur = {
   created_at: string;
 };
 
-// BR-12 — financement prévisionnel (recette simulée propre à un scénario).
+// BR-12.1 — statut d'un fonds du plan de financement.
+export type FinancingStatus = "signe" | "promis" | "espere";
+
+// BR-12 — fonds du plan de financement (propre à un scénario).
 export type ScenarioFinancing = {
   id: string;
   budget_id: string;
   name: string;
-  amount_total: number;
+  statut: FinancingStatus;          // 0012 — signe | promis | espere
+  amount_total: number;             // saisi (montant accordé)
+  eligib_start: string | null;      // 0012 — début d'éligibilité
+  eligib_end: string | null;        // 0012 — fin d'éligibilité
   sort_order: number;
   converted_bailleur_id: string | null;
   created_at: string;
 };
+// Couche 1 — répartition annuelle d'éligibilité (couverture, BR-12.2).
+export type ScenarioFinancingYearly = {
+  id: string;
+  scenario_financing_id: string;
+  year: number;
+  amount: number;
+};
+// Couche 2 — versements mensuels (trésorerie, BR-7.7/12.3).
 export type ScenarioFinancingMonthly = {
   id: string;
   scenario_financing_id: string;

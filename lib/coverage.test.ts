@@ -1,72 +1,71 @@
 import { describe, it, expect } from "vitest";
-import { computeCoverage } from "./coverage";
+import { computePlanCoverage, statusInTier, type PlanFinancing } from "./coverage";
 
-// Helper : remplit une année avec un montant unique au mois donné.
-function ymMap(entries: Array<[number, number, number]>): Record<string, number> {
-  const m: Record<string, number> = {};
-  for (const [y, mo, v] of entries) m[`${y}:${mo}`] = v;
-  return m;
-}
-
-describe("computeCoverage (BR-12)", () => {
-  it("baseline couvre tout → restant 0, couvert 100%", () => {
-    const dep = ymMap([[2026, 6, 10000]]);
-    const rec = {};
-    const r = computeCoverage(12000, [2026], rec, dep);
-    expect(r.summary[0].charges).toBe(10000);
-    expect(r.summary[0].restantACouvrir).toBe(0);
-    expect(r.summary[0].couvertPct).toBe(100);
-    expect(r.summary[0].soldeFin).toBe(2000); // 12000 - 10000
+describe("computePlanCoverage (BR-12.2)", () => {
+  it("exemple spec : charges 100, signé 60 / promis 20 / espéré 10 → 60/20/10/10 %", () => {
+    const fins: PlanFinancing[] = [
+      { statut: "signe", yearly: { 2026: 60 } },
+      { statut: "promis", yearly: { 2026: 20 } },
+      { statut: "espere", yearly: { 2026: 10 } },
+    ];
+    const [c] = computePlanCoverage([2026], { 2026: 100 }, fins);
+    expect(c.pctSigne).toBe(60);
+    expect(c.pctPromis).toBe(20);
+    expect(c.pctEspere).toBe(10);
+    expect(c.pctNonCouvert).toBe(10);
+    expect(c.nonCouvert).toBe(10);
   });
 
-  it("solde fin d'année négatif → restant = |solde fin|, couvert dérivé", () => {
-    // baseline 0 ; dépense 10000 en mars ; recette 10000 en septembre.
-    const dep = ymMap([[2026, 3, 10000]]);
-    const rec = ymMap([[2026, 9, 10000]]);
-    const r = computeCoverage(0, [2026], rec, dep);
-    // solde fin = 0 (la recette de septembre comble la dépense) → 100 %.
-    expect(r.byYear[2026][11]).toBe(0);
-    expect(r.summary[0].soldeFin).toBe(0);
-    expect(r.summary[0].restantACouvrir).toBe(0);
-    expect(r.summary[0].couvertPct).toBe(100);
+  it("sur-financement : tranches capées à charges, non couvert 0", () => {
+    const fins: PlanFinancing[] = [
+      { statut: "signe", yearly: { 2026: 80 } },
+      { statut: "promis", yearly: { 2026: 50 } }, // dépasse le reste (20)
+    ];
+    const [c] = computePlanCoverage([2026], { 2026: 100 }, fins);
+    expect(c.signeCovered).toBe(80);
+    expect(c.promisCovered).toBe(20); // capé au reste
+    expect(c.pctNonCouvert).toBe(0);
   });
 
-  it("financement glissant multi-années : couverture par solde fin d'année", () => {
-    // 2026 : charges 50000, recette 40000 → solde fin -10000.
-    // 2027 : charges 60000, recette 33000 → solde fin -37000.
-    const dep = ymMap([[2026, 12, 50000], [2027, 12, 60000]]);
-    const rec = ymMap([[2026, 1, 40000], [2027, 1, 33000]]);
-    const r = computeCoverage(0, [2026, 2027], rec, dep);
-    expect(r.summary[0].soldeFin).toBe(-10000);
-    expect(r.summary[0].restantACouvrir).toBe(10000);
-    // (50000-10000)/50000 = 80%
-    expect(r.summary[0].couvertPct).toBe(80);
-    expect(r.summary[1].soldeFin).toBe(-37000);
-    expect(r.summary[1].restantACouvrir).toBe(37000);
-    // 2027 seule : (60000-37000)/60000 = 38%
-    expect(r.summary[1].couvertPct).toBe(38);
-    expect(r.summary[1].recettes).toBe(33000);
+  it("rien de signé → tout en non couvert", () => {
+    const [c] = computePlanCoverage([2027], { 2027: 60000 }, []);
+    expect(c.pctSigne).toBe(0);
+    expect(c.nonCouvert).toBe(60000);
+    expect(c.pctNonCouvert).toBe(100);
   });
 
-  it("exemple spec : charges 100, solde fin -20 → couvert 80%", () => {
-    const dep = ymMap([[2026, 6, 100]]);
-    const rec = ymMap([[2026, 6, 80]]);
-    const r = computeCoverage(0, [2026], rec, dep);
-    expect(r.summary[0].soldeFin).toBe(-20);
-    expect(r.summary[0].couvertPct).toBe(80);
-    expect(r.summary[0].restantACouvrir).toBe(20);
+  it("charges 0 → tous les % à 0", () => {
+    const fins: PlanFinancing[] = [{ statut: "signe", yearly: { 2026: 100 } }];
+    const [c] = computePlanCoverage([2026], {}, fins);
+    expect(c.charges).toBe(0);
+    expect(c.pctSigne).toBe(0);
+    expect(c.pctNonCouvert).toBe(0);
   });
 
-  it("solde fin positif → 100% même si trou en cours d'année", () => {
-    // baseline 30000 couvre tout ; dépense 100 jan, recette 0 → solde fin 29900 > 0.
-    const dep = ymMap([[2026, 1, 100]]);
-    const r = computeCoverage(30000, [2026], {}, dep);
-    expect(r.summary[0].couvertPct).toBe(100);
+  it("multi-années : agrège la couche 1 par année", () => {
+    const fins: PlanFinancing[] = [
+      { statut: "signe", yearly: { 2026: 40000, 2027: 21600 } },
+    ];
+    const r = computePlanCoverage([2026, 2027], { 2026: 58800, 2027: 60000 }, fins);
+    expect(r[0].signeCovered).toBe(40000);
+    expect(r[1].pctSigne).toBe(36); // 21600/60000
   });
+});
 
-  it("aucune charge → couvert 100%", () => {
-    const r = computeCoverage(0, [2026], {}, {});
-    expect(r.summary[0].couvertPct).toBe(100);
-    expect(r.summary[0].restantACouvrir).toBe(0);
+describe("statusInTier (BR-7.8)", () => {
+  it("tier signé : seulement signé", () => {
+    expect(statusInTier("signe", "signe")).toBe(true);
+    expect(statusInTier("promis", "signe")).toBe(false);
+    expect(statusInTier("espere", "signe")).toBe(false);
+  });
+  it("tier promis : signé + promis", () => {
+    expect(statusInTier("signe", "promis")).toBe(true);
+    expect(statusInTier("promis", "promis")).toBe(true);
+    expect(statusInTier("espere", "promis")).toBe(false);
+  });
+  it("tier espéré : tout", () => {
+    expect(statusInTier("signe", "espere")).toBe(true);
+    expect(statusInTier("promis", "espere")).toBe(true);
+    expect(statusInTier("espere", "espere")).toBe(true);
   });
 });
