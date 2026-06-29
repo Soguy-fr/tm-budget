@@ -79,16 +79,17 @@ export async function saveLine(p: LinePayload): Promise<ActionResult> {
         .eq("year", p.year);
       effectiveTotal = (cur ?? []).reduce((s, r) => s + Number(r.amount), 0);
     }
-  }
 
-  // BR-1.1 — refuser tant que Σ mois ≠ total planifié.
-  const bal = lineBalance(p.months, effectiveTotal);
-  if (!bal.balanced) {
-    const lbl = p.lineCode ? `Ligne ${p.lineCode} : ` : "";
-    return {
-      ok: false,
-      error: `${lbl}Σ mois (${formatEur(bal.sum)}) ≠ total (${formatEur(bal.total)}). Solde restant ${formatEur(bal.ecart)} à placer.`,
-    };
+    // BR-1.1 — sur l'ACTIF uniquement : refuser tant que Σ mois ≠ total verrouillé.
+    // En brouillon, le total est libre : on enregistre même si écart ≠ 0 (⚠ informatif).
+    const bal = lineBalance(p.months, effectiveTotal);
+    if (!bal.balanced) {
+      const lbl = p.lineCode ? `Ligne ${p.lineCode} : ` : "";
+      return {
+        ok: false,
+        error: `${lbl}Σ mois (${formatEur(bal.sum)}) ≠ total (${formatEur(bal.total)}). Solde restant ${formatEur(bal.ecart)} à placer.`,
+      };
+    }
   }
 
   // Upsert des 12 mailles (montant + bailleur ensemble).

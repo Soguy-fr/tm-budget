@@ -14,10 +14,13 @@ Pour une LB sur une année :
 - Si `écart ≠ 0` : la cellule « Total » passe en **rouge** et l'écart est affiché
   **dans la même cellule** (ex : « 30 000 (+250) ») ; **un avertissement ⚠ apparaît tout
   à gauche de la ligne**.
-- **Enregistrement bloqué (nouveau)** : on ne peut PAS enregistrer une ligne dont
-  `écart ≠ 0`. L'écart n'est donc jamais persisté — c'est un état transitoire d'édition
-  à résoudre avant de sauver (via Répartir, saisie manuelle, ou — en brouillon seulement —
-  « Mettre à jour le total »). En cas de save multi-lignes refusé, **lister les LB fautives**.
+- **Enregistrement bloqué — scénario ACTIF uniquement (Suivi interne)** : sur l'actif, le
+  total est verrouillé (BR-1.4) et `Σ mois` doit retomber dessus ; on ne peut PAS enregistrer
+  une ligne dont `écart ≠ 0`. En cas de save multi-lignes refusé, **lister les LB fautives**.
+- **Brouillon (onglet Édition de scénario)** : le total est **modifiable** (BR-1.4) ; on peut
+  enregistrer une ligne **même si `écart ≠ 0`** — l'écart est persisté tel quel, le ⚠ reste
+  **informatif** (non bloquant). On le résout plus tard (Répartir, saisie, « Mettre à jour le
+  total »). Permet de poser d'abord le total annuel puis de répartir les mois ensuite.
 - Pas de colonnes dédiées « Σ mois » ni « Écart » dans le tableur : l'info vit dans la
   cellule Total + l'avertissement de ligne.
 
