@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { isActiveOn } from "@/lib/financement";
+import type { FinancingStatus } from "@/lib/types";
 import { createFunder, updateFunder } from "@/app/(app)/financements/actions";
 
 export type FinLite = {
@@ -12,35 +12,40 @@ export type FinLite = {
   code: string;
   name: string;
   color: string;
+  statut: FinancingStatus;
   funder_id: string | null;
   convention_start: string | null;
   convention_end: string | null;
+};
+
+const STATUT_LABEL: Record<FinancingStatus, string> = {
+  signe: "Contrat signé",
+  promis: "En cours de signature",
+  espere: "Promesse",
+};
+const STATUT_CLASS: Record<FinancingStatus, string> = {
+  signe: "bg-brand-emerald text-white",
+  promis: "bg-emerald-200 text-emerald-900",
+  espere: "bg-amber-200 text-amber-900",
 };
 
 // F4.14 — onglet « Bailleurs » : acteurs + leurs financements (accordéon, filtres, édition).
 export function BailleurTab({
   funders,
   financements,
-  today,
 }: {
   funders: { id: string; name: string }[];
   financements: FinLite[];
-  today: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [statut, setStatut] = useState<"tous" | "actif" | "inactif">("tous");
+  const [statut, setStatut] = useState<"tous" | FinancingStatus>("tous");
   const [year, setYear] = useState<string>("");
   const [newFunder, setNewFunder] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-
-  const withActive = useMemo(
-    () => financements.map((f) => ({ ...f, actif: isActiveOn(f.convention_start, f.convention_end, today) })),
-    [financements, today],
-  );
 
   // Années couvertes par au moins un financement (pour le filtre année).
   const years = useMemo(() => {
@@ -59,9 +64,8 @@ export function BailleurTab({
     return s <= y && y <= e;
   };
 
-  const filtered = withActive.filter((f) => {
-    if (statut === "actif" && !f.actif) return false;
-    if (statut === "inactif" && f.actif) return false;
+  const filtered = financements.filter((f) => {
+    if (statut !== "tous" && f.statut !== statut) return false;
     if (year && !overlapsYear(f, Number(year))) return false;
     return true;
   });
@@ -123,11 +127,12 @@ export function BailleurTab({
         </button>
       </form>
 
-      {/* Filtres */}
+      {/* Filtres par statut (F4.14) */}
       <div className="mb-3 flex flex-wrap items-center gap-1">
         {chip("tous", "Tous")}
-        {chip("actif", "Actifs")}
-        {chip("inactif", "Inactifs")}
+        {chip("signe", "Contrat signé")}
+        {chip("promis", "En cours de signature")}
+        {chip("espere", "Promesse")}
         {years.length > 0 && (
           <select
             value={year}
@@ -215,7 +220,7 @@ export function BailleurTab({
   );
 }
 
-function FinRow({ f }: { f: FinLite & { actif: boolean } }) {
+function FinRow({ f }: { f: FinLite }) {
   return (
     <Link
       href={`/financements/${f.id}`}
@@ -225,8 +230,8 @@ function FinRow({ f }: { f: FinLite & { actif: boolean } }) {
         <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: f.color }} />
         <span className="font-mono text-xs text-brand-night">{f.reference || f.code}</span>
         <span className="text-slate-500">{f.name}</span>
-        <span className={`rounded px-1.5 py-0.5 text-[10px] ${f.actif ? "bg-brand-lime/30 text-brand-brown" : "bg-slate-100 text-slate-400"}`}>
-          {f.actif ? "actif" : "inactif"}
+        <span className={`rounded px-1.5 py-0.5 text-[10px] ${STATUT_CLASS[f.statut]}`}>
+          {STATUT_LABEL[f.statut]}
         </span>
       </span>
     </Link>

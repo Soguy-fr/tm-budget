@@ -2,15 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateComment } from "@/app/(app)/structure/actions";
+import { updateLineYearComment } from "@/app/(app)/structure/actions";
 
-// F8.5 / BR-5.4 — cellule Commentaire éditable (bouton Édit / OK) du Dashboard
-// onglet Dépense. Édite le champ `comment` partagé (même que Configuration).
+// F8.5 / BR-5.7 — cellule Commentaire éditable (bouton Édit / OK) du Dashboard
+// onglet Dépense. Commentaire PAR ANNÉE (line_year_comments), lié à l'année affichée.
 export function CommentCell({
   lineId,
+  year,
   comment,
 }: {
   lineId: string;
+  year: number;
   comment: string | null;
 }) {
   const router = useRouter();
@@ -20,7 +22,7 @@ export function CommentCell({
 
   function save() {
     startTransition(async () => {
-      const res = await updateComment(lineId, value);
+      const res = await updateLineYearComment(lineId, year, value);
       if (res.ok) {
         setEditing(false);
         router.refresh();

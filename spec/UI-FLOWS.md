@@ -37,6 +37,24 @@ Nomenclature des entrées de menu (les routes techniques restent inchangées) :
 └────────────┴─────────────────────────────────┘
 ```
 
+## 1b. Page d'accueil — synthèse (`/`, F10.4)
+
+Tableau de bord d'entrée, deux cartes + liens.
+```
+Budget ONG — scénario actif : Budget à jour
+
+┌ Grand Livre ───────────────┐  ┌ Couverture 2026 — dépenses 411 090 € ┐
+│ Dernière mise à jour : 28/06/2026 │  │ ▓▓▓▓▓▓░░░░░▒▒░░  signé 58 %         │
+│ Lignes à allouer : 12      │  │ en signature 0 % · promesse 0 %     │
+│ Ouvrir le Grand Livre →    │  │ non couvert 42 %                    │
+└────────────────────────────┘  │ Ouvrir le Dashboard →               │
+                                 └─────────────────────────────────────┘
+```
+- **Grand Livre** : date du **dernier import** (`gl_imports`) + **nb de lignes à allouer**
+  (écritures non allouées, BR-4.1) — rouge si > 0. Lien `/grand-livre`.
+- **Couverture année en cours** : barre empilée par statut sur **tous** les financements
+  (couche 1), rapportée aux dépenses de l'année du scénario actif (BR-12.3). Lien `/suivi`.
+
 ## 2. Page « Configuration » (F1) — onglets
 
 Deux onglets : **Structure** (arbre des LB) et **Utilisateurs** (gestion des comptes,
@@ -176,7 +194,7 @@ forcément l'actif), avec : édition **ligne-par-ligne** (P7), **Afficher baille
 des dépenses » (réservés au suivi de l'actif). Le **total** des LB y est **modifiable**
 (brouillon). En-tête éditable : **titre (nom)** + **description** du scénario (F2.11).
 
-**Bloc « Plan de financement »** (sous le budget dépenses, F2.7, BR-12) :
+**Bloc « Plan de financement »** (affiché **en haut** de l'onglet, **avant** le tableur, F2.7, BR-12) :
 ```
 ┌ Couverture par année (financements retenus) ──────────┐
 │ Année  Charges   Signé   Promis  Espéré  Non couvert  │
@@ -184,13 +202,20 @@ des dépenses » (réservés au suivi de l'actif). Le **total** des LB y est **m
 │ 2027   60 000    21 600     0       0    38 400 (36/0/0/64 %)   │
 └────────────────────────────────────────────────────────┘
 
-Financements du scénario :                    [gérer les financements →]
+Financements du scénario :              [gérer les financements →]   [Éditer]
+  HWF01 · Contrat signé · Fondation JFN · 04/2024 → 03/2026
+    Amplifying the Voices of African Women                  🔒 garanti
+  GIZ   · En cours de signature · GIZ · 01/2026 → 12/2027
+    Strategic Communications for IPLC women
+  (mode Éditer :)
   ☑ HWF01  (signé)    — verrouillé (garanti)
   ☑ GIZ    (promis)   [retirer]
   ☐ SYE    (espéré)   [ajouter]
 ```
-- Liste des **financements réels** : case **inclure/exclure** du scénario (`budget_financing`).
-  Les **signés** sont cochés et **verrouillés** (BR-12.2).
+- Liste des **financements du scénario** en **lecture seule** par défaut : **ID**, **statut**,
+  **bailleur** (acteur), **période d'éligibilité** et **intitulé complet**. Bouton **« Éditer »**
+  qui bascule en mode **inclure/exclure** (cases `budget_financing`).
+- Les **signés** sont cochés et **verrouillés** (BR-12.2).
 - Le **statut**, la **répartition annuelle** et les **déblocages** d'un fonds s'éditent sur sa
   **page financement** (F4.10/F4.15) — lien « gérer les financements ».
 - Tableau **Couverture par année** : signé/promis/espéré/non couvert empilé sur les fonds
@@ -201,25 +226,32 @@ Financements du scénario :                    [gérer les financements →]
 Comparer : [Budget 2026 v1 ▾]   vs   [Budget 2026 +GIZ ▾]
 
 2026
-  LB                         Scénario A      •     Scénario B
-  1.1.1 Salaires             425 000         ●(vert)   425 000
-  1.2.1 Loyer                 12 000         ●(orange)  18 000
-  Total année                ...             •         ...
+  Code  Ligne                   Scénario A      •     Scénario B
+▼ 1     Operating Costs          437 000        ●(orange)  443 000
+   1.1  Core Team                425 000        ●(vert)    425 000
+   1.2  Office & Admin            12 000        ●(orange)   18 000
+▶ 2     Programme Activities      ...           ●          ...
+  Total année                     ...           •          ...
 ```
-- Deux **menus déroulants** (A, B). Tableau groupé par **année**, une ligne par **LB niv.3**
-  (mois repliés → total annuel). **Point** entre les colonnes : **vert** si A = B, **orange** sinon.
+- Deux **menus déroulants** (A, B). Tableau groupé par **année**, **hiérarchique** : catégories
+  **niveau 1 et 2** (totaux annuels agrégés), **accordéon** repliant le niv.2 sous son niv.1
+  (chevron ▶/▼), comme le Dashboard. Mois repliés → total annuel. **Point** entre les colonnes :
+  **vert** si A = B, **orange** sinon.
 
 ## 4. Pages « Financement » (F4) — même gabarit
 
 Identiques au tableur interne, mais centrées sur le financement (sert au **rapport financier**).
 
 ```
-Financement JFN-001  (Bailleur : Fondation JFN)   montant total 10 000 €
-Éligibilité 04/2026 → 03/2028                      [Éditer] [Suivi] [+ année]
-Description : Fonds de soutien au programme jeunesse…
-                                                   [Assigner les lignes dans le budget]
+┌ Financement (encadré récap, F4.10) ───────────────────────────────┐
+│ Intitulé : Fonds de soutien au programme jeunesse                  │
+│ ID JFN-001 · Bailleur : Fondation JFN · Contrat signé · Affectés   │
+│ Éligibilité 04/2026 → 03/2028 · Montant total 10 000 €             │
+│ Description : …                                                    │
+└───────────────────────────────────────────────────────────────────┘
+                                                   [Modifier] [Règles du fonds]
 
-BLOC DÉPENSES PRÉVUES (dérivées du plan interne)
+BLOC BUDGET DÉPENSE BAILLEUR (dérivé du plan interne)   [Assigner les lignes dans le budget]
   Code  Ligne financement    LB mappées       Budgété   Dépensé   Total   Jan ... Déc
   A1    Ressources humaines  1.1.1, 1.1.2     6 000     5 200     ...
   A2    Frais de bureau      1.2.1, 1.2.2     3 500     3 400     ...
@@ -232,13 +264,15 @@ BLOC RECETTES PRÉVUES (déblocages)
 
 Solde prévu (recettes − dépenses)
 ```
-- **En-tête** : référence, bailleur (acteur), `montant_total`, fenêtre d'éligibilité, description,
-  **statut** signé/promis/espéré (F4.9/F4.10).
-- **Répartition annuelle (couverture)** (F4.15, couche 1 `bailleur_yearly`) : un montant par
-  année d'éligibilité, à côté des recettes/déblocages. **⚠** si Σannuel ≠ Σdéblocages ≠ montant_total.
+- **En-tête** : un **encadré récapitulatif** (F4.10) regroupant intitulé, référence/ID, bailleur
+  (acteur), **statut** signé/promis/espéré, **type**, fenêtre d'éligibilité, `montant_total`,
+  description — toutes les infos utiles d'un coup d'œil. Actions à côté : **Modifier**, **Règles**.
+- **Couverture** (F4.15, couche 1 `bailleur_yearly`) : un montant par année d'éligibilité, présentée
+  en **tableau lisible** (année · montant · Σ vs `montant_total`). **⚠** si Σannuel ≠ montant_total.
 - Colonnes **Budgété** / **Dépensé** par ligne + récap d'écart vs `montant_total` (F4.11, BR-3.4) :
   « reste X à budgéter » si sous-budgété, « sur-budgété » / dépassement (rouge) sinon.
-- Bouton **« Assigner les lignes dans le budget »** (F4.12, BR-3.5) : impute les LB mappées
+- Bouton **« Assigner les lignes dans le budget »** (F4.12, BR-3.5) : **placé dans la section
+  « Budget dépense bailleur »** (pas dans la barre d'actions de l'en-tête). Impute les LB mappées
   au financement sur la fenêtre d'éligibilité. **Confirmation** listant les conflits si des
   mailles portent déjà un autre financement (écrasement).
 - La ligne **« Non assigné »** est calculée (BR-3.2) pour équilibrer recettes = dépenses.
@@ -277,8 +311,9 @@ Date       Type     Libellé              Montant   LB      Bailleur  Statut
 ## 6. Pages « Dashboard / Suivi » (F6, F8)
 
 - **Onglet Dépense** : tableau prévu / réalisé / écart / % — **niveaux 1 et 2 uniquement**
-  (pas niveau 3, BR-5.4). Colonne **Commentaire** éditable (bouton **Édit / OK**), liée au
-  champ `comment` partagé (F1.7) : éditer ici met à jour la bulle partout.
+  (pas niveau 3, BR-5.4). Colonne **Commentaire** éditable (bouton **Édit / OK**), **liée à
+  l'année affichée** (`line_year_comments`, BR-5.7) : le commentaire vaut pour cette année
+  seulement, sans toucher au commentaire global de structure (F1.7/F1.8).
   - **Hiérarchie & accordéon (F8.6)** : niv.1 en bloc repliable (chevron ▶/▼) ; niv.2 indentés
     dessous. Agrégat niv.1 visible même replié.
   - **% consommé (F8.7, BR-5.6)** : barre de dégradé 0 % blanc → 100 % vert ; négatif rouge.
@@ -292,8 +327,10 @@ Code  Ligne                Prévu   Réalisé  Écart  % consommé        Vitess
    1.1 Core Team           69 600  …        …      [▓▓▓▓▓ 100%]       [|██ 95%|]      …  [Édit]
 ▶ 2   Programme Activities …       …                …                 …
 ```
-- **Onglet Bailleurs** : tableau recettes & dépenses prévues vs réelles par financement (BR-6).
-- Dépassements en rouge.
+- **Onglet Bailleurs** : par financement et par année, deux colonnes seulement (BR-6.1, F6.2) —
+  **Recettes prévues** = montant **alloué** de l'année (couche 1) et **Dépenses réalisées** (GL).
+  Plus de colonnes « recettes reçues », « % reçu » ni « solde réalisé ». Dépassement
+  (dépenses > alloué) en rouge.
 
 ## 6b. Page « Trésorerie » (F7.7/7.8)
 

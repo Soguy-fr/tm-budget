@@ -2,11 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { flattenForGrid, cellKey, totalKey } from "@/lib/budget-grid";
+import { buildTree } from "@/lib/structure";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { StructureLine, Budget, Bailleur } from "@/lib/types";
 import { BudgetList } from "@/components/budgets/BudgetList";
 import { ScenarioSelect } from "@/components/budgets/ScenarioSelect";
 import { CoveragePanel, type ScenarioFinancingRow } from "@/components/budgets/CoveragePanel";
 import { ScenarioMeta } from "@/components/budgets/ScenarioMeta";
+import type { Funder } from "@/lib/types";
 import { ComparisonView } from "@/components/budgets/ComparisonView";
 import { InterneGrid } from "@/components/interne/InterneGrid";
 import { computePlanCoverage, type PlanYearCoverage, type PlanFinancing } from "@/lib/coverage";
@@ -130,13 +133,17 @@ async function ComparisonTab({
   const selectedB =
     budgets.find((x) => x.id === b)?.id ?? budgets.find((x) => x.id !== selectedA)!.id;
 
-  const [{ data: lines }, { data: mA }, { data: mB }] = await Promise.all([
-    supabase.from("structure_lines").select("id, code, label, level, sort_order").eq("active", true).eq("level", 3).order("sort_order"),
-    supabase.from("budget_monthly").select("line_id, year, amount").eq("budget_id", selectedA).range(0, 99999),
-    supabase.from("budget_monthly").select("line_id, year, amount").eq("budget_id", selectedB).range(0, 99999),
+  const mQuery = (budgetId: string) =>
+    fetchAll<{ line_id: string; year: number; amount: number }>((f, t) =>
+      supabase.from("budget_monthly").select("line_id, year, amount").eq("budget_id", budgetId).range(f, t),
+    );
+  const [{ data: lines }, mA, mB] = await Promise.all([
+    supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
+    mQuery(selectedA),
+    mQuery(selectedB),
   ]);
 
-  // Σ par (ligne, année) pour chaque scénario.
+  // Σ feuilles (niv.3) par (ligne, année) pour chaque scénario.
   const sumBy = (rows: { line_id: string; year: number; amount: number }[] | null) => {
     const m: Record<string, number> = {};
     for (const r of rows ?? []) m[`${r.line_id}:${r.year}`] = (m[`${r.line_id}:${r.year}`] ?? 0) + Number(r.amount);
@@ -148,16 +155,61 @@ async function ComparisonTab({
     new Set([...(mA ?? []), ...(mB ?? [])].map((r) => r.year as number)),
   ).sort((x, y) => x - y);
 
+  // F2.12 — agrégation hiérarchique : sommer les feuilles vers les catégories niv.1/2.
+  const tree = buildTree((lines ?? []) as StructureLine[]);
   const data = years.map((year) => {
-    const rows = (lines ?? [])
-      .map((l) => {
-        const av = aBy[`${l.id}:${year}`] ?? 0;
-        const bv = bBy[`${l.id}:${year}`] ?? 0;
-        return { lineId: l.id as string, code: l.code as string, label: l.label as string, a: av, b: bv, same: av === bv };
-      })
-      .filter((r) => r.a !== 0 || r.b !== 0);
-    const totalA = rows.reduce((s, r) => s + r.a, 0);
-    const totalB = rows.reduce((s, r) => s + r.b, 0);
+    const sums = new Map<string, { a: number; b: number }>();
+    const agg = (node: ReturnType<typeof buildTree>[number]): { a: number; b: number } => {
+      let a = 0;
+      let b = 0;
+      if (node.children.length === 0) {
+        a = aBy[`${node.id}:${year}`] ?? 0;
+        b = bBy[`${node.id}:${year}`] ?? 0;
+      } else {
+        for (const c of node.children) {
+          const s = agg(c);
+          a += s.a;
+          b += s.b;
+        }
+      }
+      sums.set(node.id, { a, b });
+      return { a, b };
+    };
+    tree.forEach(agg);
+
+    // Pré-ordre : émettre niv.1 et niv.2 (pas niv.3), comme le Dashboard.
+    const rows: {
+      lineId: string;
+      code: string;
+      label: string;
+      level: number;
+      parentId: string | null;
+      a: number;
+      b: number;
+      same: boolean;
+    }[] = [];
+    const emit = (node: ReturnType<typeof buildTree>[number]) => {
+      if (node.level <= 2) {
+        const s = sums.get(node.id)!;
+        if (s.a !== 0 || s.b !== 0) {
+          rows.push({
+            lineId: node.id,
+            code: node.code,
+            label: node.label,
+            level: node.level,
+            parentId: node.parent_id,
+            a: s.a,
+            b: s.b,
+            same: s.a === s.b,
+          });
+        }
+      }
+      node.children.forEach(emit);
+    };
+    tree.forEach(emit);
+
+    const totalA = rows.filter((r) => r.level === 1).reduce((s, r) => s + r.a, 0);
+    const totalB = rows.filter((r) => r.level === 1).reduce((s, r) => s + r.b, 0);
     return { year, rows, totalA, totalB };
   });
 
@@ -177,8 +229,11 @@ async function coverageByBudget(
   budgets: Budget[],
   yearsByBudget: Record<string, number[]>,
 ): Promise<Record<string, PlanYearCoverage[]>> {
-  const [{ data: bm }, { data: bailleurs }, { data: by }, { data: bf }] = await Promise.all([
-    supabase.from("budget_monthly").select("budget_id, year, amount").range(0, 99999),
+  const [bm, { data: bailleurs }, { data: by }, { data: bf }] = await Promise.all([
+    // Paginé : sinon tronqué à 1000 lignes (toutes scénarios confondus) → totaux faux.
+    fetchAll<{ budget_id: string; year: number; amount: number }>((f, t) =>
+      supabase.from("budget_monthly").select("budget_id, year, amount").range(f, t),
+    ),
     supabase.from("bailleurs").select("id, statut"),
     supabase.from("bailleur_yearly").select("bailleur_id, year, amount"),
     supabase.from("budget_financing").select("budget_id, bailleur_id"),
@@ -246,19 +301,24 @@ async function EditionTab({
   const [
     { data: lines },
     { data: yearRows },
-    { data: monthlyRows },
+    monthlyRows,
     { data: totalRows },
     { data: bailleurRows },
     { data: yearlyRows },
     { data: budgetFinRows },
+    { data: funderRows },
   ] = await Promise.all([
     supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
     supabase.from("budget_years").select("year").eq("budget_id", selected.id),
-    supabase
-      .from("budget_monthly")
-      .select("line_id, year, month, amount, bailleur_id")
-      .eq("budget_id", selected.id)
-      .range(0, 99999),
+    // Paginé : un scénario peut dépasser 1000 mailles → sinon grille + totaux tronqués.
+    fetchAll<{ line_id: string; year: number; month: number; amount: number; bailleur_id: string | null }>(
+      (f, t) =>
+        supabase
+          .from("budget_monthly")
+          .select("line_id, year, month, amount, bailleur_id")
+          .eq("budget_id", selected.id)
+          .range(f, t),
+    ),
     supabase
       .from("budget_line_totals")
       .select("line_id, year, total_input")
@@ -266,7 +326,9 @@ async function EditionTab({
     supabase.from("bailleurs").select("*").order("code"),
     supabase.from("bailleur_yearly").select("bailleur_id, year, amount"),
     supabase.from("budget_financing").select("bailleur_id").eq("budget_id", selected.id),
+    supabase.from("funders").select("id, name"),
   ]);
+  const funderName = new Map((funderRows ?? []).map((f) => [f.id, (f as Funder).name]));
 
   const flat = flattenForGrid((lines ?? []) as StructureLine[]);
   const monthly: Record<string, number> = {};
@@ -302,6 +364,9 @@ async function EditionTab({
     label: b.reference || b.code,
     name: b.name,
     statut: b.statut,
+    funderName: b.funder_id ? funderName.get(b.funder_id) ?? null : null,
+    conventionStart: b.convention_start,
+    conventionEnd: b.convention_end,
     included: b.statut === "signe" || explicit.has(b.id),
     yearly: yearlyById[b.id] ?? {},
   }));
@@ -318,7 +383,14 @@ async function EditionTab({
         description={selected.description}
         canEdit={canEdit}
       />
-      <p className="mb-3 text-xs text-slate-400">
+      <CoveragePanel
+        budgetId={selected.id}
+        years={yearList}
+        depByYear={depByYear}
+        financings={scenarioFinancings}
+        canEdit={canEdit}
+      />
+      <p className="mb-3 mt-8 text-xs text-slate-400">
         Brouillon : le total des lignes est modifiable ici. Sur le scénario actif
         (Suivi interne) il est verrouillé (BR-1.4).
       </p>
@@ -340,13 +412,6 @@ async function EditionTab({
         isDraft
         allowTreso={false}
         allowSuivi={false}
-        canEdit={canEdit}
-      />
-      <CoveragePanel
-        budgetId={selected.id}
-        years={yearList}
-        depByYear={depByYear}
-        financings={scenarioFinancings}
         canEdit={canEdit}
       />
     </div>

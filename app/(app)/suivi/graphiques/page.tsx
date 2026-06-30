@@ -12,6 +12,7 @@ import type {
 } from "@/lib/types";
 import { SuiviTabs } from "@/components/suivi/SuiviTabs";
 import { DashboardCharts, type DashboardData } from "@/components/suivi/DashboardCharts";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function GraphiquesPage() {
     { data: depRows },
     { data: baiRows },
     { data: bailleurs },
-    { data: monthlyRows },
+    monthlyRows,
     { data: incomeRows },
     { data: glRows },
   ] = await Promise.all([
@@ -43,8 +44,10 @@ export default async function GraphiquesPage() {
     supabase.from("v_suivi_depenses").select("*").eq("budget_id", budget.id),
     supabase.from("v_suivi_bailleurs").select("*"),
     supabase.from("bailleurs").select("*").order("code"),
-    supabase.from("budget_monthly")
-      .select("line_id, year, month, amount").eq("budget_id", budget.id).range(0, 99999),
+    // Paginé : un scénario peut dépasser 1000 mailles (sinon courbe tréso tronquée).
+    fetchAll<{ line_id: string; year: number; month: number; amount: number }>((f, t) =>
+      supabase.from("budget_monthly").select("line_id, year, month, amount").eq("budget_id", budget.id).range(f, t),
+    ),
     supabase.from("bailleur_income_monthly").select("year, month, amount"),
     supabase.from("gl_entries").select("*").eq("archived", false).range(0, 99999),
   ]);

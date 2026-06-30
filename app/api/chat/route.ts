@@ -10,6 +10,7 @@ import {
 } from "@/lib/treasury";
 import type { ClosureRow } from "@/lib/closure";
 import type { GlEntry } from "@/lib/types";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -57,12 +58,15 @@ async function execTool(supabase: Supabase, name: string, args: ToolArgs): Promi
     const { data: budget } = await supabase
       .from("budgets").select("id, initial_cash").eq("is_active", true).maybeSingle();
     if (!budget) return { error: "Aucun budget actif." };
-    const [{ data: yearRows }, { data: closureRows }, { data: glRows }, { data: monthlyRows }, { data: incomeRows }] =
+    const [{ data: yearRows }, { data: closureRows }, { data: glRows }, monthlyRows, { data: incomeRows }] =
       await Promise.all([
         supabase.from("budget_years").select("year").eq("budget_id", budget.id),
         supabase.from("month_closures").select("year, month, reopened_at"),
         supabase.from("gl_entries").select("entry_date, entry_type, amount").eq("archived", false).range(0, 99999),
-        supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(0, 99999),
+        // Paginé : un scénario peut dépasser 1000 mailles (sinon dépenses budgétées tronquées).
+        fetchAll<{ year: number; month: number; amount: number }>((f, t) =>
+          supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(f, t),
+        ),
         supabase.from("bailleur_income_monthly").select("year, month, amount"),
       ]);
     const years = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);

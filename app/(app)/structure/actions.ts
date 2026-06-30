@@ -114,6 +114,27 @@ export async function updateComment(
   return { ok: true };
 }
 
+// F8.5 / BR-5.7 — Commentaire du Dashboard PAR ANNÉE (table line_year_comments),
+// distinct du commentaire global de structure (updateComment ci-dessus). Tier opérationnel.
+export async function updateLineYearComment(
+  lineId: string,
+  year: number,
+  comment: string,
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const deny = await denyUnless(supabase, "edit_budget");
+  if (deny) return { ok: false, error: deny };
+  const { error } = await supabase
+    .from("line_year_comments")
+    .upsert(
+      { line_id: lineId, year, comment: comment.trim() || null, updated_at: new Date().toISOString() },
+      { onConflict: "line_id,year" },
+    );
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/suivi");
+  return { ok: true };
+}
+
 // F1.4 — Réordonner une LB parmi ses frères (échange sort_order, P3 : code intact).
 export async function moveLine(
   id: string,

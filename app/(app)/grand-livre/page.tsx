@@ -5,6 +5,7 @@ import { scoreAnomalies } from "@/lib/anomalies";
 import type { StructureLine, Bailleur, GlEntry } from "@/lib/types";
 import { GlTable } from "@/components/grand-livre/GlTable";
 import { GuideLink } from "@/components/GuideLink";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function GrandLivrePage({
     .eq("is_active", true)
     .maybeSingle();
 
-  const [{ data: entries }, { data: lines }, { data: bailleurs }, planRes, { data: mappingRows }] = await Promise.all([
+  const [{ data: entries }, { data: lines }, { data: bailleurs }, planMonthlyRows, { data: mappingRows }] = await Promise.all([
     // Perf : limiter l'affichage aux 2000 écritures les plus récentes (hors archivées, BR-10.2).
     supabase.from("gl_entries").select("*").eq("archived", false)
       .order("entry_date", { ascending: false }).range(0, 1999),
@@ -43,12 +44,15 @@ export default async function GrandLivrePage({
       .eq("active", true),
     supabase.from("bailleurs").select("*").order("code"),
     budget
-      ? supabase
-          .from("budget_monthly")
-          .select("line_id, year, month, amount, bailleur_id")
-          .eq("budget_id", budget.id)
-          .range(0, 99999)
-      : Promise.resolve({ data: [] as { line_id: string; year: number; month: number; amount: number; bailleur_id: string | null }[] }),
+      ? fetchAll<{ line_id: string; year: number; month: number; amount: number; bailleur_id: string | null }>(
+          (f, t) =>
+            supabase
+              .from("budget_monthly")
+              .select("line_id, year, month, amount, bailleur_id")
+              .eq("budget_id", budget.id)
+              .range(f, t),
+        )
+      : Promise.resolve([] as { line_id: string; year: number; month: number; amount: number; bailleur_id: string | null }[]),
     // C2 — mapping LB ↔ bailleur (liste blanche d'éligibilité).
     supabase.from("bailleur_line_mapping").select("bailleur_line_id, line_id, bailleur_lines(bailleur_id)"),
   ]);
@@ -57,7 +61,7 @@ export default async function GrandLivrePage({
   // + montant planifié par maille (F5.11).
   const planByCell: Record<string, string> = {};
   const planAmountByCell: Record<string, number> = {};
-  for (const p of planRes.data ?? []) {
+  for (const p of planMonthlyRows) {
     const k = `${p.line_id}:${p.year}:${p.month}`;
     if (p.bailleur_id) planByCell[k] = p.bailleur_id as string;
     planAmountByCell[k] = (planAmountByCell[k] ?? 0) + Number(p.amount);

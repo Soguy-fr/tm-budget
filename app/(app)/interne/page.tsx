@@ -9,6 +9,7 @@ import { InterneGrid } from "@/components/interne/InterneGrid";
 import { GuideLink } from "@/components/GuideLink";
 import { getRole } from "@/lib/auth/role";
 import { can } from "@/lib/roles";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -37,18 +38,22 @@ export default async function InternePage() {
   const [
     { data: lines },
     { data: years },
-    { data: monthlyRows },
+    monthlyRows,
     { data: totalRows },
     { data: bailleurRows },
     { data: glRows },
   ] = await Promise.all([
     supabase.from("structure_lines").select("*").eq("active", true).order("sort_order"),
     supabase.from("budget_years").select("year").eq("budget_id", budget.id),
-    supabase
-      .from("budget_monthly")
-      .select("line_id, year, month, amount, bailleur_id")
-      .eq("budget_id", budget.id)
-      .range(0, 99999),
+    // Paginé : un scénario peut dépasser 1000 mailles (sinon grille tronquée).
+    fetchAll<{ line_id: string; year: number; month: number; amount: number; bailleur_id: string | null }>(
+      (f, t) =>
+        supabase
+          .from("budget_monthly")
+          .select("line_id, year, month, amount, bailleur_id")
+          .eq("budget_id", budget.id)
+          .range(f, t),
+    ),
     supabase
       .from("budget_line_totals")
       .select("line_id, year, total_input")

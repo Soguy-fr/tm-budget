@@ -10,6 +10,7 @@ import { PlanFinancementBlock } from "@/components/suivi/PlanFinancementBlock";
 import { computePlanCoverage } from "@/lib/coverage";
 import type { FinancingStatus } from "@/lib/types";
 import { GuideLink } from "@/components/GuideLink";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -34,15 +35,25 @@ export default async function SuiviPage({
   }
   const budget = budgetRow as Budget;
 
-  const [{ data: structure }, { data: yearRows }, { data: monthly }, { data: gl }, { data: bailleurs }, { data: by }] =
+  const [{ data: structure }, { data: yearRows }, monthly, { data: gl }, { data: bailleurs }, { data: by }, { data: yearComments }] =
     await Promise.all([
       supabase.from("structure_lines").select("*").eq("active", true),
       supabase.from("budget_years").select("year").eq("budget_id", budget.id),
-      supabase.from("budget_monthly").select("line_id, year, month, amount").eq("budget_id", budget.id).range(0, 99999),
+      // Paginé : un scénario peut dépasser 1000 mailles (sinon prévu/couverture tronqués).
+      fetchAll<{ line_id: string; year: number; month: number; amount: number }>((f, t) =>
+        supabase.from("budget_monthly").select("line_id, year, month, amount").eq("budget_id", budget.id).range(f, t),
+      ),
       supabase.from("gl_entries").select("*").eq("entry_type", "Dépense").eq("archived", false).range(0, 99999),
       supabase.from("bailleurs").select("id, code, reference, name, statut").order("code"),
       supabase.from("bailleur_yearly").select("bailleur_id, year, amount"),
+      supabase.from("line_year_comments").select("line_id, year, comment"),
     ]);
+
+  // BR-5.7 — commentaire du Dashboard par (LB × année).
+  const commentByLineYear: Record<string, string | null> = {};
+  for (const c of yearComments ?? []) {
+    commentByLineYear[`${c.line_id as string}:${c.year as number}`] = (c.comment as string | null) ?? null;
+  }
 
   const lines = (structure ?? []) as StructureLine[];
   const allYears = (yearRows ?? []).map((y) => y.year as number).sort((a, b) => a - b);
@@ -120,7 +131,12 @@ export default async function SuiviPage({
         realiseToDate: realiseTD[k] ?? 0,
       };
     }
-    return { year, rows: aggregateByCategory(lines, leaf) };
+    // BR-5.7 — le commentaire affiché est celui de l'année (pas le commentaire global structure).
+    const rows = aggregateByCategory(lines, leaf).map((r) => ({
+      ...r,
+      comment: commentByLineYear[`${r.id}:${year}`] ?? null,
+    }));
+    return { year, rows };
   });
 
   return (

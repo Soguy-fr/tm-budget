@@ -80,7 +80,7 @@ export function DepenseTable({ year, rows }: { year: number; rows: CategoryRow[]
                   <VitesseGauge v={v} />
                 </td>
                 <td className="px-2 py-1 align-top">
-                  <CommentCell lineId={r.id} comment={r.comment} />
+                  <CommentCell lineId={r.id} year={year} comment={r.comment} />
                 </td>
               </tr>
             );

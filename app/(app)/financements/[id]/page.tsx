@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Bailleur, BailleurLine, StructureLine, Funder } from "@/lib/types";
 import { BailleurDetail, type GlLite } from "@/components/bailleurs/BailleurDetail";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
     .eq("is_active", true)
     .maybeSingle();
 
-  const [{ data: lines }, { data: mapping }, { data: structure }, { data: income }, planRes, yearRes, { data: gl }, { data: funders }, { data: yearlyRows }] =
+  const [{ data: lines }, { data: mapping }, { data: structure }, { data: income }, planMonthlyRows, yearRes, { data: gl }, { data: funders }, { data: yearlyRows }] =
     await Promise.all([
       supabase.from("bailleur_lines").select("*").eq("bailleur_id", params.id).order("sort_order"),
       supabase.from("bailleur_line_mapping").select("bailleur_line_id, line_id"),
@@ -49,11 +50,14 @@ export default async function BailleurPage({ params }: { params: { id: string } 
         .select("year, month, amount")
         .eq("bailleur_id", params.id),
       budget
-        ? supabase
-            .from("budget_monthly")
-            .select("line_id, amount, bailleur_id")
-            .eq("budget_id", budget.id)
-        : Promise.resolve({ data: [] as { line_id: string; amount: number; bailleur_id: string | null }[] }),
+        ? fetchAll<{ line_id: string; amount: number; bailleur_id: string | null }>((f, t) =>
+            supabase
+              .from("budget_monthly")
+              .select("line_id, amount, bailleur_id")
+              .eq("budget_id", budget.id)
+              .range(f, t),
+          )
+        : Promise.resolve([] as { line_id: string; amount: number; bailleur_id: string | null }[]),
       budget
         ? supabase.from("budget_years").select("year").eq("budget_id", budget.id)
         : Promise.resolve({ data: [] as { year: number }[] }),
@@ -113,7 +117,7 @@ export default async function BailleurPage({ params }: { params: { id: string } 
         lines={(lines ?? []) as BailleurLine[]}
         mappingByLine={mappingByLine}
         structure={(structure ?? []) as StructureLine[]}
-        planMonthly={(planRes.data ?? []) as { line_id: string; amount: number; bailleur_id: string | null }[]}
+        planMonthly={planMonthlyRows as { line_id: string; amount: number; bailleur_id: string | null }[]}
         glEntries={(gl ?? []) as GlLite[]}
         income={income2}
         yearly={yearly}

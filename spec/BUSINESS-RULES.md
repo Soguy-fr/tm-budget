@@ -216,9 +216,9 @@ L'entête de chaque année affiche le **réalisé annuel à côté du budget ann
 L'onglet **Dépense** du Dashboard n'affiche que les LB de **niveau 1** (ex `1 Operating Costs`)
 et **niveau 2** (ex `1.1 Core Team`) — **pas le niveau 3**. Les montants niveau 1/2 restent
 l'agrégat de leurs feuilles (BR-5.3).
-- Colonne **« Commentaire »** éditable (bouton Édit / OK) sur ces lignes. Elle édite le
-  **même champ `comment`** que la page Configuration (F1.7) : un seul champ partagé, pas de
-  doublon. Affecter le commentaire d'une niveau 1/2 ici le met à jour partout (bulles incluses).
+- Colonne **« Commentaire »** éditable (bouton Édit / OK) sur ces lignes, **liée à l'année
+  affichée** (BR-5.7) : le commentaire saisi ne vaut que pour cette année (pas de propagation
+  vers la Configuration ni les bulles, qui gardent le commentaire global F1.7/F1.8).
 - **Lisibilité & accordéon (F8.6)** : la hiérarchie niv.1/niv.2 est indentée et typée pour se
   lire d'un coup d'œil ; chaque niveau 1 est un bloc **accordéon** repliant ses sous-catégories
   niveau 2 (l'agrégat niv.1 reste visible replié).
@@ -250,15 +250,31 @@ couleur en dégradé** proportionnelle :
 - valeur **négative** (réalisé net négatif, ex. avoirs > dépenses, BR-4.4) = **rouge** ;
 - au-delà de 100 % la barre reste pleine (le dépassement est déjà signalé en rouge, BR-5.2).
 
+### BR-5.7 — Commentaire de ligne par année (Dashboard)
+Le commentaire éditable du Dashboard onglet Dépense (F8.5) est **scopé à l'année affichée** :
+stocké dans `line_year_comments(line_id, year, comment)`, **un commentaire par (LB × année)**.
+- Éditer le commentaire d'une catégorie niv.1/2 pour 2026 n'affecte **pas** 2027 ni le
+  commentaire global de structure (`structure_lines.comment`, F1.7/F1.8) affiché en
+  Configuration et en bulles. Les deux notions coexistent : globale (structure) vs annuelle
+  (suivi).
+- Permission d'édition : **tier opérationnel** (édition budget) — `admin_systeme`, `directrice`,
+  `respo_financiere` (la respo assure le suivi). Garde server action + RLS.
+
 ## 6. Suivi par bailleur
 
-### BR-6.1 — Réalisé recettes / dépenses
+### BR-6.1 — Recettes prévues (alloué) & dépenses réalisées
 ```
-recettes_reçues(bailleur, année)    = Σ GL où type=Recette, bailleur=B, année(date)=année
+recettes_prévues(bailleur, année)   = Σ couche 1 (bailleur_yearly) de l'année  -- montant ALLOUÉ
 dépenses_réalisées(bailleur, année) = Σ GL où type=Dépense, bailleur=B, année(date)=année
-solde_réalisé                       = recettes_reçues − dépenses_réalisées
-% recettes reçues                   = recettes_reçues / recettes_prévues
 ```
+- **Recettes prévues = montant alloué de l'année** (couche 1, répartition annuelle d'éligibilité),
+  PAS les décaissements/versements attendus (couche 2, qui servent à la trésorerie BR-7.7).
+- Le **Dashboard onglet Bailleurs** (F6.2) n'affiche QUE ces deux colonnes (Recettes prévues
+  allouées · Dépenses réalisées). Les colonnes **« recettes reçues » (GL)**, **« % reçu »** et
+  **« solde réalisé »** sont **retirées** : les recettes reçues ne sont pas mesurées de façon
+  fiable dans le GL.
+- La vue `v_suivi_bailleurs` conserve `recettes_recues`/`depenses_realisees` (utilisées ailleurs,
+  ex. chatbot) ; seul `recettes_prevues` change de définition (→ couche 1).
 
 ### BR-6.2 — Alerte dépassement bailleur
 Si `dépenses_réalisées > recettes (prévues ou conventionnées)` : alerte de dépassement (INV5).
@@ -278,7 +294,10 @@ dépenses (BR-5.1) mais invisible dans le suivi bailleur → totaux non recoupab
 ## 7. Trésorerie (prévision glissante)
 
 ### BR-7.1 — Solde initial et chaînage
-`initial_cash` est saisi **une fois**, au 1er janvier de la **première** année du budget.
+`initial_cash` **n'est plus saisi depuis l'UI** (F2.5 retiré) : il reste à sa valeur par
+défaut/legacy en base (0 sauf donnée historique). Le démarrage réel de la trésorerie se pilote
+via le **solde forcé** (`forced_balance` + `calc_date`, BR-7.7) ; à défaut de forçage, le
+chaînage budgété part de `initial_cash`.
 Les années suivantes chaînent automatiquement : `solde_initial(N+1) = solde_final(N)`.
 Chaque mode chaîne **ses propres soldes**, sans mélange :
 - Mode **Budgété** : `solde_final(N)` = solde budgété de décembre N.

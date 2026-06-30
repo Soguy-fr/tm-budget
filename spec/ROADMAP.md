@@ -187,6 +187,30 @@ pas sur un objet autonome par scénario. Migration **0013** remplace `scenario_f
 4. **Dashboard / liste / trésorerie** : lisent les financements **retenus** du scénario
    (signés implicites ∪ `budget_financing`), filtre statut sur la trésorerie.
 
+## Jalon 19 — Lot UX financement/dashboard (2026-06-30)
+
+Itération UX sur retours utilisateur. **Specs MAJ avant implémentation** (FEATURES, BUSINESS-RULES,
+DATA-MODEL, UI-FLOWS). Migration **0015**.
+
+1. **Scénario / Liste** (F2.5) : retrait du champ « solde initial tréso » de l'accordéon.
+2. **Scénario / Édition** (F2.7) : bloc Plan de financement **en haut** ; liste financements en
+   lecture seule (intitulé, période, bailleur, statut) + bouton **Éditer** (inclure/exclure).
+3. **Scénario / Comparaison** (F2.12) : affichage **hiérarchique** niv.1/2 + accordéon.
+4. **Financements / liste** (F4.13) : tris cliquables (bailleur / date) + mise en page pleine
+   largeur (intitulé sur ligne dédiée ; ID, bailleur, statut, type au-dessus).
+5. **Financements / onglet Bailleurs** (F4.14) : filtres par **statut** (remplacent actif/inactif).
+6. **Fiche financement** (F4.10/F4.12/F4.15) : encadré récap ; bouton « Assigner » dans la section
+   « Budget dépense bailleur » ; couverture en tableau lisible.
+7. **Dashboard / Dépense** (F8.5, BR-5.7, table `line_year_comments`) : commentaire **par année**.
+8. **Dashboard / Bailleurs** (F6.2, BR-6.1, vue `v_suivi_bailleurs`) : Recettes prévues = montant
+   **alloué** (couche 1) ; retrait des colonnes recettes reçues / % reçu / solde réalisé.
+9. **Correctif pagination 1000 lignes** (P-BUG-2) : `lib/supabase/fetch-all.ts` ; toutes les lectures
+   agrégeant `budget_monthly` paginées (la couverture de la liste affichait des totaux tronqués).
+10. **Plan de financement / Édition** : sélection inclure/exclure en **lot** (écriture en base au clic
+    « Terminé », plus à chaque case).
+11. **Page d'accueil** (F10.4) : synthèse GL (dernière MAJ + lignes à allouer) + couverture de l'année
+    + liens Grand Livre / Dashboard.
+
 ## Phase 3 — industrialisation
 
 - ~~Multi-utilisateurs + rôles + RLS (F10.2)~~ → **avancé au Lot 3** (Chantier 1).

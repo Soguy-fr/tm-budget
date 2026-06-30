@@ -8,6 +8,7 @@ import { can } from "@/lib/roles";
 import type { Budget, BankReconciliation, GlEntry } from "@/lib/types";
 import { ClotureBoard } from "@/components/cloture/ClotureBoard";
 import { GuideLink } from "@/components/GuideLink";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,15 @@ export default async function CloturePage() {
   if (!budget) return <Notice>Aucun budget actif.</Notice>;
 
   const [{ data: yearRows }, { data: closureRows }, { data: recoRows }, { data: glRows },
-    { data: monthlyRows }, { data: incomeRows }] = await Promise.all([
+    monthlyRows, { data: incomeRows }] = await Promise.all([
     supabase.from("budget_years").select("year").eq("budget_id", budget.id),
     supabase.from("month_closures").select("*"),
     supabase.from("bank_reconciliations").select("*"),
     supabase.from("gl_entries").select("*").eq("archived", false).range(0, 99999),
-    supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(0, 99999),
+    // Paginé : un scénario peut dépasser 1000 mailles (sinon flux budgété tronqués).
+    fetchAll<{ year: number; month: number; amount: number }>((f, t) =>
+      supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(f, t),
+    ),
     supabase.from("bailleur_income_monthly").select("year, month, amount"),
   ]);
 

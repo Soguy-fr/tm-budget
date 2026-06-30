@@ -16,9 +16,17 @@ export type ScenarioFinancingRow = {
   label: string;       // référence ou nom
   name: string;
   statut: FinancingStatus;
+  funderName: string | null;       // bailleur acteur
+  conventionStart: string | null;  // ISO
+  conventionEnd: string | null;    // ISO
   included: boolean;   // retenu dans ce scénario
   yearly: Record<number, number>; // couche 1
 };
+
+// ISO → JJ/MM/AAAA.
+const frDate = (iso: string | null) => (iso ? iso.split("-").reverse().join("/") : null);
+const period = (s: string | null, e: string | null) =>
+  s || e ? `${frDate(s) ?? "?"} → ${frDate(e) ?? "?"}` : null;
 
 const STATUT_LABEL: Record<FinancingStatus, string> = {
   signe: "Contrat signé",
@@ -42,13 +50,44 @@ export function CoveragePanel({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  // Sélection locale en cours d'édition : on n'écrit en base qu'au clic « Terminé ».
+  const [draft, setDraft] = useState<Set<string>>(new Set());
 
-  function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
+  function startEdit() {
+    setDraft(new Set(financings.filter((f) => f.included).map((f) => f.id)));
+    setEditing(true);
+  }
+  function toggleDraft(id: string) {
+    setDraft((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+  function applyEdits() {
+    const original = new Set(financings.filter((f) => f.included).map((f) => f.id));
+    const toAdd = [...draft].filter((id) => !original.has(id));
+    const toRemove = [...original].filter((id) => !draft.has(id));
     setError(null);
     startTransition(async () => {
-      const res = await fn();
-      if (!res.ok) setError(res.error ?? "Erreur.");
-      else router.refresh();
+      for (const id of toAdd) {
+        const r = await addBudgetFinancing(budgetId, id);
+        if (!r.ok) {
+          setError(r.error ?? "Erreur.");
+          return;
+        }
+      }
+      for (const id of toRemove) {
+        const r = await removeBudgetFinancing(budgetId, id);
+        if (!r.ok) {
+          setError(r.error ?? "Erreur.");
+          return;
+        }
+      }
+      setEditing(false);
+      router.refresh();
     });
   }
 
@@ -113,14 +152,28 @@ export function CoveragePanel({
         </table>
       </div>
 
-      {/* Inclure / exclure les financements */}
-      <h3 className="mb-1 text-xs font-medium uppercase text-slate-400">Financements du scénario</h3>
+      {/* Financements du scénario : lecture seule (intitulé, période, bailleur) + bascule Éditer */}
+      <div className="mb-1 flex items-center gap-3">
+        <h3 className="text-xs font-medium uppercase text-slate-400">Financements du scénario</h3>
+        <Link href="/financements" className="text-xs text-brand-emerald hover:underline">
+          gérer les financements →
+        </Link>
+        {canEdit && financings.length > 0 && (
+          <button
+            onClick={() => (editing ? applyEdits() : startEdit())}
+            disabled={pending}
+            className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+          >
+            {editing ? (pending ? "Enregistrement…" : "Terminé") : "Éditer"}
+          </button>
+        )}
+      </div>
       {financings.length === 0 ? (
         <p className="text-sm text-slate-500">
           Aucun financement. Créez-en sur la{" "}
           <Link href="/financements" className="text-brand-emerald hover:underline">page financement</Link>.
         </p>
-      ) : (
+      ) : editing ? (
         <ul className="space-y-1 text-sm">
           {financings.map((f) => {
             const locked = f.statut === "signe";
@@ -129,15 +182,9 @@ export function CoveragePanel({
               <li key={f.id} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={f.included}
-                  disabled={!canEdit || locked}
-                  onChange={() =>
-                    run(() =>
-                      f.included
-                        ? removeBudgetFinancing(budgetId, f.id)
-                        : addBudgetFinancing(budgetId, f.id),
-                    )
-                  }
+                  checked={locked || draft.has(f.id)}
+                  disabled={!canEdit || locked || pending}
+                  onChange={() => toggleDraft(f.id)}
                   title={locked ? "Financement signé : garanti, non retirable" : undefined}
                 />
                 <Link href={`/financements/${f.id}`} className="text-brand-night hover:underline">
@@ -149,6 +196,34 @@ export function CoveragePanel({
               </li>
             );
           })}
+        </ul>
+      ) : (
+        <ul className="space-y-1.5 text-sm">
+          {financings
+            .filter((f) => f.included)
+            .map((f) => {
+              const p = period(f.conventionStart, f.conventionEnd);
+              return (
+                <li key={f.id} className="rounded border border-slate-100 bg-slate-50/60 px-2 py-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/financements/${f.id}`}
+                      className="font-mono text-xs font-medium text-brand-night hover:underline"
+                    >
+                      {f.label}
+                    </Link>
+                    <StatutChip statut={f.statut} />
+                    {f.funderName && <span className="text-xs text-slate-500">{f.funderName}</span>}
+                    {p && <span className="text-xs text-slate-400">{p}</span>}
+                    {f.statut === "signe" && <span className="text-[10px] text-slate-400">🔒 garanti</span>}
+                  </div>
+                  <div className="text-xs text-slate-600">{f.name}</div>
+                </li>
+              );
+            })}
+          {financings.every((f) => !f.included) && (
+            <li className="text-sm text-slate-400">Aucun financement retenu. Cliquez « Éditer » pour en ajouter.</li>
+          )}
         </ul>
       )}
     </section>

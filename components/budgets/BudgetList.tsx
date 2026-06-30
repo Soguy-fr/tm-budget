@@ -11,7 +11,6 @@ import {
   setActiveBudget,
   duplicateBudget,
   deleteBudget,
-  updateInitialCash,
 } from "@/app/(app)/budgets/actions";
 
 export function BudgetList({
@@ -114,8 +113,6 @@ function BudgetRow({
   run: (fn: () => Promise<{ ok: boolean; error?: string }>) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [cash, setCash] = useState(String(budget.initial_cash));
-  const dirty = Number(cash) !== budget.initial_cash;
   const descPreview = (budget.description ?? "").split("\n").slice(0, 2).join(" ");
 
   return (
@@ -212,29 +209,10 @@ function BudgetRow({
               </tbody>
             </table>
           ) : (
-            <p className="mb-3 text-xs text-slate-400">
+            <p className="text-xs text-slate-400">
               {years.length === 0 ? "Aucune année." : "Aucune donnée de couverture."}
             </p>
           )}
-
-          <div className="flex items-center gap-2 text-sm">
-            <label className="text-slate-500">Solde initial tréso (1er janv.)</label>
-            <input
-              type="number"
-              value={cash}
-              onChange={(e) => setCash(e.target.value)}
-              className="w-32 rounded border border-slate-300 px-2 py-1 text-right text-input"
-            />
-            {dirty && (
-              <button
-                onClick={() => run(() => updateInitialCash(budget.id, Number(cash) || 0))}
-                disabled={pending}
-                className="rounded bg-input px-2 py-1 text-xs text-white"
-              >
-                Enregistrer
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>

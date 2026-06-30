@@ -3,6 +3,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Bailleur, Budget, FinancingStatus } from "@/lib/types";
 import { TresorerieTable } from "@/components/tresorerie/TresorerieTable";
 import { GuideLink } from "@/components/GuideLink";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,13 @@ export default async function TresoreriePage() {
   }
   const budget = budgetRow as Budget;
 
-  const [{ data: yearRows }, { data: monthly }, { data: bailleurs }, { data: income }, { data: budgetFin }] =
+  const [{ data: yearRows }, monthly, { data: bailleurs }, { data: income }, { data: budgetFin }] =
     await Promise.all([
       supabase.from("budget_years").select("year").eq("budget_id", budget.id),
-      supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(0, 99999),
+      // Paginé : un scénario peut dépasser 1000 mailles (sinon dépenses totales tronquées).
+      fetchAll<{ year: number; month: number; amount: number }>((f, t) =>
+        supabase.from("budget_monthly").select("year, month, amount").eq("budget_id", budget.id).range(f, t),
+      ),
       supabase.from("bailleurs").select("*").order("code"),
       supabase.from("bailleur_income_monthly").select("bailleur_id, year, month, amount"),
       supabase.from("budget_financing").select("bailleur_id").eq("budget_id", budget.id),

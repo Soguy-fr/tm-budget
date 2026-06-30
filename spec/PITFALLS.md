@@ -32,14 +32,33 @@ revalidation n'aura aucun effet visible.
 
 ## P-BUG-2 — Limite de 1000 lignes de PostgREST/Supabase
 
-**Symptôme** (préventif) : au-delà de ~1000 mailles, les requêtes Supabase
-tronquent silencieusement les résultats (limite par défaut de PostgREST).
+**Symptôme** : au-delà de 1000 mailles, les requêtes Supabase tronquent
+**silencieusement** les résultats. Concrètement (2026-06-30) : la couverture de
+la liste des scénarios affichait « Total dépense 2025 = 9 583 € » alors que
+l'édition du même scénario montrait 247 783 € — la requête `budget_monthly`
+**toutes scénarios** (6 936 lignes) ne renvoyait que les 1000 premières, et le
+scénario actif (1011 mailles) était en queue, donc presque entièrement coupé.
 
-**Correctif** : ajouter `.range(0, 99999)` sur les requêtes volumineuses
-(`budget_monthly`, `gl_entries`).
+**Cause** : `db-max-rows` de PostgREST plafonne **chaque** requête à 1000 lignes.
+⚠ **`.range(0, 99999)` NE contourne PAS ce plafond** (l'ancien correctif de cette
+fiche était faux) : `range` borne la fenêtre demandée mais le serveur la re-borne à
+`db-max-rows`. Un scénario seul peut dépasser 1000 mailles (≈ feuilles × années × 12).
 
-**Règle** : pour toute table à fort volume (mailles mensuelles, écritures GL),
-paginer explicitement ou poser un `.range()` large.
+**Correctif** : **paginer** par pages de 1000 jusqu'à épuisement. Helper
+`lib/supabase/fetch-all.ts` (`fetchAll(build)`), appliqué à toutes les lectures
+agrégeant un budget entier ou tous les budgets : liste/édition/comparaison des
+scénarios, `/interne`, `/suivi`, `/suivi/graphiques`, `/tresorerie`, `/cloture`,
+`/financements/[id]`, `/grand-livre`, et l'outil tréso du chat.
+```ts
+const rows = await fetchAll((f, t) =>
+  supabase.from("budget_monthly").select("…").eq("budget_id", id).range(f, t));
+```
+
+**Règle** : pour toute table à fort volume (`budget_monthly`, `gl_entries`) dont on
+**somme/agrège** le contenu, paginer avec `fetchAll`. Ne jamais se fier à un
+`.range()` large pour « tout » récupérer. (Pour un simple **affichage** borné, ex.
+les 2000 dernières écritures GL, un `.range()` reste acceptable — mais ≤ 1000 par
+requête, donc paginer si l'on veut réellement 2000.)
 
 ## P-BUG-3 — Poignée de redimensionnement de colonne invisible / inopérante
 

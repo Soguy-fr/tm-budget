@@ -182,57 +182,60 @@ export function BailleurDetail({
 
   return (
     <div className="mt-2 max-w-5xl">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-brand-night">
-        <span className="inline-block h-4 w-4 rounded-sm" style={{ background: bailleur.color }} />
-        {bailleur.name}
-      </h1>
-      <div className="mb-1 text-sm text-slate-500">
-        ID : <span className="font-mono font-medium text-brand-night">{bailleur.reference || bailleur.code}</span>
-        <span className="ml-1 text-xs text-slate-400">(référence d&apos;allocation)</span>
-        {funderName && <> · Bailleur : <span className="font-medium text-brand-night">{funderName}</span></>}
-      </div>
-      <div className="mb-1 text-sm text-slate-500">
-        {bailleur.convention_start && bailleur.convention_end
-          ? `Éligibilité ${frDate(bailleur.convention_start)} → ${frDate(bailleur.convention_end)}`
-          : "Éligibilité non renseignée"}
-        {bailleur.montant_total != null &&
-          ` · Montant total : ${formatEur(Number(bailleur.montant_total))}`}
-        {" · "}
-        <span
-          className={`rounded px-1.5 py-0.5 text-xs ${
-            bailleur.statut === "signe"
-              ? "bg-brand-emerald text-white"
-              : bailleur.statut === "promis"
-                ? "bg-emerald-200 text-emerald-900"
-                : "bg-amber-200 text-amber-900"
-          }`}
-        >
-          {STATUT_LABEL[bailleur.statut]}
-        </span>
-        {" · "}
-        <span className="text-slate-600">{TYPE_LABEL[bailleur.type]}</span>
-      </div>
-      {bailleur.description && (
-        <p className="mb-2 max-w-3xl text-sm text-slate-600">{bailleur.description}</p>
-      )}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="relative flex gap-2">
-          {/* F4.12/BR-3.5 — assigner les LB mappées sur la fenêtre d'éligibilité */}
-          <button
-            disabled={pending}
-            onClick={assignLines}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-            title="Impute les LB mappées à ce financement sur sa fenêtre d'éligibilité"
-          >
-            Assigner les lignes dans le budget
-          </button>
-          <FinancementEdit bailleur={bailleur} funders={funders} pending={pending} run={run} />
-          <button
-            onClick={() => setShowRegles(true)}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
-          >
-            Règles du fonds
-          </button>
+      {/* F4.10 — encadré récapitulatif : toutes les infos utiles du financement */}
+      <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-xl font-bold text-brand-night">
+              <span className="inline-block h-4 w-4 rounded-sm" style={{ background: bailleur.color }} />
+              {bailleur.name}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+              <span>
+                ID : <span className="font-mono font-medium text-brand-night">{bailleur.reference || bailleur.code}</span>
+              </span>
+              <span
+                className={`rounded px-1.5 py-0.5 text-xs ${
+                  bailleur.statut === "signe"
+                    ? "bg-brand-emerald text-white"
+                    : bailleur.statut === "promis"
+                      ? "bg-emerald-200 text-emerald-900"
+                      : "bg-amber-200 text-amber-900"
+                }`}
+              >
+                {STATUT_LABEL[bailleur.statut]}
+              </span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{TYPE_LABEL[bailleur.type]}</span>
+            </div>
+            <div className="mt-1 grid gap-x-6 gap-y-0.5 text-sm text-slate-600 sm:grid-cols-2">
+              {funderName && (
+                <span>
+                  Bailleur : <span className="font-medium text-brand-night">{funderName}</span>
+                </span>
+              )}
+              <span>
+                Éligibilité :{" "}
+                {bailleur.convention_start && bailleur.convention_end
+                  ? `${frDate(bailleur.convention_start)} → ${frDate(bailleur.convention_end)}`
+                  : "non renseignée"}
+              </span>
+              {bailleur.montant_total != null && (
+                <span>Montant total : <span className="font-medium">{formatEur(Number(bailleur.montant_total))}</span></span>
+              )}
+            </div>
+            {bailleur.description && (
+              <p className="mt-2 max-w-3xl text-sm text-slate-600">{bailleur.description}</p>
+            )}
+          </div>
+          <div className="relative flex shrink-0 gap-2">
+            <FinancementEdit bailleur={bailleur} funders={funders} pending={pending} run={run} />
+            <button
+              onClick={() => setShowRegles(true)}
+              className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+            >
+              Règles du fonds
+            </button>
+          </div>
         </div>
       </div>
 
@@ -245,9 +248,20 @@ export function BailleurDetail({
       )}
 
       {/* ── BLOC BUDGET DÉPENSE BAILLEUR (dérivé du plan interne, BR-3.1) ── */}
-      <h2 className="mb-2 font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
-        Budget dépense bailleur
-      </h2>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-heading text-sm font-bold uppercase tracking-wide text-slate-500">
+          Budget dépense bailleur
+        </h2>
+        {/* F4.12/BR-3.5 — assigner les LB mappées sur la fenêtre d'éligibilité */}
+        <button
+          disabled={pending}
+          onClick={assignLines}
+          className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+          title="Impute les LB mappées à ce financement sur sa fenêtre d'éligibilité"
+        >
+          Assigner les lignes dans le budget
+        </button>
+      </div>
       <div className="overflow-hidden rounded border border-slate-200 bg-white">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -393,22 +407,40 @@ export function BailleurDetail({
           </button>
         )}
       </div>
-      <div className="mb-1 flex flex-wrap items-center gap-3 text-sm">
-        {years.map((y) => (
-          <label key={y} className="flex items-center gap-1">
-            <span className="text-slate-500">{y}</span>
-            {yearlyEditing ? (
-              <input
-                type="number"
-                value={workYearly[y] ?? 0}
-                onChange={(e) => setWorkYearly((w) => ({ ...w, [y]: Number(e.target.value) || 0 }))}
-                className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-input"
-              />
-            ) : (
-              <span className="font-medium">{formatEur(workYearly[y] ?? 0)}</span>
-            )}
-          </label>
-        ))}
+      <div className="mb-2 overflow-hidden rounded border border-slate-200 bg-white">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+              <th className="px-3 py-1.5">Année</th>
+              <th className="px-3 py-1.5 text-right">Montant alloué</th>
+            </tr>
+          </thead>
+          <tbody>
+            {years.map((y) => (
+              <tr key={y} className="border-b border-slate-50">
+                <td className="px-3 py-1.5 font-medium text-slate-600">{y}</td>
+                <td className="px-3 py-1.5 text-right">
+                  {yearlyEditing ? (
+                    <input
+                      type="number"
+                      value={workYearly[y] ?? 0}
+                      onChange={(e) => setWorkYearly((w) => ({ ...w, [y]: Number(e.target.value) || 0 }))}
+                      className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-input"
+                    />
+                  ) : (
+                    <span className="font-medium">{formatEur(workYearly[y] ?? 0)}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-slate-300 bg-slate-50 font-medium text-brand-night">
+              <td className="px-3 py-1.5">Total couverture</td>
+              <td className="px-3 py-1.5 text-right">{formatEur(sumYearly)}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
       {mt != null && (
         <p className={`mb-2 text-xs ${sumYearly !== mt ? "text-amber-600" : "text-slate-400"}`}>

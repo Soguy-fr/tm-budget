@@ -44,7 +44,8 @@ create table budgets (
   description    text,                          -- F2.11 (migration 0011) : description du scénario
   type           text not null default 'interne' check (type in ('interne')),
   is_active      boolean not null default false,
-  initial_cash   numeric(14,2) not null default 0,  -- solde tréso au 1er janv. de la 1re année
+  initial_cash   numeric(14,2) not null default 0,  -- legacy : plus saisi depuis l'UI (F2.5 retiré) ;
+                                                     --   démarrage tréso piloté par forced_balance (BR-7.7)
   archived       boolean not null default false,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
@@ -99,6 +100,50 @@ alter table budgets drop column if exists coverage_baseline;
 -- migration 0014 — type d'un financement (F4.10).
 alter table bailleurs add column if not exists type text not null default 'non_affecte'
   check (type in ('non_affecte', 'affecte'));  -- Fonds non-affectés / Fonds affectés
+```
+
+### line_year_comments (migration 0015) — commentaire de ligne par année (BR-5.7)
+
+Commentaire du Dashboard onglet Dépense, **scopé à l'année** (F8.5/BR-5.7). Distinct du
+commentaire global `structure_lines.comment` (F1.7/F1.8, Configuration + bulles).
+
+```sql
+-- migration 0015
+create table line_year_comments (
+  id         uuid primary key default gen_random_uuid(),
+  line_id    uuid not null references structure_lines(id) on delete cascade,
+  year       int not null,
+  comment    text,
+  updated_at timestamptz not null default now(),
+  unique (line_id, year)
+);
+```
+> RLS au **tier opérationnel** (écriture `admin_systeme`/`directrice`/`respo_financiere`,
+> lecture authentifiée) — le suivi est assuré par la respo (BR-5.7).
+
+```sql
+-- migration 0015 (suite) — Recettes prévues du suivi bailleur = montant ALLOUÉ (couche 1).
+-- BR-6.1 : recettes_prevues passe de la couche 2 (bailleur_income_monthly = décaissements)
+-- à la couche 1 (bailleur_yearly = montant alloué de l'année). Les autres colonnes inchangées.
+create or replace view v_suivi_bailleurs as
+select
+  ba.id as bailleur_id, ba.code, by_.year,
+  coalesce((select sum(y.amount) from bailleur_yearly y
+            where y.bailleur_id=ba.id and y.year=by_.year),0)            as recettes_prevues,
+  coalesce((select sum(g.amount) from gl_entries g
+            where g.bailleur_id=ba.id and g.entry_type='Recette'
+              and g.archived=false
+              and extract(year from g.entry_date)=by_.year),0)           as recettes_recues,
+  coalesce((select sum(e.amount) from bailleur_expense_monthly e
+            join bailleur_lines bl on bl.id=e.bailleur_line_id
+            where bl.bailleur_id=ba.id and e.year=by_.year),0)           as depenses_prevues,
+  coalesce((select sum(g.amount) from gl_entries g
+            where g.bailleur_id=ba.id and g.entry_type='Dépense'
+              and g.archived=false
+              and extract(year from g.entry_date)=by_.year),0)           as depenses_realisees
+from bailleurs ba
+cross join (select distinct year from budget_years) by_;
+alter view v_suivi_bailleurs set (security_invoker = on);
 ```
 
 ### budget_years
@@ -328,7 +373,7 @@ create table user_roles (
 
 | Tables                                                                                   | Écriture autorisée |
 | ---------------------------------------------------------------------------------------- | ------------------ |
-| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `bailleur_yearly`, `budget_financing` | `admin_systeme`, `directrice`, `respo_financiere` |
+| **Opérationnel** — `budget_monthly`, `budget_line_totals`, `gl_entries`, `gl_imports`, `bank_reconciliations`, `month_closures`, `funders`, `bailleurs`, `bailleur_lines`, `bailleur_line_mapping`, `bailleur_income_monthly`, `bailleur_expense_monthly`, `bailleur_yearly`, `budget_financing`, `line_year_comments` | `admin_systeme`, `directrice`, `respo_financiere` |
 | **Budgets** (`budgets`, `budget_years`) — création/duplication/édition                   | `admin_systeme`, `directrice`, `respo_financiere` ; **activation `is_active` trigger-gated** (admin_systeme/directrice, voir ci-dessous) |
 | **Référence + gouvernance** — `structure_lines`, `user_roles`                            | `admin_systeme`, `directrice` |
 | **Audit** — `audit_log`                                                                  | lecture `admin_systeme` + `directrice` ; écriture trigger uniquement |
@@ -428,12 +473,15 @@ group by b.id, sl.id, sl.code, sl.label, by_.year;
 
 ### v_suivi_bailleurs — recettes/dépenses prévues vs réalisées par bailleur
 
+> **`recettes_prevues` = couche 1 (`bailleur_yearly`, montant alloué) depuis la migration 0015**
+> (BR-6.1) — définition canonique ci-dessous mise à jour en conséquence.
+
 ```sql
 create view v_suivi_bailleurs as
 select
   ba.id as bailleur_id, ba.code, by_.year,
-  coalesce((select sum(i.amount) from bailleur_income_monthly i
-            where i.bailleur_id=ba.id and i.year=by_.year),0)            as recettes_prevues,
+  coalesce((select sum(y.amount) from bailleur_yearly y
+            where y.bailleur_id=ba.id and y.year=by_.year),0)            as recettes_prevues,
   coalesce((select sum(g.amount) from gl_entries g
             where g.bailleur_id=ba.id and g.entry_type='Recette'
               and g.archived=false

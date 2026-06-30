@@ -28,7 +28,7 @@ export default async function SuiviBailleursPage() {
       <h1 className="mb-3 text-xl font-bold text-brand-night">Dashboard</h1>
       <SuiviTabs />
       <p className="mb-4 text-sm text-slate-500">
-        Recettes & dépenses par bailleur : prévu vs réalisé (Grand Livre, BR-6.1).
+        Par financement : montant alloué de l&apos;année (couche 1) vs dépenses réalisées (Grand Livre, BR-6.1).
       </p>
 
       {years.length === 0 && <p className="text-sm text-slate-500">Aucune donnée.</p>}
@@ -44,30 +44,20 @@ export default async function SuiviBailleursPage() {
               <thead>
                 <tr className="border-b border-slate-200 text-left text-slate-500">
                   <th className="px-2 py-1">Bailleur</th>
-                  <th className="px-2 py-1 text-right">Recettes prévues</th>
-                  <th className="px-2 py-1 text-right">Recettes reçues</th>
-                  <th className="px-2 py-1 text-right">% reçu</th>
+                  <th className="px-2 py-1 text-right">Recettes prévues (alloué)</th>
                   <th className="px-2 py-1 text-right">Dépenses réalisées</th>
-                  <th className="px-2 py-1 text-right">Solde réalisé</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const pct = r.recettes_prevues > 0 ? r.recettes_recues / r.recettes_prevues : 0;
-                  const solde = r.recettes_recues - r.depenses_realisees;
-                  // INV5 — dépassement si dépenses réalisées > recettes.
-                  const over = r.depenses_realisees > r.recettes_recues;
+                  // INV5 — dépassement si dépenses réalisées > montant alloué de l'année.
+                  const over = r.depenses_realisees > r.recettes_prevues;
                   return (
                     <tr key={r.bailleur_id} className="border-b border-slate-50">
                       <td className="px-2 py-1 font-medium">{r.code}</td>
                       <td className="px-2 py-1 text-right">{formatEur(r.recettes_prevues)}</td>
-                      <td className="px-2 py-1 text-right">{formatEur(r.recettes_recues)}</td>
-                      <td className="px-2 py-1 text-right text-slate-500">{Math.round(pct * 100)}%</td>
                       <td className={`px-2 py-1 text-right ${over ? "font-medium text-alert" : ""}`}>
                         {formatEur(r.depenses_realisees)}
-                      </td>
-                      <td className={`px-2 py-1 text-right ${solde < 0 ? "text-alert" : ""}`}>
-                        {formatEur(solde)}
                       </td>
                     </tr>
                   );

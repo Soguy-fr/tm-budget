@@ -32,14 +32,14 @@
 | F2.2 | Sélectionner le budget actif (un seul à la fois)               | 🟢    | —      |
 | F2.3 | Dupliquer le scénario **sélectionné** (souvent l'actif) — copie montants + assignations + financements prévisionnels | 🟢 | —      |
 | F2.4 | Archiver un budget                                             | 🟡    | —      |
-| F2.5 | Saisir le solde initial de trésorerie (1er janvier, 1re année) | 🟢    | BR-7.1 |
+| F2.5 | ~~Saisir le solde initial de trésorerie (1er janvier, 1re année)~~ — **retiré de l'UI** : plus de champ « solde initial » dans la liste des scénarios. La trésorerie démarre du **solde forcé** (`forced_balance` + `calc_date`, F7.7/BR-7.7) ; `initial_cash` reste en base (défaut 0, legacy) | ⛔ | BR-7.7 |
 | F2.6 | **Onglet « Édition du scénario »** (dans /budgets) : tableur du scénario **sélectionné**. Réutilise édition ligne-par-ligne, afficher bailleur, +année, replier les mois, filtre année. **Sans** solde tréso ni suivi. On peut **modifier le titre (nom) et la description** du scénario | 🟢 | P7, P10 |
-| F2.7 | **Plan de financement** (bloc de l'onglet édition) : liste des **financements réels** avec **inclure/exclure** du scénario (`budget_financing`) ; les **signés** sont retenus d'office et **non retirables**. Tableau **couverture par année** (signé/promis/espéré/non couvert) des financements **retenus** + lien « gérer les financements » | 🟢 | BR-12.2, BR-12.3 |
+| F2.7 | **Plan de financement** (bloc de l'onglet édition, affiché **en haut**, avant le tableur) : tableau **couverture par année** (signé/promis/espéré/non couvert) des financements **retenus** ; liste des **financements du scénario** en **lecture seule** par défaut (intitulé complet, **période d'éligibilité**, **bailleur** acteur, statut) + bouton **« Éditer »** qui bascule en mode **inclure/exclure** (`budget_financing`) ; les **signés** sont retenus d'office et **non retirables**. Lien « gérer les financements » | 🟢 | BR-12.2, BR-12.3 |
 | F2.8 | **Ajouter / retirer un financement d'un scénario** (`budget_financing`) : ajout d'un fonds promis/espéré ; retrait interdit sur un fonds **signé** (garanti). Duplication d'un scénario : copie ses appartenances | 🟢 | BR-12.2 |
 | F2.9 | **Liste des scénarios** : **accordéon** par scénario (replié = **nom + début de la description**) ; au dépli, **une ligne par année** : **total dépense** (gras) + couverture **signé / promis / espéré / non couvert** (BR-12.3). Indicateur **« ? »** (survol + lien guide) | 🟢 | BR-12.3 |
 | F2.10 | **Supprimer un scénario** : bouton + confirmation « Êtes-vous sûr ? ». **Interdit sur le scénario actif** | 🟢 | — |
 | F2.11 | **Description de scénario** (`budgets.description`) : éditable dans l'onglet Édition (avec le titre) ; aperçu (premières lignes) dans la liste | 🟢 | — |
-| F2.12 | **Onglet « Comparaison »** : 2 menus déroulants pour choisir 2 scénarios ; tableau côte à côte des **totaux annuels par LB** (mois repliés), avec un **point** entre les deux colonnes (**vert** = montants identiques, **orange** = différents) | 🟢 | — |
+| F2.12 | **Onglet « Comparaison »** : 2 menus déroulants pour choisir 2 scénarios ; tableau côte à côte **hiérarchique** (catégories **niveau 1 et 2** + **accordéon** repliant le niv.2 sous le niv.1, comme le Dashboard), totaux annuels par catégorie/LB (mois repliés), avec un **point** entre les deux colonnes (**vert** = montants identiques, **orange** = différents) | 🟢 | — |
 
 ## F3 — Prévisionnel interne (page tableur principale)
 
@@ -78,12 +78,12 @@
 | F4.7 | Affichage du réalisé sur la page financement (bouton, comme l'interne) | 🟡 | BR-5.3, BR-6.1 |
 | F4.8 | Export rapport financier par financement | 🟡 | BR-10.1 |
 | F4.9 | **Bailleur (acteur)** : entité parente ; un bailleur porte 1..N financements ; sélection du bailleur à la création d'un financement | 🟢 | — |
-| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total**, **statut** (signé/promis/espéré), **type** (Fonds non-affectés / affectés) | 🟢 | BR-12.1 |
-| F4.15 | **Couverture** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année. **⚠ non bloquant** si Σannuel ≠ montant_total. Les **années** affichées dérivent de l'**éligibilité** du fonds (`convention_start..end`) ∪ années déjà saisies — **indépendantes** des années du scénario actif (pas de bouton « Ajouter année » pour les fonds) | 🟢 | BR-12.1, BR-12.3 |
+| F4.10 | Champs financement : **référence** (JFN-001), **dates début/fin d'éligibilité**, **description**, **montant_total**, **statut** (signé/promis/espéré), **type** (Fonds non-affectés / affectés). Sur la fiche, ces infos sont regroupées dans un **encadré récapitulatif** (toutes les infos utiles d'un coup d'œil) | 🟢 | BR-12.1 |
+| F4.15 | **Couverture** (couche 1, `bailleur_yearly`) sur la page financement : un montant par année, **présentée en tableau lisible** (année · montant · Σ vs montant_total). **⚠ non bloquant** si Σannuel ≠ montant_total. Les **années** affichées dérivent de l'**éligibilité** du fonds (`convention_start..end`) ∪ années déjà saisies — **indépendantes** des années du scénario actif (pas de bouton « Ajouter année » pour les fonds) | 🟢 | BR-12.1, BR-12.3 |
 | F4.11 | Colonnes **Budgété** (ancien « Total dérivé ») + **Dépensé** (GL) + écart vs `montant_total` (reste à budgéter / sous-/sur-dépensé) | 🟢 | BR-3.4 |
-| F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement | 🟢 | BR-3.5 |
-| F4.13 | Liste des financements : **filtre par statut** (contrat signé / en cours de signature / promesse), **tri par bailleur (acteur) puis date de début** ; affiche **statut** + **type** (non-affectés / affectés) par ligne. *(La notion actif/inactif est retirée.)* | 🟢 | BR-12.1 |
-| F4.14 | Menu Financement à **onglets** « Financements \| Bailleurs » ; onglet Bailleur = liste des acteurs + financements liés (accordéon), filtres actif/année, éditer le bailleur ; création d'un bailleur (acteur) uniquement ici | 🟢 | — |
+| F4.12 | Bouton **« Assigner les lignes dans le budget »** : impute les LB mappées au financement sur sa fenêtre d'éligibilité ; confirmation si écrasement d'un autre financement. **Placé dans la section « Budget dépense bailleur »** (pas dans la barre d'actions de l'en-tête) | 🟢 | BR-3.5 |
+| F4.13 | Liste des financements : **filtre par statut** (contrat signé / en cours de signature / promesse), **tri choisi par l'utilisateur** (par **bailleur** OU par **date** de début, contrôles cliquables) ; **pleine largeur**, **intitulé sur une ligne dédiée**, au-dessus l'**ID**, le **bailleur** (acteur), le **statut** et le **type** (non-affectés / affectés). *(La notion actif/inactif est retirée.)* | 🟢 | BR-12.1 |
+| F4.14 | Menu Financement à **onglets** « Financements \| Bailleurs » ; onglet Bailleur = liste des acteurs + financements liés (accordéon), **filtres par statut** (contrat signé / en cours / promesse) + année, éditer le bailleur ; création d'un bailleur (acteur) uniquement ici. *(Les filtres actif/inactif sont retirés.)* | 🟢 | BR-12.1 |
 
 ## F5 — Grand Livre
 
@@ -111,7 +111,7 @@
 | #    | Fonctionnalité                                                                        | Phase | Règles         |
 | ---- | ------------------------------------------------------------------------------------- | ----- | -------------- |
 | F6.1 | Suivi dépenses par LB : prévu / réalisé / écart / % consommé                          | 🟢    | BR-5.1, BR-5.2 |
-| F6.2 | Suivi par bailleur : recettes & dépenses, prévu vs réalisé                            | 🟢    | BR-6.1         |
+| F6.2 | Suivi par bailleur (Dashboard onglet Bailleurs) : **Recettes prévues** = **montant alloué de l'année** (couche 1, `bailleur_yearly`) + **Dépenses réalisées** (GL). Les colonnes « recettes reçues » (GL), « % reçu » et « solde réalisé » sont **retirées** (recettes reçues non mesurées de façon fiable dans le GL) | 🟢 | BR-6.1 |
 | F6.3 | Alerte dépassement bailleur                                                           | 🟡    | BR-6.2         |
 | F6.4 | Suivi mois par mois (réalisé cumulé vs prévu)                                         | 🟡    | BR-5.*         |
 | F6.5 | Ligne « Réalisé non assigné » dans le suivi bailleur (réconciliation des deux suivis) | 🟡    | BR-6.3         |
@@ -137,7 +137,7 @@
 | F8.2 | Répartition des dépenses par catégorie / par bailleur | 🟡 | — |
 | F8.3 | Courbe trésorerie cumulée prévu vs réel | 🟡 | BR-7.* |
 | F8.4 | Tableau de bord complet multi-indicateurs | 🔵 | — |
-| F8.5 | Onglet **Dépense** : n'afficher que les niveaux 1 et 2 (pas niveau 3) + colonne **Commentaire** éditable (édit/OK), liée au champ `comment` partagé | 🟢 | BR-5.4, F1.7 |
+| F8.5 | Onglet **Dépense** : n'afficher que les niveaux 1 et 2 (pas niveau 3) + colonne **Commentaire** éditable (édit/OK), **liée à l'année affichée** (table `line_year_comments`, un commentaire par LB × année) — **distincte** du commentaire global de structure (F1.7/F1.8) | 🟢 | BR-5.4, BR-5.7 |
 | F8.6 | **Plan de financement** (bloc dashboard) : par année, **barre empilée** du taux de couverture (contrat signé / en cours / promesse / non couvert) avec le **% affiché dans chaque segment** ; **accordéon** par année listant les financements (nom, statut, montant). Montre **tous** les financements (pas seulement les retenus du scénario) | 🟢 | BR-12.2 |
 | F8.6 | Onglet **Dépense** : hiérarchie niv.1/2 plus lisible (indentation, typo) + **accordéon** repliant les sous-catégories niv.2 sous leur niv.1 | 🟢 | BR-5.4 |
 | F8.7 | Onglet **Dépense** : **barre de couleur en dégradé** dans la colonne « % consommé » — 0 % blanc → 100 % vert ; négatif (avoir net) rouge | 🟢 | BR-5.6 |
@@ -159,6 +159,7 @@
 | F10.1 | Authentification (email/lien Supabase Auth)      | 🟢    | —      |
 | F10.2 | Multi-utilisateurs + 4 rôles + RLS (voir F12.1)  | 🟢    | P10    |
 | F10.3 | Real-time (édition concurrente)                  | 🔵    | —      |
+| F10.4 | **Page d'accueil — synthèse** (`/`) : (a) Grand Livre = **date de dernière mise à jour** (dernier import) + **nb de lignes à allouer** (BR-4.1) ; (b) **couverture de l'année en cours** (taux signé / en signature / promesse / non couvert, tous financements, comme le Dashboard, BR-12.3) ; (c) **liens** vers Grand Livre et Dashboard | 🟢 | BR-4.1, BR-12.3 |
 
 ## F11 — Clôture mensuelle
 
